@@ -1,0 +1,221 @@
+{
+  "fitting_instance_ids": [
+    "exp1_0033__lvl116_over_lvl97"
+  ],
+  "validation_instance_ids": [
+    "exp2_0059_pair1__Collector-81_over_Runner-83",
+    "exp2_0059_pair2__Collector-81_over_Killer-77",
+    "exp2_0059_pair3__Runner-83_over_Killer-77"
+  ],
+  "selection_rule": "lowest validation ranking BCE; reconstruction BCE breaks ties",
+  "candidates": [
+    {
+      "hyperparameters": {
+        "learning_rate": 0.001,
+        "lambda_rec": 1.0,
+        "lambda_kl": 0.001,
+        "lambda_rank": 1.0
+      },
+      "fit_history": [
+        {
+          "epoch": 1,
+          "total_loss": 1.3727185726165771,
+          "reconstruction_bce": 0.695083498954773,
+          "kl_divergence": 0.6843656301498413,
+          "ranking_bce": 0.6769506335258484,
+          "seconds": 0.04546858300091117
+        }
+      ],
+      "validation_metrics": {
+        "total_loss": 1.364017367362976,
+        "reconstruction_bce": 0.659340500831604,
+        "kl_divergence": 3.386310577392578,
+        "ranking_bce": 0.7012905478477478,
+        "accuracy": 0.5,
+        "macro_f1": 0.3333333333333333,
+        "f1_by_class": {
+          "0": 0.0,
+          "1": 0.6666666666666666
+        },
+        "confusion_matrix": [
+          [
+            0,
+            3
+          ],
+          [
+            0,
+            3
+          ]
+        ],
+        "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+        "class_support": {
+          "0": 3,
+          "1": 3
+        },
+        "ordered_examples": 6,
+        "comparisons": 3,
+        "reporting_seed": 43,
+        "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+        "dropout_enabled": false
+      }
+    },
+    {
+      "hyperparameters": {
+        "learning_rate": 0.001,
+        "lambda_rec": 1.0,
+        "lambda_kl": 0.01,
+        "lambda_rank": 1.0
+      },
+      "fit_history": [
+        {
+          "epoch": 1,
+          "total_loss": 1.378877878189087,
+          "reconstruction_bce": 0.695083498954773,
+          "kl_divergence": 0.6843656301498413,
+          "ranking_bce": 0.6769506335258484,
+          "seconds": 0.009459749999223277
+        }
+      ],
+      "validation_metrics": {
+        "total_loss": 1.3817589282989502,
+        "reconstruction_bce": 0.6593378782272339,
+        "kl_divergence": 2.4757091999053955,
+        "ranking_bce": 0.6976639628410339,
+        "accuracy": 0.5,
+        "macro_f1": 0.3333333333333333,
+        "f1_by_class": {
+          "0": 0.0,
+          "1": 0.6666666666666666
+        },
+        "confusion_matrix": [
+          [
+            0,
+            3
+          ],
+          [
+            0,
+            3
+          ]
+        ],
+        "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+        "class_support": {
+          "0": 3,
+          "1": 3
+        },
+        "ordered_examples": 6,
+        "comparisons": 3,
+        "reporting_seed": 43,
+        "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+        "dropout_enabled": false
+      }
+    },
+    {
+      "hyperparameters": {
+        "learning_rate": 0.0003,
+        "lambda_rec": 2.0,
+        "lambda_kl": 0.001,
+        "lambda_rank": 1.0
+      },
+      "fit_history": [
+        {
+          "epoch": 1,
+          "total_loss": 2.0678019523620605,
+          "reconstruction_bce": 0.695083498954773,
+          "kl_divergence": 0.6843656301498413,
+          "ranking_bce": 0.6769506335258484,
+          "seconds": 0.009635207999963313
+        }
+      ],
+      "validation_metrics": {
+        "total_loss": 2.0683672428131104,
+        "reconstruction_bce": 0.6829314231872559,
+        "kl_divergence": 1.7583791017532349,
+        "ranking_bce": 0.7007460594177246,
+        "accuracy": 0.5,
+        "macro_f1": 0.3333333333333333,
+        "f1_by_class": {
+          "0": 0.0,
+          "1": 0.6666666666666666
+        },
+        "confusion_matrix": [
+          [
+            0,
+            3
+          ],
+          [
+            0,
+            3
+          ]
+        ],
+        "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+        "class_support": {
+          "0": 3,
+          "1": 3
+        },
+        "ordered_examples": 6,
+        "comparisons": 3,
+        "reporting_seed": 43,
+        "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+        "dropout_enabled": false
+      }
+    },
+    {
+      "hyperparameters": {
+        "learning_rate": 0.0003,
+        "lambda_rec": 1.0,
+        "lambda_kl": 0.001,
+        "lambda_rank": 2.0
+      },
+      "fit_history": [
+        {
+          "epoch": 1,
+          "total_loss": 2.0496692657470703,
+          "reconstruction_bce": 0.695083498954773,
+          "kl_divergence": 0.6843656301498413,
+          "ranking_bce": 0.6769506335258484,
+          "seconds": 0.009779083999092109
+        }
+      ],
+      "validation_metrics": {
+        "total_loss": 2.0862503051757812,
+        "reconstruction_bce": 0.6829322576522827,
+        "kl_divergence": 1.7961543798446655,
+        "ranking_bce": 0.7007609605789185,
+        "accuracy": 0.5,
+        "macro_f1": 0.3333333333333333,
+        "f1_by_class": {
+          "0": 0.0,
+          "1": 0.6666666666666666
+        },
+        "confusion_matrix": [
+          [
+            0,
+            3
+          ],
+          [
+            0,
+            3
+          ]
+        ],
+        "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+        "class_support": {
+          "0": 3,
+          "1": 3
+        },
+        "ordered_examples": 6,
+        "comparisons": 3,
+        "reporting_seed": 43,
+        "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+        "dropout_enabled": false
+      }
+    }
+  ],
+  "status": "completed",
+  "selected_candidate_index": 1,
+  "selected_hyperparameters": {
+    "learning_rate": 0.001,
+    "lambda_rec": 1.0,
+    "lambda_kl": 0.01,
+    "lambda_rank": 1.0
+  }
+}

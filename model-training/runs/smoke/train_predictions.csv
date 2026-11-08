@@ -1,0 +1,9 @@
+instance_id,first_level,second_level,target,probability_first_preferred,prediction
+exp1_0033__lvl116_over_lvl97,lvl116,lvl97,1,0.5384610295295715,1
+exp1_0033__lvl116_over_lvl97,lvl97,lvl116,0,0.5473508834838867,1
+exp2_0059_pair1__Collector-81_over_Runner-83,Collector-81,Runner-83,1,0.521587610244751,1
+exp2_0059_pair1__Collector-81_over_Runner-83,Runner-83,Collector-81,0,0.5358202457427979,1
+exp2_0059_pair2__Collector-81_over_Killer-77,Collector-81,Killer-77,1,0.5299164056777954,1
+exp2_0059_pair2__Collector-81_over_Killer-77,Killer-77,Collector-81,0,0.542103111743927,1
+exp2_0059_pair3__Runner-83_over_Killer-77,Runner-83,Killer-77,1,0.5513582229614258,1
+exp2_0059_pair3__Runner-83_over_Killer-77,Killer-77,Runner-83,0,0.5083271265029907,1
