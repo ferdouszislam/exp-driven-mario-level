@@ -140,6 +140,39 @@ The FC-Tail concatenates samples **in the supplied input order**:
 
 The last scalar is a logit. Applying sigmoid gives `P(first playthrough preferred)`. Returning logits permits numerically stable BCE-with-logits loss, as allowed in the architecture specification. The network does not impose a scalar utility function or an exact complement relationship between its two input orders.
 
+### Parameter count
+
+The implemented model has **1,138,199 parameters**, all trainable. Counting `sum(parameter.numel() for parameter in model.parameters())` gives the following breakdown. The shared encoder and decoder are each counted once, even though each processes both playthroughs in a pair.
+
+| Component | Trainable parameters |
+|---|---:|
+| Shared encoder, including mean and log-variance heads | 643,296 |
+| Shared decoder | 488,630 |
+| Pairwise FC-Tail | 6,273 |
+| **Total** | **1,138,199** |
+
+The layer counts include convolutional and fully connected weights and biases. Each GroupNorm contributes one learned scale and one learned shift per output channel, giving `2 × channels` parameters. Rows containing GroupNorm include these parameters in their totals.
+
+| Component | Layer | Parameters |
+|---|---|---:|
+| Encoder | Conv 22 → 32, 4×4, followed by GroupNorm | 11,360 |
+| Encoder | Conv 32 → 64, 4×4, followed by GroupNorm | 32,960 |
+| Encoder | Conv 64 → 128, 4×4, followed by GroupNorm | 131,456 |
+| Encoder | Conv 128 → 128, 4×4, followed by GroupNorm | 262,528 |
+| Encoder | Hidden FC 1,536 → 128 | 196,736 |
+| Encoder | Mean head 128 → 32 | 4,128 |
+| Encoder | Log-variance head 128 → 32 | 4,128 |
+| Decoder | Projection FC 32 → 1,536 | 50,688 |
+| Decoder | Transposed conv 128 → 128, 4×4, followed by GroupNorm | 262,528 |
+| Decoder | Transposed conv 128 → 64, 4×4, followed by GroupNorm | 131,264 |
+| Decoder | Transposed conv 64 → 32, 4×4, followed by GroupNorm | 32,864 |
+| Decoder | Output transposed conv 32 → 22, 4×4 | 11,286 |
+| FC-Tail | FC 64 → 64 | 4,160 |
+| FC-Tail | FC 64 → 32 | 2,080 |
+| FC-Tail | FC 32 → 1 | 33 |
+
+Flattening, reshaping, concatenation, LeakyReLU, dropout, sigmoid, and latent sampling each contribute zero parameters.
+
 ## 6. Joint losses and their reductions
 
 The optimizer minimizes:
