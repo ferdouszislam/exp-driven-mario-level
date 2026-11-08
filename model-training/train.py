@@ -116,7 +116,8 @@ def classification_metrics(targets: list[int], predictions: list[int]) -> dict:
         f1.append(2 * tp / denominator if denominator else 0.0)
     return {
         "accuracy": (matrix[0][0] + matrix[1][1]) / len(targets),
-        "macro_f1": sum(f1) / 2,
+        "f1_score": f1[1],
+        "f1_positive_label": 1,
         "f1_by_class": {"0": f1[0], "1": f1[1]},
         "confusion_matrix": matrix,
         "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
@@ -322,7 +323,8 @@ def write_report(output: Path, config: dict, metrics: dict, tuning: dict) -> Non
                        ("Reconstruction BCE (mean per bit)", "reconstruction_bce"),
                        ("KL divergence (sum per latent, mean per input)", "kl_divergence"),
                        ("Fun-ranking BCE", "ranking_bce"),
-                       ("Fun-ranking accuracy", "accuracy"), ("Fun-ranking macro F1", "macro_f1")):
+                       ("Fun-ranking accuracy", "accuracy"),
+                       ("Fun-ranking F1 (positive class 1)", "f1_score")):
         lines.append(f"| {label} | {metrics[key]:.10f} |")
     lines += ["", "Final measurements use evaluation mode and one seeded posterior draw per input;",
               "the same two latent samples are reused for the two orders. These are in-sample",

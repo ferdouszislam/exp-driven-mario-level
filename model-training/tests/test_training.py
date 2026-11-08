@@ -185,17 +185,23 @@ class TrainingTests(unittest.TestCase):
         self.assertFalse(model.training)
         self.assertFalse(metrics["dropout_enabled"])
 
-    def test_accuracy_macro_f1_and_single_predicted_class(self) -> None:
+    def test_accuracy_binary_f1_and_single_predicted_class(self) -> None:
         cases = [
-            ([0, 0, 0, 1, 1, 1, 1, 1], [0, 0, 1, 0, 0, 1, 1, 1], [[2, 1], [2, 3]], 5 / 8, 13 / 21),
-            ([0, 1], [1, 1], [[0, 1], [0, 1]], 0.5, 1 / 3),
+            ([0, 0, 0, 1, 1, 1, 1, 1], [0, 0, 1, 0, 0, 1, 1, 1], [[2, 1], [2, 3]], 5 / 8, 2 / 3, 4 / 7),
+            ([0, 1], [1, 1], [[0, 1], [0, 1]], 0.5, 2 / 3, 0.0),
+            ([0, 0, 0, 0, 1, 1, 1, 1], [0, 0, 0, 0, 0, 1, 1, 1], [[4, 0], [1, 3]], 7 / 8, 6 / 7, 8 / 9),
+            ([0, 0], [0, 0], [[2, 0], [0, 0]], 1.0, 0.0, 1.0),
         ]
-        for targets, predictions, matrix, accuracy, macro_f1 in cases:
+        for targets, predictions, matrix, accuracy, positive_f1, negative_f1 in cases:
             with self.subTest(predictions=predictions):
                 metrics = classification_metrics(targets, predictions)
                 self.assertEqual(metrics["confusion_matrix"], matrix)
                 self.assertAlmostEqual(metrics["accuracy"], accuracy)
-                self.assertAlmostEqual(metrics["macro_f1"], macro_f1)
+                self.assertAlmostEqual(metrics["f1_score"], positive_f1)
+                self.assertEqual(metrics["f1_positive_label"], 1)
+                self.assertAlmostEqual(metrics["f1_by_class"]["0"], negative_f1)
+                self.assertAlmostEqual(metrics["f1_by_class"]["1"], positive_f1)
+                self.assertNotIn("macro_f1", metrics)
         with self.assertRaises(ValueError):
             classification_metrics([], [])
 

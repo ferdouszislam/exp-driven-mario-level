@@ -188,7 +188,7 @@ signed_gap = validation_total_loss - fitting_total_loss
 selection_value = abs(signed_gap)
 ```
 
-The selector chooses the candidate with the **smallest `selection_value`**. An exact tie is resolved only by the original candidate order. The fitting loss here is a fresh measurement of the final tuning model, rather than the last optimization epoch's averaged stochastic loss. No extra common validation weights, loss penalties, acceptance thresholds, or early stopping are introduced. Ranking BCE, accuracy, and macro F1 remain reported measurements and do not select the candidate.
+The selector chooses the candidate with the **smallest `selection_value`**. An exact tie is resolved only by the original candidate order. The fitting loss here is a fresh measurement of the final tuning model, rather than the last optimization epoch's averaged stochastic loss. No extra common validation weights, loss penalties, acceptance thresholds, or early stopping are introduced. Ranking BCE, accuracy, and binary F1-score remain reported measurements and do not select the candidate.
 
 For example, suppose candidate A has fitting loss 0.80 and validation loss 0.83: its signed gap is `+0.03`, and its absolute gap is `0.03`. Candidate B has fitting loss 0.90 and validation loss 0.88: its signed gap is `-0.02`, and its absolute gap is `0.02`. The rule selects B because its absolute gap is smaller, even though its validation loss is higher. These are illustrative values, not results from a saved run. Taking the absolute value treats validation losses above and below fitting loss consistently.
 
@@ -208,17 +208,19 @@ After final fitting, the script runs one reporting pass on exactly the selected 
 
 For each pair, reconstruction BCE and KL are calculated once and averaged over its two inputs. Ranking BCE averages the forward target-1 and reverse target-0 losses. Dataset losses then average over original comparisons. These reductions correspond to the balanced ordered representation while avoiding a second random latent draw for the reverse direction.
 
-Classification uses `sigmoid(logit) >= 0.5` to predict class 1; otherwise it predicts class 0. Accuracy and macro F1 include **both input orders**. They are computed as:
+Classification uses `sigmoid(logit) >= 0.5` to predict class 1 and assigns class 0 below that threshold. Accuracy and binary F1-score include **both input orders**. The positive class is **1**, meaning the first playthrough is preferred. The confusion matrix uses true-label rows and predicted-label columns in the order `[0, 1]`.
 
 ```text
 accuracy = number of correct ordered predictions / number of ordered examples
-F1_class = 2 × TP / (2 × TP + FP + FN)
-macro_F1 = (F1_class_0 + F1_class_1) / 2
+TP = confusion_matrix[1][1]
+FP = confusion_matrix[0][1]
+FN = confusion_matrix[1][0]
+f1_score = 2 × TP / (2 × TP + FP + FN)
 ```
 
-An F1 value with a zero denominator is defined as 0. The confusion matrix has true-label rows and predicted-label columns, both ordered `[0, 1]`; each class's support and F1 are also saved. Class 1 means the first input is preferred, and class 0 means the second input is preferred.
+The F1-score is defined as 0 when its denominator is zero. Saved metrics use `f1_score` for this positive-class result and `f1_positive_label=1` to identify the class. Each class's F1 remains available in `f1_by_class`, alongside `class_support` and `confusion_matrix`. Class 0 means the second playthrough is preferred.
 
-Final reporting losses can differ from the last optimization epoch because the final model is fixed, dropout is off, and reporting uses its own posterior draws. The reported train accuracy and macro F1 measure fit to the selected training data. They do not estimate performance on held-out comparisons.
+Final reporting losses can differ from the last optimization epoch because the final model is fixed, dropout is off, and reporting uses its own posterior draws. The reported train accuracy and binary F1-score measure fit to the selected training data. They do not estimate performance on held-out comparisons.
 
 Python, NumPy, PyTorch, available accelerator RNGs, and DataLoader shuffling are seeded. cuDNN benchmarking is disabled and its deterministic option is enabled when available. Exact numerical agreement across devices, PyTorch releases, or different batch sizes is not guaranteed; see PyTorch's [reproducibility guidance](https://docs.pytorch.org/docs/2.15/notes/randomness.html). The run records its environment and reporting seed.
 
@@ -233,7 +235,7 @@ Every completed run writes:
 | `selected_train_comparisons.json` | Selected training manifest entries with participant/playthrough and grouping provenance |
 | `tuning.json` | Fitting/validation instance IDs, candidate settings and histories, post-fit `fitting_metrics` and `validation_metrics`, signed `validation_minus_fitting_total_loss`, `absolute_total_loss_gap`, and the selected `selected_absolute_total_loss_gap`; or an explicit single-group smoke-run fallback |
 | `train_history.json` | Per-epoch final-fitting losses and epoch duration |
-| `train_metrics.json` | Final loss components, weighted total, accuracy, macro F1, confusion matrix, class supports, and reporting convention |
+| `train_metrics.json` | Final loss components, weighted total, accuracy, binary `f1_score` with `f1_positive_label=1`, per-class F1 diagnostics, confusion matrix, class supports, and reporting convention |
 | `train_predictions.csv` | Every ordered train prediction, its target, probability, and comparison/level IDs |
 | `REPORT.md` | Human-readable final train results, run settings, selection rule, and the selected tuning candidate's fitting/validation total losses and gap |
 
@@ -278,6 +280,8 @@ Numerical results belong to each run's saved report. The implementation does not
 
 The existing `full_train` and `smoke` directories were produced **before the total-loss-gap selector was introduced**. They used the previous rule: lowest validation ranking BCE, with reconstruction BCE as a tie-breaker. Their saved models, selection records, and measurements are historical results of that earlier rule; they have not been relabeled as results of the current selector.
 
+Both runs also predate binary-F1 reporting. Their saved `macro_f1` values record the mean of the two class F1 values, and their original reports and checkpoints retain that metric. The `f1_score` schema described in sections 8–9 applies to newly generated measurements.
+
 The historical [full training report](runs/full_train/REPORT.md) records the completed 50-epoch CPU run on all 290 comparisons. Hyperparameter selection used 232 comparisons for fitting and 58 for temporary validation, with no shared annotation groups or recorded playthroughs across that temporary split. Candidate 2 was selected by the previous ranking-BCE rule, then final fitting started from scratch on all 290 comparisons.
 
 The [saved model](runs/full_train/model.pt), [exact metrics](runs/full_train/train_metrics.json), and [580 ordered predictions](runs/full_train/train_predictions.csv) are available in that run directory. Reloading the checkpoint on CPU reproduced every reported loss, metric, and exported prediction exactly. Independently counting the CSV predictions gave 575 correct predictions out of 580. All nine behavioral tests passed.
@@ -288,6 +292,8 @@ The separate historical [smoke report](runs/smoke/REPORT.md) records the four-co
 
 The [total-loss-gap smoke report](runs/smoke_total_loss_gap/REPORT.md) records a completed run with four original comparisons, one tuning epoch per candidate, and two final epochs. Its [tuning record](runs/smoke_total_loss_gap/tuning.json) includes both post-fit total losses and both gap values for all four candidates. Candidate 2 had the smallest absolute gap, approximately `0.00507331`, and was selected by the new rule. This is a pipeline check, rather than a full-data performance result.
 
-The saved losses and selected gap were independently checked against the formula above. The [smoke checkpoint](runs/smoke_total_loss_gap/model.pt) records the new selection rule and gap, and reloading it reproduced the saved final train metrics exactly. A separate single-group CLI check confirmed that the gap is explicitly unavailable (`null`) when grouped validation cannot be performed. All **12 behavioral tests** pass, including tests that distinguish absolute-gap selection from lowest-loss selection, check post-fit measurements and exact ties, and exercise the single-group fallback.
+This smoke run also predates binary-F1 reporting. Its saved `macro_f1` and original report retain the recorded macro-F1 measurement. Its total-loss-gap selection record remains a verification of that selector.
+
+The saved losses and selected gap were independently checked against the formula above. The [smoke checkpoint](runs/smoke_total_loss_gap/model.pt) records the new selection rule and gap, and reloading it reproduced the saved final train metrics exactly. A separate single-group CLI check confirmed that the gap is explicitly unavailable (`null`) when grouped validation cannot be performed. At that stage, all **12 behavioral tests** passed, including tests that distinguish absolute-gap selection from lowest-loss selection, check post-fit measurements and exact ties, and exercise the single-group fallback.
 
 The full 290-comparison model has **not been retrained with this new selector**. Its existing checkpoint remains the historical result described in section 11. `smoke_total_loss_gap` now exists too, so choose a new output directory or omit `--output-dir` for another run.
