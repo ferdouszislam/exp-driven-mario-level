@@ -1,0 +1,782 @@
+{
+  "fitting_instance_ids": [
+    "exp1_0005__lvl145_over_lvl31",
+    "exp1_0006__lvl53_over_lvl70",
+    "exp1_0007__lvl12_over_lvl172",
+    "exp1_0008__lvl7_over_lvl104",
+    "exp1_0009__lvl75_over_lvl10",
+    "exp1_0010__lvl134_over_lvl162",
+    "exp1_0011__lvl30_over_lvl81",
+    "exp1_0012__lvl10_over_lvl184",
+    "exp1_0013__lvl149_over_lvl84",
+    "exp1_0016__lvl109_over_lvl192",
+    "exp1_0018__lvl87_over_lvl36",
+    "exp1_0019__lvl34_over_lvl55",
+    "exp1_0023__lvl178_over_lvl29",
+    "exp1_0025__lvl19_over_lvl72",
+    "exp1_0028__lvl31_over_lvl186",
+    "exp1_0031__lvl179_over_lvl122",
+    "exp1_0032__lvl189_over_lvl93",
+    "exp1_0034__lvl11_over_lvl123",
+    "exp1_0037__lvl53_over_lvl24",
+    "exp1_0038__lvl60_over_lvl187",
+    "exp1_0042__lvl13_over_lvl158",
+    "exp1_0043__lvl62_over_lvl118",
+    "exp1_0044__lvl19_over_lvl49",
+    "exp1_0045__lvl195_over_lvl104",
+    "exp1_0046__lvl120_over_lvl65",
+    "exp1_0047__lvl186_over_lvl33",
+    "exp1_0048__lvl42_over_lvl11",
+    "exp1_0052__lvl57_over_lvl141",
+    "exp1_0053__lvl99_over_lvl21",
+    "exp1_0054__lvl194_over_lvl116",
+    "exp1_0055__lvl114_over_lvl86",
+    "exp1_0056__lvl17_over_lvl61",
+    "exp1_0057__lvl129_over_lvl132",
+    "exp1_0058__lvl168_over_lvl27",
+    "exp1_0059__lvl62_over_lvl142",
+    "exp1_0064__lvl174_over_lvl192",
+    "exp1_0066__lvl18_over_lvl33",
+    "exp1_0067__lvl142_over_lvl126",
+    "exp1_0068__lvl71_over_lvl125",
+    "exp1_0070__lvl27_over_lvl57",
+    "exp1_0071__lvl64_over_lvl167",
+    "exp1_0072__lvl97_over_lvl38",
+    "exp1_0073__lvl128_over_lvl54",
+    "exp1_0075__lvl145_over_lvl114",
+    "exp1_0076__lvl13_over_lvl132",
+    "exp1_0079__lvl34_over_lvl4",
+    "exp1_0080__lvl89_over_lvl120",
+    "exp1_0082__lvl98_over_lvl61",
+    "exp1_0083__lvl100_over_lvl146",
+    "exp1_0091__lvl54_over_lvl45",
+    "exp1_0092__lvl138_over_lvl129",
+    "exp1_0094__lvl140_over_lvl111",
+    "exp1_0095__lvl31_over_lvl39",
+    "exp1_0096__lvl92_over_lvl118",
+    "exp1_0099__lvl150_over_lvl60",
+    "exp1_0102__lvl168_over_lvl146",
+    "exp1_0103__lvl69_over_lvl112",
+    "exp1_0105__lvl151_over_lvl62",
+    "exp1_0107__lvl83_over_lvl142",
+    "exp1_0109__lvl169_over_lvl186",
+    "exp1_0110__lvl33_over_lvl114",
+    "exp1_0115__lvl151_over_lvl79",
+    "exp1_0117__lvl70_over_lvl115",
+    "exp1_0118__lvl42_over_lvl130",
+    "exp1_0120__lvl157_over_lvl13",
+    "exp1_0122__lvl50_over_lvl25",
+    "exp1_0123__lvl143_over_lvl195",
+    "exp2_0001_pair1__Runner-16_over_Killer-29",
+    "exp2_0001_pair2__Runner-16_over_Collector-42",
+    "exp2_0001_pair3__Killer-29_over_Collector-42",
+    "exp2_0004_pair1__Collector-4_over_Killer-71",
+    "exp2_0004_pair2__Collector-4_over_Runner-44",
+    "exp2_0004_pair3__Killer-71_over_Runner-44",
+    "exp2_0009_pair1__Collector-43_over_Killer-83",
+    "exp2_0009_pair2__Collector-43_over_Runner-35",
+    "exp2_0009_pair3__Killer-83_over_Runner-35",
+    "exp2_0010_pair1__Collector-46_over_Runner-21",
+    "exp2_0010_pair2__Collector-46_over_Killer-80",
+    "exp2_0010_pair3__Runner-21_over_Killer-80",
+    "exp2_0011_pair1__Collector-47_over_Killer-62",
+    "exp2_0011_pair2__Collector-47_over_Runner-40",
+    "exp2_0011_pair3__Killer-62_over_Runner-40",
+    "exp2_0012_pair1__Runner-86_over_Collector-50",
+    "exp2_0012_pair2__Runner-86_over_Killer-3",
+    "exp2_0012_pair3__Collector-50_over_Killer-3",
+    "exp2_0013_pair1__Collector-45_over_Killer-26",
+    "exp2_0013_pair2__Collector-45_over_Runner-86",
+    "exp2_0013_pair3__Killer-26_over_Runner-86",
+    "exp2_0014_pair1__Killer-26_over_Runner-34",
+    "exp2_0014_pair2__Killer-26_over_Collector-48",
+    "exp2_0014_pair3__Runner-34_over_Collector-48",
+    "exp2_0016_pair1__Runner-52_over_Collector-78",
+    "exp2_0016_pair2__Runner-52_over_Killer-98",
+    "exp2_0016_pair3__Collector-78_over_Killer-98",
+    "exp2_0018_pair1__Killer-43_over_Runner-70",
+    "exp2_0018_pair2__Killer-43_over_Collector-96",
+    "exp2_0018_pair3__Runner-70_over_Collector-96",
+    "exp2_0019_pair1__Collector-64_over_Killer-27",
+    "exp2_0019_pair2__Collector-64_over_Runner-29",
+    "exp2_0019_pair3__Killer-27_over_Runner-29",
+    "exp2_0020_pair1__Killer-57_over_Collector-49",
+    "exp2_0020_pair2__Killer-57_over_Runner-1",
+    "exp2_0020_pair3__Collector-49_over_Runner-1",
+    "exp2_0022_pair1__Collector-68_over_Killer-55",
+    "exp2_0022_pair2__Collector-68_over_Runner-3",
+    "exp2_0022_pair3__Killer-55_over_Runner-3",
+    "exp2_0023_pair1__Killer-76_over_Runner-70",
+    "exp2_0023_pair2__Killer-76_over_Collector-82",
+    "exp2_0023_pair3__Runner-70_over_Collector-82",
+    "exp2_0024_pair1__Collector-64_over_Killer-97",
+    "exp2_0024_pair2__Collector-64_over_Runner-30",
+    "exp2_0024_pair3__Killer-97_over_Runner-30",
+    "exp2_0025_pair1__Collector-35_over_Killer-40",
+    "exp2_0025_pair2__Collector-35_over_Runner-23",
+    "exp2_0025_pair3__Killer-40_over_Runner-23",
+    "exp2_0027_pair1__Runner-53_over_Killer-3",
+    "exp2_0027_pair2__Runner-53_over_Collector-82",
+    "exp2_0027_pair3__Killer-3_over_Collector-82",
+    "exp2_0028_pair1__Runner-20_over_Killer-65",
+    "exp2_0028_pair2__Runner-20_over_Collector-42",
+    "exp2_0028_pair3__Killer-65_over_Collector-42",
+    "exp2_0029_pair1__Collector-44_over_Killer-19",
+    "exp2_0029_pair2__Collector-44_over_Runner-31",
+    "exp2_0029_pair3__Killer-19_over_Runner-31",
+    "exp2_0030_pair1__Runner-93_over_Killer-0",
+    "exp2_0030_pair2__Runner-93_over_Collector-3",
+    "exp2_0030_pair3__Killer-0_over_Collector-3",
+    "exp2_0032_pair1__Runner-79_over_Killer-65",
+    "exp2_0032_pair2__Runner-79_over_Collector-81",
+    "exp2_0032_pair3__Killer-65_over_Collector-81",
+    "exp2_0034_pair1__Collector-46_over_Killer-68",
+    "exp2_0034_pair2__Collector-46_over_Runner-77",
+    "exp2_0034_pair3__Killer-68_over_Runner-77",
+    "exp2_0035_pair1__Killer-97_over_Collector-8",
+    "exp2_0035_pair2__Killer-97_over_Runner-75",
+    "exp2_0035_pair3__Collector-8_over_Runner-75",
+    "exp2_0036_pair1__Runner-36_over_Killer-98",
+    "exp2_0036_pair2__Runner-36_over_Collector-43",
+    "exp2_0036_pair3__Killer-98_over_Collector-43",
+    "exp2_0037_pair1__Runner-91_over_Killer-12",
+    "exp2_0037_pair2__Runner-91_over_Collector-9",
+    "exp2_0037_pair3__Killer-12_over_Collector-9",
+    "exp2_0039_pair1__Runner-52_over_Killer-4",
+    "exp2_0039_pair2__Runner-52_over_Collector-55",
+    "exp2_0039_pair3__Killer-4_over_Collector-55",
+    "exp2_0041_pair1__Killer-78_over_Runner-90",
+    "exp2_0041_pair2__Killer-78_over_Collector-53",
+    "exp2_0041_pair3__Runner-90_over_Collector-53",
+    "exp2_0042_pair1__Runner-48_over_Collector-35",
+    "exp2_0042_pair2__Runner-48_over_Killer-47",
+    "exp2_0042_pair3__Collector-35_over_Killer-47",
+    "exp2_0043_pair1__Collector-49_over_Runner-21",
+    "exp2_0043_pair2__Collector-49_over_Killer-53",
+    "exp2_0043_pair3__Runner-21_over_Killer-53",
+    "exp2_0044_pair1__Killer-80_over_Collector-70",
+    "exp2_0044_pair2__Killer-80_over_Runner-46",
+    "exp2_0044_pair3__Collector-70_over_Runner-46",
+    "exp2_0045_pair1__Runner-33_over_Collector-37",
+    "exp2_0045_pair2__Runner-33_over_Killer-9",
+    "exp2_0045_pair3__Collector-37_over_Killer-9",
+    "exp2_0046_pair1__Collector-26_over_Runner-87",
+    "exp2_0046_pair2__Collector-26_over_Killer-46",
+    "exp2_0046_pair3__Runner-87_over_Killer-46",
+    "exp2_0050_pair1__Collector-4_over_Killer-20",
+    "exp2_0050_pair2__Collector-4_over_Runner-14",
+    "exp2_0050_pair3__Killer-20_over_Runner-14",
+    "exp2_0051_pair1__Collector-83_over_Runner-90",
+    "exp2_0051_pair2__Collector-83_over_Killer-35",
+    "exp2_0051_pair3__Runner-90_over_Killer-35",
+    "exp2_0052_pair1__Collector-88_over_Killer-16",
+    "exp2_0052_pair2__Collector-88_over_Runner-80",
+    "exp2_0052_pair3__Killer-16_over_Runner-80",
+    "exp2_0061_pair1__Killer-72_over_Collector-30",
+    "exp2_0061_pair2__Killer-72_over_Runner-94",
+    "exp2_0061_pair3__Collector-30_over_Runner-94",
+    "exp2_0062_pair1__Runner-7_over_Collector-27",
+    "exp2_0062_pair2__Runner-7_over_Killer-27",
+    "exp2_0062_pair3__Collector-27_over_Killer-27",
+    "exp2_0063_pair1__Killer-35_over_Collector-74",
+    "exp2_0063_pair2__Killer-35_over_Runner-68",
+    "exp2_0063_pair3__Collector-74_over_Runner-68",
+    "exp2_0066_pair1__Runner-40_over_Collector-70",
+    "exp2_0066_pair2__Runner-40_over_Killer-7",
+    "exp2_0066_pair3__Collector-70_over_Killer-7",
+    "exp2_0069_pair1__Collector-13_over_Killer-74",
+    "exp2_0069_pair2__Collector-13_over_Runner-96",
+    "exp2_0069_pair3__Killer-74_over_Runner-96",
+    "exp2_0070_pair1__Collector-87_over_Killer-9",
+    "exp2_0070_pair2__Collector-87_over_Runner-62",
+    "exp2_0070_pair3__Killer-9_over_Runner-62",
+    "exp2_0071_pair1__Runner-96_over_Killer-81",
+    "exp2_0071_pair2__Runner-96_over_Collector-97",
+    "exp2_0071_pair3__Killer-81_over_Collector-97",
+    "exp2_0074_pair1__Runner-67_over_Collector-17",
+    "exp2_0074_pair2__Runner-67_over_Killer-59",
+    "exp2_0074_pair3__Collector-17_over_Killer-59",
+    "exp2_0076_pair1__Runner-68_over_Killer-84",
+    "exp2_0076_pair2__Runner-68_over_Collector-21",
+    "exp2_0076_pair3__Killer-84_over_Collector-21",
+    "exp2_0077_pair1__Runner-31_over_Killer-74",
+    "exp2_0077_pair2__Runner-31_over_Collector-56",
+    "exp2_0077_pair3__Killer-74_over_Collector-56",
+    "exp2_0078_pair1__Killer-69_over_Collector-57",
+    "exp2_0078_pair2__Killer-69_over_Runner-86",
+    "exp2_0078_pair3__Collector-57_over_Runner-86",
+    "exp2_0080_pair1__Collector-54_over_Runner-36",
+    "exp2_0080_pair2__Collector-54_over_Killer-15",
+    "exp2_0080_pair3__Runner-36_over_Killer-15",
+    "exp2_0081_pair1__Runner-57_over_Killer-63",
+    "exp2_0081_pair2__Runner-57_over_Collector-16",
+    "exp2_0081_pair3__Killer-63_over_Collector-16",
+    "exp2_0083_pair1__Runner-62_over_Killer-77",
+    "exp2_0083_pair2__Runner-62_over_Collector-98",
+    "exp2_0083_pair3__Killer-77_over_Collector-98",
+    "exp2_0085_pair1__Killer-86_over_Runner-22",
+    "exp2_0085_pair2__Killer-86_over_Collector-52",
+    "exp2_0085_pair3__Runner-22_over_Collector-52",
+    "exp2_0086_pair1__Runner-29_over_Killer-82",
+    "exp2_0086_pair2__Runner-29_over_Collector-56",
+    "exp2_0086_pair3__Killer-82_over_Collector-56",
+    "exp2_0087_pair1__Killer-71_over_Collector-67",
+    "exp2_0087_pair2__Killer-71_over_Runner-85",
+    "exp2_0087_pair3__Collector-67_over_Runner-85",
+    "exp2_0088_pair1__Runner-87_over_Collector-94",
+    "exp2_0088_pair2__Runner-87_over_Killer-68",
+    "exp2_0088_pair3__Collector-94_over_Killer-68",
+    "exp2_0090_pair1__Runner-54_over_Collector-76",
+    "exp2_0090_pair2__Runner-54_over_Killer-23",
+    "exp2_0090_pair3__Collector-76_over_Killer-23",
+    "exp2_0091_pair1__Collector-26_over_Killer-43",
+    "exp2_0091_pair2__Collector-26_over_Runner-92",
+    "exp2_0091_pair3__Killer-43_over_Runner-92"
+  ],
+  "validation_instance_ids": [
+    "exp1_0014__lvl170_over_lvl168",
+    "exp1_0033__lvl116_over_lvl97",
+    "exp1_0040__lvl137_over_lvl112",
+    "exp1_0061__lvl179_over_lvl66",
+    "exp1_0062__lvl19_over_lvl125",
+    "exp1_0077__lvl129_over_lvl60",
+    "exp1_0078__lvl66_over_lvl11",
+    "exp1_0086__lvl129_over_lvl193",
+    "exp1_0116__lvl169_over_lvl146",
+    "exp1_0119__lvl58_over_lvl165",
+    "exp2_0002_pair1__Collector-85_over_Runner-5",
+    "exp2_0002_pair2__Collector-85_over_Killer-76",
+    "exp2_0002_pair3__Runner-5_over_Killer-76",
+    "exp2_0003_pair1__Killer-22_over_Runner-41",
+    "exp2_0003_pair2__Killer-22_over_Collector-59",
+    "exp2_0003_pair3__Runner-41_over_Collector-59",
+    "exp2_0021_pair1__Collector-20_over_Killer-4",
+    "exp2_0021_pair2__Collector-20_over_Runner-11",
+    "exp2_0021_pair3__Killer-4_over_Runner-11",
+    "exp2_0033_pair1__Collector-58_over_Runner-11",
+    "exp2_0033_pair2__Collector-58_over_Killer-69",
+    "exp2_0033_pair3__Runner-11_over_Killer-69",
+    "exp2_0048_pair1__Runner-80_over_Collector-40",
+    "exp2_0048_pair2__Runner-80_over_Killer-31",
+    "exp2_0048_pair3__Collector-40_over_Killer-31",
+    "exp2_0049_pair1__Runner-79_over_Collector-4",
+    "exp2_0049_pair2__Runner-79_over_Killer-93",
+    "exp2_0049_pair3__Collector-4_over_Killer-93",
+    "exp2_0053_pair1__Collector-64_over_Killer-83",
+    "exp2_0053_pair2__Collector-64_over_Runner-52",
+    "exp2_0053_pair3__Killer-83_over_Runner-52",
+    "exp2_0054_pair1__Runner-11_over_Collector-9",
+    "exp2_0054_pair2__Runner-11_over_Killer-17",
+    "exp2_0054_pair3__Collector-9_over_Killer-17",
+    "exp2_0056_pair1__Collector-59_over_Runner-60",
+    "exp2_0056_pair2__Collector-59_over_Killer-48",
+    "exp2_0056_pair3__Runner-60_over_Killer-48",
+    "exp2_0057_pair1__Killer-60_over_Collector-98",
+    "exp2_0057_pair2__Killer-60_over_Runner-80",
+    "exp2_0057_pair3__Collector-98_over_Runner-80",
+    "exp2_0058_pair1__Runner-68_over_Collector-74",
+    "exp2_0058_pair2__Runner-68_over_Killer-65",
+    "exp2_0058_pair3__Collector-74_over_Killer-65",
+    "exp2_0059_pair1__Collector-81_over_Runner-83",
+    "exp2_0059_pair2__Collector-81_over_Killer-77",
+    "exp2_0059_pair3__Runner-83_over_Killer-77",
+    "exp2_0060_pair1__Runner-83_over_Killer-64",
+    "exp2_0060_pair2__Runner-83_over_Collector-93",
+    "exp2_0060_pair3__Killer-64_over_Collector-93",
+    "exp2_0068_pair1__Killer-83_over_Collector-48",
+    "exp2_0068_pair2__Killer-83_over_Runner-73",
+    "exp2_0068_pair3__Collector-48_over_Runner-73",
+    "exp2_0075_pair1__Runner-75_over_Collector-35",
+    "exp2_0075_pair2__Runner-75_over_Killer-59",
+    "exp2_0075_pair3__Collector-35_over_Killer-59",
+    "exp2_0089_pair1__Collector-43_over_Killer-24",
+    "exp2_0089_pair2__Collector-43_over_Runner-35",
+    "exp2_0089_pair3__Killer-24_over_Runner-35"
+  ],
+  "selection_rule": "smallest absolute fitting/validation total-loss gap; ties use candidate order",
+  "selection_loss": "candidate-weighted total_loss on both portions",
+  "comparison_policy": "post-fit evaluation mode; no gradients; seed + 1 on both portions",
+  "selected_absolute_total_loss_gap": 0.0023964746245022095,
+  "candidates": [
+    {
+      "hyperparameters": {
+        "learning_rate": 0.001,
+        "lambda_rec": 1.0,
+        "lambda_kl": 0.001,
+        "lambda_rank": 1.0
+      },
+      "fit_history": [
+        {
+          "epoch": 1,
+          "total_loss": 1.088233222221506,
+          "reconstruction_bce": 0.38830152565035325,
+          "kl_divergence": 3.6738250193924737,
+          "ranking_bce": 0.6962578831047848,
+          "seconds": 2.7713061250001374
+        },
+        {
+          "epoch": 2,
+          "total_loss": 0.8321410664196672,
+          "reconstruction_bce": 0.13552661034567604,
+          "kl_divergence": 1.5273023329932114,
+          "ranking_bce": 0.6950871595020952,
+          "seconds": 0.6193119170000045
+        },
+        {
+          "epoch": 3,
+          "total_loss": 0.7870277310239857,
+          "reconstruction_bce": 0.0900675690379636,
+          "kl_divergence": 1.901207710134572,
+          "ranking_bce": 0.6950589500624558,
+          "seconds": 0.6332268329999806
+        },
+        {
+          "epoch": 4,
+          "total_loss": 0.7674727583753651,
+          "reconstruction_bce": 0.07077421838867254,
+          "kl_divergence": 0.9509631683086527,
+          "ranking_bce": 0.6957475748555414,
+          "seconds": 0.6406495420001193
+        },
+        {
+          "epoch": 5,
+          "total_loss": 0.752664931889238,
+          "reconstruction_bce": 0.06024693068245362,
+          "kl_divergence": 3.059321456942065,
+          "ranking_bce": 0.689358676302022,
+          "seconds": 0.642045957999926
+        }
+      ],
+      "fitting_metrics": {
+        "total_loss": 0.7394467140066212,
+        "reconstruction_bce": 0.05673710179739985,
+        "kl_divergence": 2.1445443959071717,
+        "ranking_bce": 0.6805650694616909,
+        "accuracy": 0.6077586206896551,
+        "f1_score": 0.5973451327433629,
+        "f1_positive_label": 1,
+        "f1_by_class": {
+          "0": 0.6176470588235294,
+          "1": 0.5973451327433629
+        },
+        "confusion_matrix": [
+          [
+            147,
+            85
+          ],
+          [
+            97,
+            135
+          ]
+        ],
+        "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+        "class_support": {
+          "0": 232,
+          "1": 232
+        },
+        "ordered_examples": 464,
+        "comparisons": 232,
+        "reporting_seed": 43,
+        "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+        "dropout_enabled": false
+      },
+      "validation_metrics": {
+        "total_loss": 0.7514762200158218,
+        "reconstruction_bce": 0.055826324070322106,
+        "kl_divergence": 2.147558837101377,
+        "ranking_bce": 0.6935023357128275,
+        "accuracy": 0.5,
+        "f1_score": 0.48214285714285715,
+        "f1_positive_label": 1,
+        "f1_by_class": {
+          "0": 0.5166666666666667,
+          "1": 0.48214285714285715
+        },
+        "confusion_matrix": [
+          [
+            31,
+            27
+          ],
+          [
+            31,
+            27
+          ]
+        ],
+        "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+        "class_support": {
+          "0": 58,
+          "1": 58
+        },
+        "ordered_examples": 116,
+        "comparisons": 58,
+        "reporting_seed": 43,
+        "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+        "dropout_enabled": false
+      },
+      "validation_minus_fitting_total_loss": 0.012029506009200608,
+      "absolute_total_loss_gap": 0.012029506009200608
+    },
+    {
+      "hyperparameters": {
+        "learning_rate": 0.001,
+        "lambda_rec": 1.0,
+        "lambda_kl": 0.01,
+        "lambda_rank": 1.0
+      },
+      "fit_history": [
+        {
+          "epoch": 1,
+          "total_loss": 1.0889485971681003,
+          "reconstruction_bce": 0.38884439036763946,
+          "kl_divergence": 0.3931330545195218,
+          "ranking_bce": 0.6961728848260025,
+          "seconds": 0.6439766670000608
+        },
+        {
+          "epoch": 2,
+          "total_loss": 0.8314942142059063,
+          "reconstruction_bce": 0.13591576264850025,
+          "kl_divergence": 0.1461061385685,
+          "ranking_bce": 0.694117389876267,
+          "seconds": 0.6566987500000323
+        },
+        {
+          "epoch": 3,
+          "total_loss": 0.7864871888325132,
+          "reconstruction_bce": 0.08982073567036924,
+          "kl_divergence": 0.15986539449157386,
+          "ranking_bce": 0.6950678003245386,
+          "seconds": 0.6486589589999312
+        },
+        {
+          "epoch": 4,
+          "total_loss": 0.7673835487201296,
+          "reconstruction_bce": 0.0705945347917491,
+          "kl_divergence": 0.17875307669927334,
+          "ranking_bce": 0.6950014850188946,
+          "seconds": 0.6475880000000416
+        },
+        {
+          "epoch": 5,
+          "total_loss": 0.7546233308726343,
+          "reconstruction_bce": 0.06017452850937843,
+          "kl_divergence": 0.23567307200925103,
+          "ranking_bce": 0.6920920713194485,
+          "seconds": 0.6391286250000121
+        }
+      ],
+      "fitting_metrics": {
+        "total_loss": 0.7505305450538109,
+        "reconstruction_bce": 0.05663379166146804,
+        "kl_divergence": 0.16729533364032878,
+        "ranking_bce": 0.6922238078610651,
+        "accuracy": 0.5301724137931034,
+        "f1_score": 0.5725490196078431,
+        "f1_positive_label": 1,
+        "f1_by_class": {
+          "0": 0.4784688995215311,
+          "1": 0.5725490196078431
+        },
+        "confusion_matrix": [
+          [
+            100,
+            132
+          ],
+          [
+            86,
+            146
+          ]
+        ],
+        "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+        "class_support": {
+          "0": 232,
+          "1": 232
+        },
+        "ordered_examples": 464,
+        "comparisons": 232,
+        "reporting_seed": 43,
+        "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+        "dropout_enabled": false
+      },
+      "validation_metrics": {
+        "total_loss": 0.7529270196783131,
+        "reconstruction_bce": 0.05572057875065968,
+        "kl_divergence": 0.16716571717426695,
+        "ranking_bce": 0.6955347759970303,
+        "accuracy": 0.5172413793103449,
+        "f1_score": 0.5555555555555556,
+        "f1_positive_label": 1,
+        "f1_by_class": {
+          "0": 0.4716981132075472,
+          "1": 0.5555555555555556
+        },
+        "confusion_matrix": [
+          [
+            25,
+            33
+          ],
+          [
+            23,
+            35
+          ]
+        ],
+        "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+        "class_support": {
+          "0": 58,
+          "1": 58
+        },
+        "ordered_examples": 116,
+        "comparisons": 58,
+        "reporting_seed": 43,
+        "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+        "dropout_enabled": false
+      },
+      "validation_minus_fitting_total_loss": 0.0023964746245022095,
+      "absolute_total_loss_gap": 0.0023964746245022095
+    },
+    {
+      "hyperparameters": {
+        "learning_rate": 0.0003,
+        "lambda_rec": 2.0,
+        "lambda_kl": 0.001,
+        "lambda_rank": 1.0
+      },
+      "fit_history": [
+        {
+          "epoch": 1,
+          "total_loss": 1.8325307615872086,
+          "reconstruction_bce": 0.5671734511852264,
+          "kl_divergence": 2.237957473458915,
+          "ranking_bce": 0.6959459041727001,
+          "seconds": 0.6358879580000121
+        },
+        {
+          "epoch": 2,
+          "total_loss": 1.4156747316492015,
+          "reconstruction_bce": 0.3594159360589652,
+          "kl_divergence": 1.6324552030398929,
+          "ranking_bce": 0.695210415741493,
+          "seconds": 0.666837749999786
+        },
+        {
+          "epoch": 3,
+          "total_loss": 1.1838828366378258,
+          "reconstruction_bce": 0.24435919471855821,
+          "kl_divergence": 2.052507079880813,
+          "ranking_bce": 0.6931119417322094,
+          "seconds": 0.63948579099997
+        },
+        {
+          "epoch": 4,
+          "total_loss": 1.0164399619760185,
+          "reconstruction_bce": 0.18420880827410469,
+          "kl_divergence": 8.993563684923895,
+          "ranking_bce": 0.6390287824745836,
+          "seconds": 0.6414270000000215
+        },
+        {
+          "epoch": 5,
+          "total_loss": 0.5993656772991707,
+          "reconstruction_bce": 0.14954738113386878,
+          "kl_divergence": 76.69336397894497,
+          "ranking_bce": 0.2235775451207983,
+          "seconds": 0.6465383339998425
+        }
+      ],
+      "fitting_metrics": {
+        "total_loss": 0.4385452517147722,
+        "reconstruction_bce": 0.13648065051128125,
+        "kl_divergence": 85.45291926943023,
+        "ranking_bce": 0.08013102489298787,
+        "accuracy": 0.9870689655172413,
+        "f1_score": 0.9870689655172413,
+        "f1_positive_label": 1,
+        "f1_by_class": {
+          "0": 0.9870689655172413,
+          "1": 0.9870689655172413
+        },
+        "confusion_matrix": [
+          [
+            229,
+            3
+          ],
+          [
+            3,
+            229
+          ]
+        ],
+        "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+        "class_support": {
+          "0": 232,
+          "1": 232
+        },
+        "ordered_examples": 464,
+        "comparisons": 232,
+        "reporting_seed": 43,
+        "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+        "dropout_enabled": false
+      },
+      "validation_metrics": {
+        "total_loss": 1.3061663446755245,
+        "reconstruction_bce": 0.13619942089606976,
+        "kl_divergence": 53.515974899818154,
+        "ranking_bce": 0.980251509567787,
+        "accuracy": 0.5,
+        "f1_score": 0.49122807017543857,
+        "f1_positive_label": 1,
+        "f1_by_class": {
+          "0": 0.5084745762711864,
+          "1": 0.49122807017543857
+        },
+        "confusion_matrix": [
+          [
+            30,
+            28
+          ],
+          [
+            30,
+            28
+          ]
+        ],
+        "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+        "class_support": {
+          "0": 58,
+          "1": 58
+        },
+        "ordered_examples": 116,
+        "comparisons": 58,
+        "reporting_seed": 43,
+        "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+        "dropout_enabled": false
+      },
+      "validation_minus_fitting_total_loss": 0.8676210929607523,
+      "absolute_total_loss_gap": 0.8676210929607523
+    },
+    {
+      "hyperparameters": {
+        "learning_rate": 0.0003,
+        "lambda_rec": 1.0,
+        "lambda_kl": 0.001,
+        "lambda_rank": 2.0
+      },
+      "fit_history": [
+        {
+          "epoch": 1,
+          "total_loss": 1.9627052052267666,
+          "reconstruction_bce": 0.5668974919565792,
+          "kl_divergence": 3.7586588571811546,
+          "ranking_bce": 0.6960245206438261,
+          "seconds": 0.6392298339999343
+        },
+        {
+          "epoch": 2,
+          "total_loss": 1.7524596082753148,
+          "reconstruction_bce": 0.35943786337457856,
+          "kl_divergence": 2.2575179132921943,
+          "ranking_bce": 0.6953821141144325,
+          "seconds": 0.650414334000061
+        },
+        {
+          "epoch": 3,
+          "total_loss": 1.6298227597927224,
+          "reconstruction_bce": 0.244410525622039,
+          "kl_divergence": 3.2752393854075463,
+          "ranking_bce": 0.691068499252714,
+          "seconds": 0.6499784169998293
+        },
+        {
+          "epoch": 4,
+          "total_loss": 1.3197704574157452,
+          "reconstruction_bce": 0.18419830090013042,
+          "kl_divergence": 27.457405106774694,
+          "ranking_bce": 0.5540573699720974,
+          "seconds": 0.6437720410001475
+        },
+        {
+          "epoch": 5,
+          "total_loss": 0.5345147601489363,
+          "reconstruction_bce": 0.14955113314349075,
+          "kl_divergence": 121.33142274001548,
+          "ranking_bce": 0.13181609968686925,
+          "seconds": 0.6242595829999118
+        }
+      ],
+      "fitting_metrics": {
+        "total_loss": 0.4017681859690568,
+        "reconstruction_bce": 0.13650003383899556,
+        "kl_divergence": 136.57823023302802,
+        "ranking_bce": 0.06434495503018642,
+        "accuracy": 0.9762931034482759,
+        "f1_score": 0.9758241758241758,
+        "f1_positive_label": 1,
+        "f1_by_class": {
+          "0": 0.9767441860465116,
+          "1": 0.9758241758241758
+        },
+        "confusion_matrix": [
+          [
+            231,
+            1
+          ],
+          [
+            10,
+            222
+          ]
+        ],
+        "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+        "class_support": {
+          "0": 232,
+          "1": 232
+        },
+        "ordered_examples": 464,
+        "comparisons": 232,
+        "reporting_seed": 43,
+        "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+        "dropout_enabled": false
+      },
+      "validation_metrics": {
+        "total_loss": 2.3843935851393074,
+        "reconstruction_bce": 0.13622321959199576,
+        "kl_divergence": 84.16348003518992,
+        "ranking_bce": 1.0820034701248695,
+        "accuracy": 0.5344827586206896,
+        "f1_score": 0.46,
+        "f1_positive_label": 1,
+        "f1_by_class": {
+          "0": 0.5909090909090909,
+          "1": 0.46
+        },
+        "confusion_matrix": [
+          [
+            39,
+            19
+          ],
+          [
+            35,
+            23
+          ]
+        ],
+        "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+        "class_support": {
+          "0": 58,
+          "1": 58
+        },
+        "ordered_examples": 116,
+        "comparisons": 58,
+        "reporting_seed": 43,
+        "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+        "dropout_enabled": false
+      },
+      "validation_minus_fitting_total_loss": 1.9826253991702507,
+      "absolute_total_loss_gap": 1.9826253991702507
+    }
+  ],
+  "status": "completed",
+  "selected_candidate_index": 1,
+  "selected_hyperparameters": {
+    "learning_rate": 0.001,
+    "lambda_rec": 1.0,
+    "lambda_kl": 0.01,
+    "lambda_rank": 1.0
+  }
+}
