@@ -1,0 +1,6802 @@
+[
+  {
+    "epoch": 1,
+    "optimization": {
+      "total_loss": 1.8325307615872086,
+      "reconstruction_bce": 0.5671734511852264,
+      "kl_divergence": 2.237957473458915,
+      "ranking_bce": 0.6959459041727001
+    },
+    "train": {
+      "total_loss": 1.5825890467084687,
+      "reconstruction_bce": 0.4433170649512061,
+      "kl_divergence": 0.9700251776596596,
+      "ranking_bce": 0.6949848964296538,
+      "accuracy": 0.5,
+      "f1_score": 0.6608187134502924,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          6,
+          226
+        ],
+        [
+          6,
+          226
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.5815608172581113,
+      "reconstruction_bce": 0.4432250610713301,
+      "kl_divergence": 0.9707970454775053,
+      "ranking_bce": 0.6941398937126686,
+      "accuracy": 0.5,
+      "f1_score": 0.6547619047619048,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          3,
+          55
+        ],
+        [
+          3,
+          55
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8505490410007042
+  },
+  {
+    "epoch": 2,
+    "optimization": {
+      "total_loss": 1.4156747316492015,
+      "reconstruction_bce": 0.3594159360589652,
+      "kl_divergence": 1.6324552030398929,
+      "ranking_bce": 0.695210415741493
+    },
+    "train": {
+      "total_loss": 1.2699613077887173,
+      "reconstruction_bce": 0.28718643352903167,
+      "kl_divergence": 1.7569123917612537,
+      "ranking_bce": 0.6938315157232613,
+      "accuracy": 0.49353448275862066,
+      "f1_score": 0.6476761619190404,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          13,
+          219
+        ],
+        [
+          16,
+          216
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.268376194197556,
+      "reconstruction_bce": 0.28703852357535525,
+      "kl_divergence": 1.7606432602323334,
+      "ranking_bce": 0.6925384854448253,
+      "accuracy": 0.49137931034482757,
+      "f1_score": 0.6380368098159509,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          5,
+          53
+        ],
+        [
+          6,
+          52
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8378788329991949
+  },
+  {
+    "epoch": 3,
+    "optimization": {
+      "total_loss": 1.1838828366378258,
+      "reconstruction_bce": 0.24435919471855821,
+      "kl_divergence": 2.052507079880813,
+      "ranking_bce": 0.6931119417322094
+    },
+    "train": {
+      "total_loss": 1.1034653227904747,
+      "reconstruction_bce": 0.20733294918619352,
+      "kl_divergence": 1.9531754049761543,
+      "ranking_bce": 0.6868462459794407,
+      "accuracy": 0.5538793103448276,
+      "f1_score": 0.6437177280550774,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          70,
+          162
+        ],
+        [
+          45,
+          187
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.1097792921395138,
+      "reconstruction_bce": 0.2071348151256298,
+      "kl_divergence": 1.9182689107697586,
+      "ranking_bce": 0.6935913809414568,
+      "accuracy": 0.47413793103448276,
+      "f1_score": 0.5611510791366906,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          16,
+          42
+        ],
+        [
+          19,
+          39
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8316937499985215
+  },
+  {
+    "epoch": 4,
+    "optimization": {
+      "total_loss": 1.0164399619760185,
+      "reconstruction_bce": 0.18420880827410469,
+      "kl_divergence": 8.993563684923895,
+      "ranking_bce": 0.6390287824745836
+    },
+    "train": {
+      "total_loss": 0.7886901477287556,
+      "reconstruction_bce": 0.16363859536318942,
+      "kl_divergence": 36.163553435226966,
+      "ranking_bce": 0.42524938953333885,
+      "accuracy": 0.9633620689655172,
+      "f1_score": 0.9635974304068522,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          222,
+          10
+        ],
+        [
+          7,
+          225
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.0445995824090366,
+      "reconstruction_bce": 0.16335840985692782,
+      "kl_divergence": 23.004365394855366,
+      "ranking_bce": 0.6948784260914244,
+      "accuracy": 0.5689655172413793,
+      "f1_score": 0.5967741935483871,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          21,
+          37
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.830446750000192
+  },
+  {
+    "epoch": 5,
+    "optimization": {
+      "total_loss": 0.5993656772991707,
+      "reconstruction_bce": 0.14954738113386878,
+      "kl_divergence": 76.69336397894497,
+      "ranking_bce": 0.2235775451207983
+    },
+    "train": {
+      "total_loss": 0.4385452517147722,
+      "reconstruction_bce": 0.13648065051128125,
+      "kl_divergence": 85.45291926943023,
+      "ranking_bce": 0.08013102489298787,
+      "accuracy": 0.9870689655172413,
+      "f1_score": 0.9870689655172413,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          229,
+          3
+        ],
+        [
+          3,
+          229
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.3061663446755245,
+      "reconstruction_bce": 0.13619942089606976,
+      "kl_divergence": 53.515974899818154,
+      "ranking_bce": 0.980251509567787,
+      "accuracy": 0.5,
+      "f1_score": 0.49122807017543857,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          30,
+          28
+        ],
+        [
+          30,
+          28
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8259769589985808
+  },
+  {
+    "epoch": 6,
+    "optimization": {
+      "total_loss": 0.3993315491183051,
+      "reconstruction_bce": 0.1272106938834848,
+      "kl_divergence": 61.56546283590382,
+      "ranking_bce": 0.08334469634654193
+    },
+    "train": {
+      "total_loss": 0.33431306892427903,
+      "reconstruction_bce": 0.11830607416300938,
+      "kl_divergence": 41.00700167951913,
+      "ranking_bce": 0.05669391669076065,
+      "accuracy": 0.9935344827586207,
+      "f1_score": 0.9935205183585313,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          231,
+          1
+        ],
+        [
+          2,
+          230
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.4144134130971184,
+      "reconstruction_bce": 0.11798310896445965,
+      "kl_divergence": 25.69937883574387,
+      "ranking_bce": 1.152747787278274,
+      "accuracy": 0.5086206896551724,
+      "f1_score": 0.5128205128205128,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          28,
+          30
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.827072957999917
+  },
+  {
+    "epoch": 7,
+    "optimization": {
+      "total_loss": 0.3103674989322136,
+      "reconstruction_bce": 0.1114646283716991,
+      "kl_divergence": 47.026066352581154,
+      "ranking_bce": 0.04041217261090361
+    },
+    "train": {
+      "total_loss": 0.273921929556748,
+      "reconstruction_bce": 0.10474994007883401,
+      "kl_divergence": 42.87936927532328,
+      "ranking_bce": 0.021542679390002942,
+      "accuracy": 0.9978448275862069,
+      "f1_score": 0.9978401727861771,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          1,
+          231
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.4156994079721386,
+      "reconstruction_bce": 0.10434654997340564,
+      "kl_divergence": 23.7474795374377,
+      "ranking_bce": 1.1832587883390229,
+      "accuracy": 0.5603448275862069,
+      "f1_score": 0.5565217391304348,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          33,
+          25
+        ],
+        [
+          26,
+          32
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8396238749992335
+  },
+  {
+    "epoch": 8,
+    "optimization": {
+      "total_loss": 0.2557619912870999,
+      "reconstruction_bce": 0.09944361936429451,
+      "kl_divergence": 35.56741721054603,
+      "ranking_bce": 0.0213073306909666
+    },
+    "train": {
+      "total_loss": 0.23479957775823002,
+      "reconstruction_bce": 0.09415062439852748,
+      "kl_divergence": 31.448908970273774,
+      "ranking_bce": 0.015049418787760982,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.4942092977721115,
+      "reconstruction_bce": 0.0936749659735581,
+      "kl_divergence": 17.026023338580952,
+      "ranking_bce": 1.2898333257642285,
+      "accuracy": 0.5086206896551724,
+      "f1_score": 0.5043478260869565,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          30,
+          28
+        ],
+        [
+          29,
+          29
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8388925830004155
+  },
+  {
+    "epoch": 9,
+    "optimization": {
+      "total_loss": 0.2236940942961594,
+      "reconstruction_bce": 0.08988782095498052,
+      "kl_divergence": 28.983609495491816,
+      "ranking_bce": 0.014934841158061192
+    },
+    "train": {
+      "total_loss": 0.20922186251344352,
+      "reconstruction_bce": 0.08560247822054501,
+      "kl_divergence": 31.62398515898606,
+      "ranking_bce": 0.006392921883099038,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.6428580777398472,
+      "reconstruction_bce": 0.08504193558775146,
+      "kl_divergence": 17.196502718432196,
+      "ranking_bce": 1.4555776920811883,
+      "accuracy": 0.5086206896551724,
+      "f1_score": 0.5043478260869565,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          30,
+          28
+        ],
+        [
+          29,
+          29
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.834119749999445
+  },
+  {
+    "epoch": 10,
+    "optimization": {
+      "total_loss": 0.2027814002900288,
+      "reconstruction_bce": 0.08218728519719222,
+      "kl_divergence": 27.205881118774414,
+      "ranking_bce": 0.011200948883297628
+    },
+    "train": {
+      "total_loss": 0.1893493194004585,
+      "reconstruction_bce": 0.07876436052651241,
+      "kl_divergence": 21.31150462709624,
+      "ranking_bce": 0.010509092039589224,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.5250150540779377,
+      "reconstruction_bce": 0.07813677962484031,
+      "kl_divergence": 12.090546706627155,
+      "ranking_bce": 1.3566509279711494,
+      "accuracy": 0.5258620689655172,
+      "f1_score": 0.5132743362831859,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          32,
+          26
+        ],
+        [
+          29,
+          29
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8369580839989794
+  },
+  {
+    "epoch": 11,
+    "optimization": {
+      "total_loss": 0.183669647779958,
+      "reconstruction_bce": 0.07600101648733534,
+      "kl_divergence": 21.744240793688544,
+      "ranking_bce": 0.009923374633593806
+    },
+    "train": {
+      "total_loss": 0.1737794105348916,
+      "reconstruction_bce": 0.07323743505724545,
+      "kl_divergence": 20.61422959689436,
+      "ranking_bce": 0.0066903105069851055,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.5957035566198414,
+      "reconstruction_bce": 0.07254596928070331,
+      "kl_divergence": 11.072779359488651,
+      "ranking_bce": 1.4395388303131893,
+      "accuracy": 0.5431034482758621,
+      "f1_score": 0.5391304347826087,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          32,
+          26
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8337630000005447
+  },
+  {
+    "epoch": 12,
+    "optimization": {
+      "total_loss": 0.17237104526881514,
+      "reconstruction_bce": 0.07086474011684286,
+      "kl_divergence": 21.85406388907597,
+      "ranking_bce": 0.008787499499860508
+    },
+    "train": {
+      "total_loss": 0.16767569965329662,
+      "reconstruction_bce": 0.06845837548888963,
+      "kl_divergence": 24.167974866669752,
+      "ranking_bce": 0.006590972895380752,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.717819148096545,
+      "reconstruction_bce": 0.06772335515967731,
+      "kl_divergence": 12.710449448947248,
+      "ranking_bce": 1.5696619872389168,
+      "accuracy": 0.5172413793103449,
+      "f1_score": 0.5254237288135594,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8370711669995217
+  },
+  {
+    "epoch": 13,
+    "optimization": {
+      "total_loss": 0.16638008633564258,
+      "reconstruction_bce": 0.06653179613680675,
+      "kl_divergence": 18.82981458203546,
+      "ranking_bce": 0.014486675118577892
+    },
+    "train": {
+      "total_loss": 0.15568549571366147,
+      "reconstruction_bce": 0.06464270271103957,
+      "kl_divergence": 19.775286510072906,
+      "ranking_bce": 0.006624802786471515,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.5741112787148048,
+      "reconstruction_bce": 0.06383333714871571,
+      "kl_divergence": 9.290834065141349,
+      "ranking_bce": 1.4371538080018142,
+      "accuracy": 0.47413793103448276,
+      "f1_score": 0.46956521739130436,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          28,
+          30
+        ],
+        [
+          31,
+          27
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8335597499990399
+  },
+  {
+    "epoch": 14,
+    "optimization": {
+      "total_loss": 0.15249520488854112,
+      "reconstruction_bce": 0.06313341265094691,
+      "kl_divergence": 19.154876906296302,
+      "ranking_bce": 0.007073501791355425
+    },
+    "train": {
+      "total_loss": 0.1458850359094554,
+      "reconstruction_bce": 0.06162317662403501,
+      "kl_divergence": 19.196395874023438,
+      "ranking_bce": 0.00344228636120157,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.6598925898815025,
+      "reconstruction_bce": 0.06078391753394028,
+      "kl_divergence": 9.61269763420368,
+      "ranking_bce": 1.5287120753321155,
+      "accuracy": 0.5,
+      "f1_score": 0.5,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          29,
+          29
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.835324584000773
+  },
+  {
+    "epoch": 15,
+    "optimization": {
+      "total_loss": 0.14409816110956258,
+      "reconstruction_bce": 0.06039964638907334,
+      "kl_divergence": 17.10640367968329,
+      "ranking_bce": 0.006192461535302472
+    },
+    "train": {
+      "total_loss": 0.14775602262595605,
+      "reconstruction_bce": 0.05913136642554711,
+      "kl_divergence": 19.21899256212958,
+      "ranking_bce": 0.01027429537398034,
+      "accuracy": 0.9956896551724138,
+      "f1_score": 0.9956896551724138,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          231,
+          1
+        ],
+        [
+          1,
+          231
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.8193548301170612,
+      "reconstruction_bce": 0.058266038781610026,
+      "kl_divergence": 10.142477265719709,
+      "ranking_bce": 1.692680249954092,
+      "accuracy": 0.4827586206896552,
+      "f1_score": 0.4827586206896552,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          28,
+          30
+        ],
+        [
+          30,
+          28
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8187158750006347
+  },
+  {
+    "epoch": 16,
+    "optimization": {
+      "total_loss": 0.1484985295040854,
+      "reconstruction_bce": 0.05814470620504741,
+      "kl_divergence": 18.931199895924536,
+      "ranking_bce": 0.013277916761580855
+    },
+    "train": {
+      "total_loss": 0.13906100135425042,
+      "reconstruction_bce": 0.05704345579805045,
+      "kl_divergence": 15.207917312095905,
+      "ranking_bce": 0.009766171108289012,
+      "accuracy": 0.9956896551724138,
+      "f1_score": 0.9956896551724138,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          231,
+          1
+        ],
+        [
+          1,
+          231
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.84768349548866,
+      "reconstruction_bce": 0.056169820756747806,
+      "kl_divergence": 8.068193238357019,
+      "ranking_bce": 1.727275667519405,
+      "accuracy": 0.49137931034482757,
+      "f1_score": 0.48695652173913045,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          30,
+          28
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8379665419997764
+  },
+  {
+    "epoch": 17,
+    "optimization": {
+      "total_loss": 0.15531912343255405,
+      "reconstruction_bce": 0.05615117439422114,
+      "kl_divergence": 18.810077930318897,
+      "ranking_bce": 0.024206693862275832
+    },
+    "train": {
+      "total_loss": 0.15468193950324222,
+      "reconstruction_bce": 0.0551602701688635,
+      "kl_divergence": 30.441230642384497,
+      "ranking_bce": 0.013920167268350207,
+      "accuracy": 0.9956896551724138,
+      "f1_score": 0.9956896551724138,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          231,
+          1
+        ],
+        [
+          1,
+          231
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.363516149849727,
+      "reconstruction_bce": 0.05426585725669203,
+      "kl_divergence": 16.837937322156183,
+      "ranking_bce": 2.238146502396156,
+      "accuracy": 0.4827586206896552,
+      "f1_score": 0.5,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          26,
+          32
+        ],
+        [
+          28,
+          30
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.826545542000531
+  },
+  {
+    "epoch": 18,
+    "optimization": {
+      "total_loss": 0.14823792669279823,
+      "reconstruction_bce": 0.05438288121387876,
+      "kl_divergence": 22.88331518502071,
+      "ranking_bce": 0.016588848092239993
+    },
+    "train": {
+      "total_loss": 0.1360924105192053,
+      "reconstruction_bce": 0.05355031351590979,
+      "kl_divergence": 19.927179073465282,
+      "ranking_bce": 0.009064603685240808,
+      "accuracy": 0.9978448275862069,
+      "f1_score": 0.9978401727861771,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          1,
+          231
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.0802999118278764,
+      "reconstruction_bce": 0.05263497731808958,
+      "kl_divergence": 12.669963047422211,
+      "ranking_bce": 1.9623599257962456,
+      "accuracy": 0.5,
+      "f1_score": 0.4727272727272727,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          32,
+          26
+        ],
+        [
+          32,
+          26
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8406990830007999
+  },
+  {
+    "epoch": 19,
+    "optimization": {
+      "total_loss": 0.13441351929615283,
+      "reconstruction_bce": 0.052872270345687866,
+      "kl_divergence": 18.321411001271215,
+      "ranking_bce": 0.01034756658341864
+    },
+    "train": {
+      "total_loss": 0.1298158703179195,
+      "reconstruction_bce": 0.05212629252466662,
+      "kl_divergence": 22.403185548453497,
+      "ranking_bce": 0.003160096191126725,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.2708460626931024,
+      "reconstruction_bce": 0.05119429117646711,
+      "kl_divergence": 12.498779165333715,
+      "ranking_bce": 2.1559586771603287,
+      "accuracy": 0.5344827586206896,
+      "f1_score": 0.5344827586206896,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          31,
+          27
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.838539333000881
+  },
+  {
+    "epoch": 20,
+    "optimization": {
+      "total_loss": 0.15953295472367057,
+      "reconstruction_bce": 0.05155544753732352,
+      "kl_divergence": 21.76175304939007,
+      "ranking_bce": 0.034660305185564635
+    },
+    "train": {
+      "total_loss": 0.16316667456051398,
+      "reconstruction_bce": 0.05107652139047097,
+      "kl_divergence": 20.228449328192347,
+      "ranking_bce": 0.04078518027632401,
+      "accuracy": 0.9913793103448276,
+      "f1_score": 0.9913419913419913,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          231,
+          1
+        ],
+        [
+          3,
+          229
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.6832695911670554,
+      "reconstruction_bce": 0.050179698215476395,
+      "kl_divergence": 11.455854777632089,
+      "ranking_bce": 1.5714543112393082,
+      "accuracy": 0.5344827586206896,
+      "f1_score": 0.509090909090909,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          34,
+          24
+        ],
+        [
+          30,
+          28
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.836329375000787
+  },
+  {
+    "epoch": 21,
+    "optimization": {
+      "total_loss": 0.23985826198397012,
+      "reconstruction_bce": 0.05050553304368052,
+      "kl_divergence": 21.556565350499646,
+      "ranking_bce": 0.11729062925060761
+    },
+    "train": {
+      "total_loss": 0.17513779576482444,
+      "reconstruction_bce": 0.04982364717228659,
+      "kl_divergence": 16.41886073145373,
+      "ranking_bce": 0.05907164051614959,
+      "accuracy": 0.978448275862069,
+      "f1_score": 0.978448275862069,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          227,
+          5
+        ],
+        [
+          5,
+          227
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.4065611773523792,
+      "reconstruction_bce": 0.04886704375003946,
+      "kl_divergence": 10.375921348045612,
+      "ranking_bce": 1.2984511770051101,
+      "accuracy": 0.5431034482758621,
+      "f1_score": 0.5470085470085471,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          31,
+          27
+        ],
+        [
+          26,
+          32
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8363143330007006
+  },
+  {
+    "epoch": 22,
+    "optimization": {
+      "total_loss": 0.15721945053544537,
+      "reconstruction_bce": 0.04926170370188253,
+      "kl_divergence": 26.881363506974846,
+      "ranking_bce": 0.0318146764405136
+    },
+    "train": {
+      "total_loss": 0.12887747637156782,
+      "reconstruction_bce": 0.048677922451290594,
+      "kl_divergence": 23.872275056510137,
+      "ranking_bce": 0.00764935277402401,
+      "accuracy": 0.9978448275862069,
+      "f1_score": 0.9978401727861771,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          1,
+          231
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.8410841308791062,
+      "reconstruction_bce": 0.04771054176421001,
+      "kl_divergence": 13.466026240381701,
+      "ranking_bce": 1.7321969640666042,
+      "accuracy": 0.5258620689655172,
+      "f1_score": 0.5454545454545454,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          28,
+          30
+        ],
+        [
+          25,
+          33
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8379561250003462
+  },
+  {
+    "epoch": 23,
+    "optimization": {
+      "total_loss": 0.12934636016344203,
+      "reconstruction_bce": 0.04814776893833588,
+      "kl_divergence": 21.69806010147621,
+      "ranking_bce": 0.011352761134762189
+    },
+    "train": {
+      "total_loss": 0.13233623293967084,
+      "reconstruction_bce": 0.047603016654992926,
+      "kl_divergence": 23.4641741390886,
+      "ranking_bce": 0.013666023239332798,
+      "accuracy": 0.9935344827586207,
+      "f1_score": 0.9935205183585313,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          231,
+          1
+        ],
+        [
+          2,
+          230
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.0352703086261092,
+      "reconstruction_bce": 0.04663733315878901,
+      "kl_divergence": 13.45246097959321,
+      "ranking_bce": 1.928543181254946,
+      "accuracy": 0.5689655172413793,
+      "f1_score": 0.5689655172413793,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          33,
+          25
+        ],
+        [
+          25,
+          33
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8300920000001497
+  },
+  {
+    "epoch": 24,
+    "optimization": {
+      "total_loss": 0.13430256807598576,
+      "reconstruction_bce": 0.04720229244437711,
+      "kl_divergence": 19.037897142870673,
+      "ranking_bce": 0.02086008491460234
+    },
+    "train": {
+      "total_loss": 0.12154192785764563,
+      "reconstruction_bce": 0.04677342867542957,
+      "kl_divergence": 13.46107976189975,
+      "ranking_bce": 0.014533989894171727,
+      "accuracy": 0.9956896551724138,
+      "f1_score": 0.9956896551724138,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          231,
+          1
+        ],
+        [
+          1,
+          231
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.4976756243870175,
+      "reconstruction_bce": 0.045780049058897744,
+      "kl_divergence": 7.7114734978511414,
+      "ranking_bce": 1.3984040556282833,
+      "accuracy": 0.5258620689655172,
+      "f1_score": 0.5299145299145299,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          30,
+          28
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8324259170003643
+  },
+  {
+    "epoch": 25,
+    "optimization": {
+      "total_loss": 0.11739092782653611,
+      "reconstruction_bce": 0.04634458057839295,
+      "kl_divergence": 16.263895955579034,
+      "ranking_bce": 0.008437869452132747
+    },
+    "train": {
+      "total_loss": 0.11182485263923118,
+      "reconstruction_bce": 0.0459023089758281,
+      "kl_divergence": 18.1697374541184,
+      "ranking_bce": 0.0018504957431638293,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.0002086573633653,
+      "reconstruction_bce": 0.04493217786838268,
+      "kl_divergence": 9.739794895566742,
+      "ranking_bce": 1.9006045522360966,
+      "accuracy": 0.5517241379310345,
+      "f1_score": 0.559322033898305,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          31,
+          27
+        ],
+        [
+          25,
+          33
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8286076669992326
+  },
+  {
+    "epoch": 26,
+    "optimization": {
+      "total_loss": 0.11005241398153634,
+      "reconstruction_bce": 0.04557027076852733,
+      "kl_divergence": 14.884091081290409,
+      "ranking_bce": 0.004027780968342619
+    },
+    "train": {
+      "total_loss": 0.10695218860075392,
+      "reconstruction_bce": 0.045182801012335155,
+      "kl_divergence": 14.284076822215113,
+      "ranking_bce": 0.002302509770680476,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.9465766281917178,
+      "reconstruction_bce": 0.044153397196325765,
+      "kl_divergence": 7.402499544209447,
+      "ranking_bce": 1.8508673454153126,
+      "accuracy": 0.5344827586206896,
+      "f1_score": 0.5344827586206896,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          31,
+          27
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8371117910010071
+  },
+  {
+    "epoch": 27,
+    "optimization": {
+      "total_loss": 0.10756167743740411,
+      "reconstruction_bce": 0.044854871286400436,
+      "kl_divergence": 14.243468514804182,
+      "ranking_bce": 0.003608465487747614
+    },
+    "train": {
+      "total_loss": 0.11426608110296316,
+      "reconstruction_bce": 0.04447228101820781,
+      "kl_divergence": 13.58523523396459,
+      "ranking_bce": 0.01173628246259137,
+      "accuracy": 0.9956896551724138,
+      "f1_score": 0.9956896551724138,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          231,
+          1
+        ],
+        [
+          1,
+          231
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.934814687432914,
+      "reconstruction_bce": 0.04344703642458751,
+      "kl_divergence": 6.807647655750143,
+      "ranking_bce": 1.8411129795271775,
+      "accuracy": 0.5086206896551724,
+      "f1_score": 0.5128205128205128,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          28,
+          30
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8287802499999088
+  },
+  {
+    "epoch": 28,
+    "optimization": {
+      "total_loss": 0.11034166324755242,
+      "reconstruction_bce": 0.04416646050481961,
+      "kl_divergence": 12.929396168938998,
+      "ranking_bce": 0.009079346212494219
+    },
+    "train": {
+      "total_loss": 0.10618797304301426,
+      "reconstruction_bce": 0.043813137401794565,
+      "kl_divergence": 15.443729137552195,
+      "ranking_bce": 0.003117968439694558,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.206744037825486,
+      "reconstruction_bce": 0.042791739363094855,
+      "kl_divergence": 7.887313185067012,
+      "ranking_bce": 2.1132732794202607,
+      "accuracy": 0.5,
+      "f1_score": 0.5,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          29,
+          29
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8377493750012945
+  },
+  {
+    "epoch": 29,
+    "optimization": {
+      "total_loss": 0.10642158137313251,
+      "reconstruction_bce": 0.04353820044418861,
+      "kl_divergence": 13.893417391283759,
+      "ranking_bce": 0.005451762862102096
+    },
+    "train": {
+      "total_loss": 0.10583159070590446,
+      "reconstruction_bce": 0.043207785949624815,
+      "kl_divergence": 18.603526477156013,
+      "ranking_bce": 0.0008124908550786946,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.3069365106779953,
+      "reconstruction_bce": 0.04215997508887587,
+      "kl_divergence": 9.160453960813324,
+      "ranking_bce": 2.213456079877656,
+      "accuracy": 0.49137931034482757,
+      "f1_score": 0.49572649572649574,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          28,
+          30
+        ],
+        [
+          29,
+          29
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8341360409995104
+  },
+  {
+    "epoch": 30,
+    "optimization": {
+      "total_loss": 0.1055821393584383,
+      "reconstruction_bce": 0.04294513872471349,
+      "kl_divergence": 16.87300234827502,
+      "ranking_bce": 0.0028188591692516387
+    },
+    "train": {
+      "total_loss": 0.10003208137791732,
+      "reconstruction_bce": 0.042647539027805985,
+      "kl_divergence": 11.995429137657428,
+      "ranking_bce": 0.002741572435078179,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.9041410520158966,
+      "reconstruction_bce": 0.041602528043862046,
+      "kl_divergence": 6.239024524031015,
+      "ranking_bce": 1.8146969943210995,
+      "accuracy": 0.5172413793103449,
+      "f1_score": 0.5254237288135594,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8450995830007741
+  },
+  {
+    "epoch": 31,
+    "optimization": {
+      "total_loss": 0.10110030862791784,
+      "reconstruction_bce": 0.04240887907558474,
+      "kl_divergence": 12.54621199903817,
+      "ranking_bce": 0.0037363372474170193
+    },
+    "train": {
+      "total_loss": 0.09848276834035742,
+      "reconstruction_bce": 0.04212699059782357,
+      "kl_divergence": 12.119732067502778,
+      "ranking_bce": 0.002109054018390076,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.8710605152722062,
+      "reconstruction_bce": 0.041099422964556466,
+      "kl_divergence": 6.40428404972471,
+      "ranking_bce": 1.7824574051232174,
+      "accuracy": 0.5344827586206896,
+      "f1_score": 0.5423728813559322,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          30,
+          28
+        ],
+        [
+          26,
+          32
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8365474169986555
+  },
+  {
+    "epoch": 32,
+    "optimization": {
+      "total_loss": 0.09905076540749648,
+      "reconstruction_bce": 0.04192016260891125,
+      "kl_divergence": 11.222904106666302,
+      "ranking_bce": 0.003987535501123759
+    },
+    "train": {
+      "total_loss": 0.0971288842887714,
+      "reconstruction_bce": 0.04164601091680856,
+      "kl_divergence": 12.052404469457166,
+      "ranking_bce": 0.0017844577267733884,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.9229633561496078,
+      "reconstruction_bce": 0.04059286749568479,
+      "kl_divergence": 6.4346834215624575,
+      "ranking_bce": 1.8353429128383767,
+      "accuracy": 0.5344827586206896,
+      "f1_score": 0.5423728813559322,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          30,
+          28
+        ],
+        [
+          26,
+          32
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8386247079997702
+  },
+  {
+    "epoch": 33,
+    "optimization": {
+      "total_loss": 0.09746549432647639,
+      "reconstruction_bce": 0.04144451574518763,
+      "kl_divergence": 12.16023514188569,
+      "ranking_bce": 0.002416227069073196
+    },
+    "train": {
+      "total_loss": 0.09538548516816106,
+      "reconstruction_bce": 0.04119791912621465,
+      "kl_divergence": 10.69910608488938,
+      "ranking_bce": 0.002290540563488572,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.8404228563966423,
+      "reconstruction_bce": 0.04015876506936961,
+      "kl_divergence": 5.184577218417464,
+      "ranking_bce": 1.7549207292754074,
+      "accuracy": 0.5258620689655172,
+      "f1_score": 0.5217391304347826,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          31,
+          27
+        ],
+        [
+          28,
+          30
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8356969590004155
+  },
+  {
+    "epoch": 34,
+    "optimization": {
+      "total_loss": 0.09813676157902027,
+      "reconstruction_bce": 0.04104286894716065,
+      "kl_divergence": 10.688445452986093,
+      "ranking_bce": 0.005362577955158235
+    },
+    "train": {
+      "total_loss": 0.09506862918878424,
+      "reconstruction_bce": 0.04080190483866067,
+      "kl_divergence": 11.869084193788726,
+      "ranking_bce": 0.0015957340104344848,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.8912704073149582,
+      "reconstruction_bce": 0.0397379400915113,
+      "kl_divergence": 6.060362815856934,
+      "ranking_bce": 1.8057341822262467,
+      "accuracy": 0.5775862068965517,
+      "f1_score": 0.5739130434782609,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          34,
+          24
+        ],
+        [
+          25,
+          33
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8413799579993793
+  },
+  {
+    "epoch": 35,
+    "optimization": {
+      "total_loss": 0.09505629282573173,
+      "reconstruction_bce": 0.04061811109041345,
+      "kl_divergence": 10.984189296590872,
+      "ranking_bce": 0.002835881306211753
+    },
+    "train": {
+      "total_loss": 0.09324173449442305,
+      "reconstruction_bce": 0.04040342158284681,
+      "kl_divergence": 10.676130557882376,
+      "ranking_bce": 0.0017587608288459737,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.945493069188348,
+      "reconstruction_bce": 0.0393318226882096,
+      "kl_divergence": 5.862983374760069,
+      "ranking_bce": 1.8609664522368332,
+      "accuracy": 0.5948275862068966,
+      "f1_score": 0.584070796460177,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          36,
+          22
+        ],
+        [
+          25,
+          33
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8396385830001236
+  },
+  {
+    "epoch": 36,
+    "optimization": {
+      "total_loss": 0.09885169154611127,
+      "reconstruction_bce": 0.04025980521892679,
+      "kl_divergence": 12.201021424655256,
+      "ranking_bce": 0.006131058626061562
+    },
+    "train": {
+      "total_loss": 0.09647492756103647,
+      "reconstruction_bce": 0.040037809132501996,
+      "kl_divergence": 15.924965299409012,
+      "ranking_bce": 0.00047434123477834307,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.2697919524949173,
+      "reconstruction_bce": 0.03892486362621702,
+      "kl_divergence": 8.771399267788592,
+      "ranking_bce": 2.1831708365473252,
+      "accuracy": 0.5689655172413793,
+      "f1_score": 0.5614035087719298,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          34,
+          24
+        ],
+        [
+          26,
+          32
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8303725410005427
+  },
+  {
+    "epoch": 37,
+    "optimization": {
+      "total_loss": 0.11982663669462862,
+      "reconstruction_bce": 0.03995467157199465,
+      "kl_divergence": 15.983192213650408,
+      "ranking_bce": 0.023934100480581602
+    },
+    "train": {
+      "total_loss": 0.09645578111040182,
+      "reconstruction_bce": 0.039753569996562495,
+      "kl_divergence": 12.579464747987945,
+      "ranking_bce": 0.004369176281937237,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.8710810151593438,
+      "reconstruction_bce": 0.038685757795284534,
+      "kl_divergence": 6.859861242360082,
+      "ranking_bce": 1.7868496467327248,
+      "accuracy": 0.5172413793103449,
+      "f1_score": 0.5087719298245614,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          31,
+          27
+        ],
+        [
+          29,
+          29
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8306183330005297
+  },
+  {
+    "epoch": 38,
+    "optimization": {
+      "total_loss": 0.09716766969910984,
+      "reconstruction_bce": 0.03960061073303223,
+      "kl_divergence": 14.274927731218009,
+      "ranking_bce": 0.0036915194078605495
+    },
+    "train": {
+      "total_loss": 0.09611963018261153,
+      "reconstruction_bce": 0.039404611906100964,
+      "kl_divergence": 13.948034549581594,
+      "ranking_bce": 0.0033623719395234667,
+      "accuracy": 0.9978448275862069,
+      "f1_score": 0.9978401727861771,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          1,
+          231
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.390841216876589,
+      "reconstruction_bce": 0.038277898882997444,
+      "kl_divergence": 8.234965390172498,
+      "ranking_bce": 2.3060504650247506,
+      "accuracy": 0.4827586206896552,
+      "f1_score": 0.4915254237288136,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          27,
+          31
+        ],
+        [
+          29,
+          29
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8386237089998758
+  },
+  {
+    "epoch": 39,
+    "optimization": {
+      "total_loss": 0.09665322252388658,
+      "reconstruction_bce": 0.03928230009202299,
+      "kl_divergence": 12.751534692172346,
+      "ranking_bce": 0.005337087081239462
+    },
+    "train": {
+      "total_loss": 0.09219097474525714,
+      "reconstruction_bce": 0.039107782316618954,
+      "kl_divergence": 11.400977825296335,
+      "ranking_bce": 0.0025744318504464523,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.2662380810441642,
+      "reconstruction_bce": 0.038013181038971604,
+      "kl_divergence": 6.7728883480203566,
+      "ranking_bce": 2.183438851915557,
+      "accuracy": 0.5172413793103449,
+      "f1_score": 0.5172413793103449,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          30,
+          28
+        ],
+        [
+          28,
+          30
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8349433750008757
+  },
+  {
+    "epoch": 40,
+    "optimization": {
+      "total_loss": 0.09502603987167621,
+      "reconstruction_bce": 0.03900375152970183,
+      "kl_divergence": 11.67966494066962,
+      "ranking_bce": 0.005338871134003496
+    },
+    "train": {
+      "total_loss": 0.09070781464206762,
+      "reconstruction_bce": 0.03883360120756873,
+      "kl_divergence": 12.324617188552331,
+      "ranking_bce": 0.0007159953659946291,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.4482463310504783,
+      "reconstruction_bce": 0.03773527489653949,
+      "kl_divergence": 7.121894178719356,
+      "ranking_bce": 2.365653942371237,
+      "accuracy": 0.5258620689655172,
+      "f1_score": 0.5217391304347826,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          31,
+          27
+        ],
+        [
+          28,
+          30
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8416257080007199
+  },
+  {
+    "epoch": 41,
+    "optimization": {
+      "total_loss": 0.11000294752162078,
+      "reconstruction_bce": 0.03874909274023155,
+      "kl_divergence": 14.654597446836274,
+      "ranking_bce": 0.01785016495429365
+    },
+    "train": {
+      "total_loss": 0.09670577018425383,
+      "reconstruction_bce": 0.03860766080946758,
+      "kl_divergence": 14.71689276859678,
+      "ranking_bce": 0.004773555048500541,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.323123471490268,
+      "reconstruction_bce": 0.037463796035996796,
+      "kl_divergence": 8.491232181417532,
+      "ranking_bce": 2.239704678798544,
+      "accuracy": 0.5,
+      "f1_score": 0.5,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          29,
+          29
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8266111659995659
+  },
+  {
+    "epoch": 42,
+    "optimization": {
+      "total_loss": 0.10394486682168369,
+      "reconstruction_bce": 0.03848838485006628,
+      "kl_divergence": 18.84814890499773,
+      "ranking_bce": 0.00811994558948911
+    },
+    "train": {
+      "total_loss": 0.1077045397511844,
+      "reconstruction_bce": 0.03830171915991553,
+      "kl_divergence": 21.903402196949926,
+      "ranking_bce": 0.009197700120396269,
+      "accuracy": 0.9956896551724138,
+      "f1_score": 0.9956896551724138,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          231,
+          1
+        ],
+        [
+          1,
+          231
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.530723678654638,
+      "reconstruction_bce": 0.03718175276600082,
+      "kl_divergence": 11.830166718055462,
+      "ranking_bce": 2.4445299362314157,
+      "accuracy": 0.5258620689655172,
+      "f1_score": 0.5217391304347826,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          31,
+          27
+        ],
+        [
+          28,
+          30
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8405243750003137
+  },
+  {
+    "epoch": 43,
+    "optimization": {
+      "total_loss": 0.1058702240216321,
+      "reconstruction_bce": 0.038221055705999506,
+      "kl_divergence": 15.340510105264597,
+      "ranking_bce": 0.014087601852852145
+    },
+    "train": {
+      "total_loss": 0.09604902565479279,
+      "reconstruction_bce": 0.03808203288193407,
+      "kl_divergence": 19.39852556689032,
+      "ranking_bce": 0.00048643395762312515,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.713854592421959,
+      "reconstruction_bce": 0.036909126130671335,
+      "kl_divergence": 12.172985504413473,
+      "ranking_bce": 2.6278633249217065,
+      "accuracy": 0.5603448275862069,
+      "f1_score": 0.5714285714285714,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          31,
+          27
+        ],
+        [
+          24,
+          34
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8272434169994085
+  },
+  {
+    "epoch": 44,
+    "optimization": {
+      "total_loss": 0.10854958871315265,
+      "reconstruction_bce": 0.0380296942231984,
+      "kl_divergence": 16.829648544048442,
+      "ranking_bce": 0.01566055105398971
+    },
+    "train": {
+      "total_loss": 0.09283139299729774,
+      "reconstruction_bce": 0.03791206522748388,
+      "kl_divergence": 13.90133075056405,
+      "ranking_bce": 0.0031059312610084125,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.2697464679849557,
+      "reconstruction_bce": 0.03676032159349014,
+      "kl_divergence": 7.154213609366582,
+      "ranking_bce": 2.1890715730601342,
+      "accuracy": 0.5517241379310345,
+      "f1_score": 0.5666666666666667,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          30,
+          28
+        ],
+        [
+          24,
+          34
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8426463749983668
+  },
+  {
+    "epoch": 45,
+    "optimization": {
+      "total_loss": 0.10226242809460082,
+      "reconstruction_bce": 0.03781705824979421,
+      "kl_divergence": 14.01276683807373,
+      "ranking_bce": 0.012615543313210043
+    },
+    "train": {
+      "total_loss": 0.09044856167045133,
+      "reconstruction_bce": 0.03772848048086824,
+      "kl_divergence": 12.263587951660156,
+      "ranking_bce": 0.002728011283485604,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.304849599969798,
+      "reconstruction_bce": 0.03660982744447116,
+      "kl_divergence": 6.558673069394868,
+      "ranking_bce": 2.2250712082303803,
+      "accuracy": 0.5344827586206896,
+      "f1_score": 0.5423728813559322,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          30,
+          28
+        ],
+        [
+          26,
+          32
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8338892080009828
+  },
+  {
+    "epoch": 46,
+    "optimization": {
+      "total_loss": 0.09419068591348057,
+      "reconstruction_bce": 0.037652242286451934,
+      "kl_divergence": 12.873168452032681,
+      "ranking_bce": 0.006013032438329838
+    },
+    "train": {
+      "total_loss": 0.0909022796770622,
+      "reconstruction_bce": 0.03753613629217806,
+      "kl_divergence": 14.271776396652747,
+      "ranking_bce": 0.0015582296026846521,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.421030587163465,
+      "reconstruction_bce": 0.03633673668935381,
+      "kl_divergence": 6.692032814025879,
+      "ranking_bce": 2.3416650541897477,
+      "accuracy": 0.5517241379310345,
+      "f1_score": 0.5517241379310345,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          32,
+          26
+        ],
+        [
+          26,
+          32
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8409036670000205
+  },
+  {
+    "epoch": 47,
+    "optimization": {
+      "total_loss": 0.0902319876798268,
+      "reconstruction_bce": 0.03746919436701413,
+      "kl_divergence": 12.323212886678762,
+      "ranking_bce": 0.0029703851564434067
+    },
+    "train": {
+      "total_loss": 0.08876228794969361,
+      "reconstruction_bce": 0.03735254448035668,
+      "kl_divergence": 11.781815627525592,
+      "ranking_bce": 0.002275382286009925,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.383130163981997,
+      "reconstruction_bce": 0.03619020612075411,
+      "kl_divergence": 6.161917522035796,
+      "ranking_bce": 2.304587857476596,
+      "accuracy": 0.5689655172413793,
+      "f1_score": 0.5833333333333334,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          31,
+          27
+        ],
+        [
+          23,
+          35
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8325599169984343
+  },
+  {
+    "epoch": 48,
+    "optimization": {
+      "total_loss": 0.08755652889095504,
+      "reconstruction_bce": 0.0372877683618973,
+      "kl_divergence": 10.489014839303904,
+      "ranking_bce": 0.0024919751429416494
+    },
+    "train": {
+      "total_loss": 0.08776323420220408,
+      "reconstruction_bce": 0.03716469157872529,
+      "kl_divergence": 10.622575167951913,
+      "ranking_bce": 0.0028112752660145535,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.391593735793541,
+      "reconstruction_bce": 0.03600065333062205,
+      "kl_divergence": 5.330443678231075,
+      "ranking_bce": 2.314262028398185,
+      "accuracy": 0.5775862068965517,
+      "f1_score": 0.5882352941176471,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          32,
+          26
+        ],
+        [
+          23,
+          35
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8369495830011147
+  },
+  {
+    "epoch": 49,
+    "optimization": {
+      "total_loss": 0.08796853854738433,
+      "reconstruction_bce": 0.03713394316106007,
+      "kl_divergence": 10.259725603564032,
+      "ranking_bce": 0.003440926378594856
+    },
+    "train": {
+      "total_loss": 0.08838107925036857,
+      "reconstruction_bce": 0.036992829421470905,
+      "kl_divergence": 13.806120839612237,
+      "ranking_bce": 0.0005892980778549701,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.983589271019245,
+      "reconstruction_bce": 0.0358366025932904,
+      "kl_divergence": 6.878011127998089,
+      "ranking_bce": 2.9050380608131148,
+      "accuracy": 0.5517241379310345,
+      "f1_score": 0.559322033898305,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          31,
+          27
+        ],
+        [
+          25,
+          33
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8312674999997398
+  },
+  {
+    "epoch": 50,
+    "optimization": {
+      "total_loss": 0.0901988436435831,
+      "reconstruction_bce": 0.03696655610512043,
+      "kl_divergence": 13.848732915417902,
+      "ranking_bce": 0.00241699812024057
+    },
+    "train": {
+      "total_loss": 0.08793725689937329,
+      "reconstruction_bce": 0.0369297309682287,
+      "kl_divergence": 13.427222482089338,
+      "ranking_bce": 0.0006505720913741369,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.9492727805828225,
+      "reconstruction_bce": 0.03581941821451845,
+      "kl_divergence": 7.474824806739544,
+      "ranking_bce": 2.8701591327272613,
+      "accuracy": 0.5086206896551724,
+      "f1_score": 0.5128205128205128,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          28,
+          30
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.839013500000874
+  },
+  {
+    "epoch": 51,
+    "optimization": {
+      "total_loss": 0.09427407794985278,
+      "reconstruction_bce": 0.03686628619144703,
+      "kl_divergence": 11.080669403076172,
+      "ranking_bce": 0.009460835626794444
+    },
+    "train": {
+      "total_loss": 0.08556152263592029,
+      "reconstruction_bce": 0.03675605485151554,
+      "kl_divergence": 9.613502042046909,
+      "ranking_bce": 0.002435909212839886,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.428324214343367,
+      "reconstruction_bce": 0.035498559603403354,
+      "kl_divergence": 5.375124635367558,
+      "ranking_bce": 2.3519519361956367,
+      "accuracy": 0.5517241379310345,
+      "f1_score": 0.559322033898305,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          31,
+          27
+        ],
+        [
+          25,
+          33
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8253328339997097
+  },
+  {
+    "epoch": 52,
+    "optimization": {
+      "total_loss": 0.10688254262866645,
+      "reconstruction_bce": 0.03672203485821855,
+      "kl_divergence": 14.237754838220004,
+      "ranking_bce": 0.01920071775735966
+    },
+    "train": {
+      "total_loss": 0.1334453839166411,
+      "reconstruction_bce": 0.03664990103450315,
+      "kl_divergence": 16.93946726568814,
+      "ranking_bce": 0.04320611290087731,
+      "accuracy": 0.9935344827586207,
+      "f1_score": 0.9935483870967742,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          230,
+          2
+        ],
+        [
+          1,
+          231
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.5711901352323334,
+      "reconstruction_bce": 0.03543260102641994,
+      "kl_divergence": 9.372931250210467,
+      "ranking_bce": 2.490951965595114,
+      "accuracy": 0.5,
+      "f1_score": 0.5166666666666667,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          27,
+          31
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8257972499995958
+  },
+  {
+    "epoch": 53,
+    "optimization": {
+      "total_loss": 0.13320504488616153,
+      "reconstruction_bce": 0.036647560781445994,
+      "kl_divergence": 16.09359103235705,
+      "ranking_bce": 0.04381633317587267
+    },
+    "train": {
+      "total_loss": 0.0958975872089123,
+      "reconstruction_bce": 0.036598822551554645,
+      "kl_divergence": 19.743666615979425,
+      "ranking_bce": 0.002956275286625645,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.3066288767189813,
+      "reconstruction_bce": 0.03546580787876557,
+      "kl_divergence": 9.924050725739578,
+      "ranking_bce": 2.2257731700765677,
+      "accuracy": 0.5,
+      "f1_score": 0.49122807017543857,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          30,
+          28
+        ],
+        [
+          30,
+          28
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8259252910011128
+  },
+  {
+    "epoch": 54,
+    "optimization": {
+      "total_loss": 0.10060197217711087,
+      "reconstruction_bce": 0.03649259911015116,
+      "kl_divergence": 20.18727391341637,
+      "ranking_bce": 0.007429499666864887
+    },
+    "train": {
+      "total_loss": 0.0932021336308841,
+      "reconstruction_bce": 0.03634697969617515,
+      "kl_divergence": 18.547219901249328,
+      "ranking_bce": 0.0019609537761237426,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.386926527681022,
+      "reconstruction_bce": 0.03517692921490505,
+      "kl_divergence": 11.817951399704505,
+      "ranking_bce": 2.304754717596646,
+      "accuracy": 0.5431034482758621,
+      "f1_score": 0.5470085470085471,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          31,
+          27
+        ],
+        [
+          26,
+          32
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8340005829995789
+  },
+  {
+    "epoch": 55,
+    "optimization": {
+      "total_loss": 0.09724757512067926,
+      "reconstruction_bce": 0.03629588541285745,
+      "kl_divergence": 17.116397791895373,
+      "ranking_bce": 0.007539405382101841
+    },
+    "train": {
+      "total_loss": 0.11473185903039472,
+      "reconstruction_bce": 0.03619838300450095,
+      "kl_divergence": 16.67656267100367,
+      "ranking_bce": 0.02565852901540799,
+      "accuracy": 0.9913793103448276,
+      "f1_score": 0.9913793103448276,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          230,
+          2
+        ],
+        [
+          2,
+          230
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.3925325541660705,
+      "reconstruction_bce": 0.035083523855127134,
+      "kl_divergence": 9.991631540758856,
+      "ranking_bce": 2.3123738519076644,
+      "accuracy": 0.5172413793103449,
+      "f1_score": 0.5254237288135594,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8352047919997858
+  },
+  {
+    "epoch": 56,
+    "optimization": {
+      "total_loss": 0.11069011996532309,
+      "reconstruction_bce": 0.036272379601823876,
+      "kl_divergence": 17.16247321819437,
+      "ranking_bce": 0.02098288561181358
+    },
+    "train": {
+      "total_loss": 0.09576569446201982,
+      "reconstruction_bce": 0.036144506057788586,
+      "kl_divergence": 17.117124162871264,
+      "ranking_bce": 0.00635955743062619,
+      "accuracy": 0.9978448275862069,
+      "f1_score": 0.9978494623655914,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          231,
+          1
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.190911321804441,
+      "reconstruction_bce": 0.035005934407998776,
+      "kl_divergence": 10.371226080532733,
+      "ranking_bce": 2.1105282388884445,
+      "accuracy": 0.5086206896551724,
+      "f1_score": 0.5128205128205128,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          28,
+          30
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8321119160009403
+  },
+  {
+    "epoch": 57,
+    "optimization": {
+      "total_loss": 0.09026639112110796,
+      "reconstruction_bce": 0.03610303779614383,
+      "kl_divergence": 15.527720484240302,
+      "ranking_bce": 0.0025325952903648584
+    },
+    "train": {
+      "total_loss": 0.08824417868564868,
+      "reconstruction_bce": 0.03600221859483883,
+      "kl_divergence": 12.529985526512409,
+      "ranking_bce": 0.003709754826182877,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.412958556208117,
+      "reconstruction_bce": 0.03489228723378017,
+      "kl_divergence": 7.283642374236008,
+      "ranking_bce": 2.335890326006659,
+      "accuracy": 0.5086206896551724,
+      "f1_score": 0.5128205128205128,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          28,
+          30
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8268736250010988
+  },
+  {
+    "epoch": 58,
+    "optimization": {
+      "total_loss": 0.0933932271497003,
+      "reconstruction_bce": 0.03600817995852437,
+      "kl_divergence": 12.973247363649566,
+      "ranking_bce": 0.008403618871194214
+    },
+    "train": {
+      "total_loss": 0.08849002831968768,
+      "reconstruction_bce": 0.035927387404030765,
+      "kl_divergence": 13.81997746434705,
+      "ranking_bce": 0.0028152743383041776,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.1554874716133905,
+      "reconstruction_bce": 0.03481645753671383,
+      "kl_divergence": 7.554948806762695,
+      "ranking_bce": 2.078299645719857,
+      "accuracy": 0.49137931034482757,
+      "f1_score": 0.48695652173913045,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          30,
+          28
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8380315829999745
+  },
+  {
+    "epoch": 59,
+    "optimization": {
+      "total_loss": 0.08546970527747581,
+      "reconstruction_bce": 0.0359082791055071,
+      "kl_divergence": 11.778293626061801,
+      "ranking_bce": 0.0018748533580821521
+    },
+    "train": {
+      "total_loss": 0.08490359629022665,
+      "reconstruction_bce": 0.03581231087446213,
+      "kl_divergence": 9.985196573980923,
+      "ranking_bce": 0.003293777908326994,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.130310765628157,
+      "reconstruction_bce": 0.03467018337085329,
+      "kl_divergence": 6.017210828846898,
+      "ranking_bce": 2.054953164067762,
+      "accuracy": 0.5086206896551724,
+      "f1_score": 0.5128205128205128,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          28,
+          30
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8319182079994789
+  },
+  {
+    "epoch": 60,
+    "optimization": {
+      "total_loss": 0.09069303089174731,
+      "reconstruction_bce": 0.035815203112774883,
+      "kl_divergence": 13.862156177389211,
+      "ranking_bce": 0.00520046788407289
+    },
+    "train": {
+      "total_loss": 0.0884646048833584,
+      "reconstruction_bce": 0.0357539562572693,
+      "kl_divergence": 13.871237064230032,
+      "ranking_bce": 0.003085453783569392,
+      "accuracy": 0.9978448275862069,
+      "f1_score": 0.9978494623655914,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          231,
+          1
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.2865365455890525,
+      "reconstruction_bce": 0.034668166575760676,
+      "kl_divergence": 8.358701969015188,
+      "ranking_bce": 2.208841504721806,
+      "accuracy": 0.5086206896551724,
+      "f1_score": 0.5128205128205128,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          28,
+          30
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8329797909991612
+  },
+  {
+    "epoch": 61,
+    "optimization": {
+      "total_loss": 0.0938498059223438,
+      "reconstruction_bce": 0.03573040009058755,
+      "kl_divergence": 12.930381610475738,
+      "ranking_bce": 0.009458623188226644
+    },
+    "train": {
+      "total_loss": 0.08414647728204727,
+      "reconstruction_bce": 0.0356510737589721,
+      "kl_divergence": 10.72853397500926,
+      "ranking_bce": 0.0021157958906079673,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 1.9543517704667717,
+      "reconstruction_bce": 0.03453531707155293,
+      "kl_divergence": 5.548058345400054,
+      "ranking_bce": 1.8797330691896637,
+      "accuracy": 0.5172413793103449,
+      "f1_score": 0.5254237288135594,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8378022080014489
+  },
+  {
+    "epoch": 62,
+    "optimization": {
+      "total_loss": 0.08548798797459438,
+      "reconstruction_bce": 0.03565267011009414,
+      "kl_divergence": 10.890493623141584,
+      "ranking_bce": 0.0032921534569548636
+    },
+    "train": {
+      "total_loss": 0.08367886574103914,
+      "reconstruction_bce": 0.035579917888189184,
+      "kl_divergence": 11.237563725175528,
+      "ranking_bce": 0.0012814656450339907,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.1550374770986624,
+      "reconstruction_bce": 0.0344439251669522,
+      "kl_divergence": 5.7829224487830855,
+      "ranking_bce": 2.0803667265793373,
+      "accuracy": 0.5258620689655172,
+      "f1_score": 0.5299145299145299,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          30,
+          28
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8536305420002464
+  },
+  {
+    "epoch": 63,
+    "optimization": {
+      "total_loss": 0.09551994605311032,
+      "reconstruction_bce": 0.03555752491128856,
+      "kl_divergence": 11.220157886373586,
+      "ranking_bce": 0.013184738106341182
+    },
+    "train": {
+      "total_loss": 0.0871265741257832,
+      "reconstruction_bce": 0.03547809324387846,
+      "kl_divergence": 12.579540614424081,
+      "ranking_bce": 0.003590846031298058,
+      "accuracy": 0.9978448275862069,
+      "f1_score": 0.9978494623655914,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          231,
+          1
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.114436330466435,
+      "reconstruction_bce": 0.03443201117474457,
+      "kl_divergence": 6.554834431615369,
+      "ranking_bce": 2.03901744710988,
+      "accuracy": 0.5086206896551724,
+      "f1_score": 0.5210084033613446,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          28,
+          30
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8323365830001421
+  },
+  {
+    "epoch": 64,
+    "optimization": {
+      "total_loss": 0.08568011506878097,
+      "reconstruction_bce": 0.035491661650353466,
+      "kl_divergence": 13.169358253479004,
+      "ranking_bce": 0.0015274340192514375
+    },
+    "train": {
+      "total_loss": 0.10900812981457546,
+      "reconstruction_bce": 0.03541448673811452,
+      "kl_divergence": 11.414443213364173,
+      "ranking_bce": 0.026764712555099133,
+      "accuracy": 0.9913793103448276,
+      "f1_score": 0.9913793103448276,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          230,
+          2
+        ],
+        [
+          2,
+          230
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.112498324492882,
+      "reconstruction_bce": 0.034283746676198365,
+      "kl_divergence": 6.030715547758957,
+      "ranking_bce": 2.037900110770916,
+      "accuracy": 0.5172413793103449,
+      "f1_score": 0.5172413793103449,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          30,
+          28
+        ],
+        [
+          28,
+          30
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.839075584000966
+  },
+  {
+    "epoch": 65,
+    "optimization": {
+      "total_loss": 0.08690144198721853,
+      "reconstruction_bce": 0.03541030105331849,
+      "kl_divergence": 12.495804918223413,
+      "ranking_bce": 0.0035850345729127654
+    },
+    "train": {
+      "total_loss": 0.08302877843379974,
+      "reconstruction_bce": 0.03532174126855258,
+      "kl_divergence": 11.251981603688208,
+      "ranking_bce": 0.0011333146056382122,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.236299592873146,
+      "reconstruction_bce": 0.034226331731368756,
+      "kl_divergence": 5.719577148042876,
+      "ranking_bce": 2.1621273098320795,
+      "accuracy": 0.5344827586206896,
+      "f1_score": 0.5344827586206896,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          31,
+          27
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8314196249993984
+  },
+  {
+    "epoch": 66,
+    "optimization": {
+      "total_loss": 0.0841411498600039,
+      "reconstruction_bce": 0.03533980404508525,
+      "kl_divergence": 9.71908477257038,
+      "ranking_bce": 0.0037424568752236344
+    },
+    "train": {
+      "total_loss": 0.08221819868375516,
+      "reconstruction_bce": 0.03526839857985233,
+      "kl_divergence": 10.60289034350165,
+      "ranking_bce": 0.0010785094723203279,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.2856749008441795,
+      "reconstruction_bce": 0.03410454839468002,
+      "kl_divergence": 5.342758540449472,
+      "ranking_bce": 2.212122974724605,
+      "accuracy": 0.5344827586206896,
+      "f1_score": 0.5423728813559322,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          30,
+          28
+        ],
+        [
+          26,
+          32
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8273699589990429
+  },
+  {
+    "epoch": 67,
+    "optimization": {
+      "total_loss": 0.08644170185615277,
+      "reconstruction_bce": 0.035280121040755306,
+      "kl_divergence": 12.52451807877113,
+      "ranking_bce": 0.0033569412407814525
+    },
+    "train": {
+      "total_loss": 0.08256018136082025,
+      "reconstruction_bce": 0.03520554843647727,
+      "kl_divergence": 10.893581357495538,
+      "ranking_bce": 0.0012555017535838676,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.230441081112829,
+      "reconstruction_bce": 0.03410485977756566,
+      "kl_divergence": 5.368973436026738,
+      "ranking_bce": 2.1568624356697343,
+      "accuracy": 0.5344827586206896,
+      "f1_score": 0.5423728813559322,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          30,
+          28
+        ],
+        [
+          26,
+          32
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8324479999992036
+  },
+  {
+    "epoch": 68,
+    "optimization": {
+      "total_loss": 0.08524900700511603,
+      "reconstruction_bce": 0.03520549448399708,
+      "kl_divergence": 12.07992303782496,
+      "ranking_bce": 0.0027580939994518773
+    },
+    "train": {
+      "total_loss": 0.08612392328936479,
+      "reconstruction_bce": 0.035122281646934046,
+      "kl_divergence": 11.960812108270053,
+      "ranking_bce": 0.003918547060336629,
+      "accuracy": 0.9978448275862069,
+      "f1_score": 0.9978494623655914,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          231,
+          1
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.2816072579087883,
+      "reconstruction_bce": 0.03405206355041471,
+      "kl_divergence": 6.347952448088547,
+      "ranking_bce": 2.2071551413371644,
+      "accuracy": 0.5689655172413793,
+      "f1_score": 0.5614035087719298,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          34,
+          24
+        ],
+        [
+          26,
+          32
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8401714579995314
+  },
+  {
+    "epoch": 69,
+    "optimization": {
+      "total_loss": 0.08185443333510695,
+      "reconstruction_bce": 0.035116973365175316,
+      "kl_divergence": 10.180557530501794,
+      "ranking_bce": 0.0014399282279492613
+    },
+    "train": {
+      "total_loss": 0.08125653297736726,
+      "reconstruction_bce": 0.03508046295108466,
+      "kl_divergence": 8.67563714652226,
+      "ranking_bce": 0.0024199681292571013,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.1534928946659484,
+      "reconstruction_bce": 0.033932332591763856,
+      "kl_divergence": 4.682555691949252,
+      "ranking_bce": 2.0809456479960473,
+      "accuracy": 0.5517241379310345,
+      "f1_score": 0.543859649122807,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          33,
+          25
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8295275000000402
+  },
+  {
+    "epoch": 70,
+    "optimization": {
+      "total_loss": 0.08122031082367075,
+      "reconstruction_bce": 0.03509013945686406,
+      "kl_divergence": 8.614612530017721,
+      "ranking_bce": 0.0024254187311302743
+    },
+    "train": {
+      "total_loss": 0.08073607061443658,
+      "reconstruction_bce": 0.03501366900986638,
+      "kl_divergence": 10.079124943963413,
+      "ranking_bce": 0.0006296074769375866,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.4515134260572236,
+      "reconstruction_bce": 0.03393382489167411,
+      "kl_divergence": 5.353540749385439,
+      "ranking_bce": 2.3782922481668405,
+      "accuracy": 0.5344827586206896,
+      "f1_score": 0.5344827586206896,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          31,
+          27
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8411104579990933
+  },
+  {
+    "epoch": 71,
+    "optimization": {
+      "total_loss": 0.0808862591611928,
+      "reconstruction_bce": 0.03503616616643708,
+      "kl_divergence": 9.580284480390878,
+      "ranking_bce": 0.001233642101177448
+    },
+    "train": {
+      "total_loss": 0.07971642654517601,
+      "reconstruction_bce": 0.034949087120335676,
+      "kl_divergence": 8.906001748709842,
+      "ranking_bce": 0.0009122503488470102,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.3802643891038566,
+      "reconstruction_bce": 0.03382517037720516,
+      "kl_divergence": 4.45332329848717,
+      "ranking_bce": 2.308160716089709,
+      "accuracy": 0.5344827586206896,
+      "f1_score": 0.5344827586206896,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          31,
+          27
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8304612920001091
+  },
+  {
+    "epoch": 72,
+    "optimization": {
+      "total_loss": 0.08104128441933928,
+      "reconstruction_bce": 0.03497999200019343,
+      "kl_divergence": 8.64407046087857,
+      "ranking_bce": 0.002437229182948519
+    },
+    "train": {
+      "total_loss": 0.0806131529910811,
+      "reconstruction_bce": 0.0348867473417315,
+      "kl_divergence": 10.324339307587723,
+      "ranking_bce": 0.0005153179930669561,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.64838864474461,
+      "reconstruction_bce": 0.033849225989703476,
+      "kl_divergence": 5.803037479006011,
+      "ranking_bce": 2.5748871318225204,
+      "accuracy": 0.5431034482758621,
+      "f1_score": 0.5470085470085471,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          31,
+          27
+        ],
+        [
+          26,
+          32
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8384499169987976
+  },
+  {
+    "epoch": 73,
+    "optimization": {
+      "total_loss": 0.08173080533742905,
+      "reconstruction_bce": 0.034890023927236426,
+      "kl_divergence": 9.885176740843674,
+      "ranking_bce": 0.0020655808189546624
+    },
+    "train": {
+      "total_loss": 0.07996036703216619,
+      "reconstruction_bce": 0.03483148343090353,
+      "kl_divergence": 9.32756180598818,
+      "ranking_bce": 0.0009698381199368982,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.52336363134713,
+      "reconstruction_bce": 0.033732417457062625,
+      "kl_divergence": 4.959808925102497,
+      "ranking_bce": 2.4509390140401908,
+      "accuracy": 0.5344827586206896,
+      "f1_score": 0.55,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          25,
+          33
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8373521249995974
+  },
+  {
+    "epoch": 74,
+    "optimization": {
+      "total_loss": 0.0796748214754565,
+      "reconstruction_bce": 0.03486395999789238,
+      "kl_divergence": 8.50569618159327,
+      "ranking_bce": 0.0014412043599114786
+    },
+    "train": {
+      "total_loss": 0.07893646277230361,
+      "reconstruction_bce": 0.034814044062433575,
+      "kl_divergence": 7.838412021768504,
+      "ranking_bce": 0.0014699612348240093,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.413884684957307,
+      "reconstruction_bce": 0.03360257451904231,
+      "kl_divergence": 4.1585893630981445,
+      "ranking_bce": 2.3425208864540887,
+      "accuracy": 0.5431034482758621,
+      "f1_score": 0.5546218487394958,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          30,
+          28
+        ],
+        [
+          25,
+          33
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8494814160003443
+  },
+  {
+    "epoch": 75,
+    "optimization": {
+      "total_loss": 0.08015925771203535,
+      "reconstruction_bce": 0.034813262136845755,
+      "kl_divergence": 7.9453262296216245,
+      "ranking_bce": 0.002587406482077846
+    },
+    "train": {
+      "total_loss": 0.0791420266032219,
+      "reconstruction_bce": 0.03472588673747819,
+      "kl_divergence": 9.233906186860183,
+      "ranking_bce": 0.00045634593359487744,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.5756366417325776,
+      "reconstruction_bce": 0.03364281048034799,
+      "kl_divergence": 4.997100090158397,
+      "ranking_bce": 2.5033538793695382,
+      "accuracy": 0.5431034482758621,
+      "f1_score": 0.5470085470085471,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          31,
+          27
+        ],
+        [
+          26,
+          32
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8356865419991664
+  },
+  {
+    "epoch": 76,
+    "optimization": {
+      "total_loss": 0.08248547747217376,
+      "reconstruction_bce": 0.03473552393502202,
+      "kl_divergence": 10.875450380917254,
+      "ranking_bce": 0.0021389783857463547
+    },
+    "train": {
+      "total_loss": 0.08099478765808303,
+      "reconstruction_bce": 0.03467523409374829,
+      "kl_divergence": 11.453609598094019,
+      "ranking_bce": 0.0001907079306341796,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.9855367315226586,
+      "reconstruction_bce": 0.033629628091022885,
+      "kl_divergence": 6.157133694352774,
+      "ranking_bce": 2.9121204080252814,
+      "accuracy": 0.5517241379310345,
+      "f1_score": 0.559322033898305,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          31,
+          27
+        ],
+        [
+          25,
+          33
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8377560419994552
+  },
+  {
+    "epoch": 77,
+    "optimization": {
+      "total_loss": 0.08340328212442069,
+      "reconstruction_bce": 0.03468581982727709,
+      "kl_divergence": 11.39037198033826,
+      "ranking_bce": 0.0026412698212127375
+    },
+    "train": {
+      "total_loss": 0.10039212529001565,
+      "reconstruction_bce": 0.03462752866847762,
+      "kl_divergence": 11.864628561611834,
+      "ranking_bce": 0.019272436988040712,
+      "accuracy": 0.9956896551724138,
+      "f1_score": 0.9956896551724138,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          231,
+          1
+        ],
+        [
+          1,
+          231
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.5111974847727807,
+      "reconstruction_bce": 0.033529693196559775,
+      "kl_divergence": 6.577462854056523,
+      "ranking_bce": 2.4375606898603768,
+      "accuracy": 0.5689655172413793,
+      "f1_score": 0.5689655172413793,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          33,
+          25
+        ],
+        [
+          25,
+          33
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8316793750000215
+  },
+  {
+    "epoch": 78,
+    "optimization": {
+      "total_loss": 0.0869770710324419,
+      "reconstruction_bce": 0.03465687933153119,
+      "kl_divergence": 11.03831253380611,
+      "ranking_bce": 0.006624999051727455
+    },
+    "train": {
+      "total_loss": 0.08498534072062065,
+      "reconstruction_bce": 0.034620895082580636,
+      "kl_divergence": 15.560903023029196,
+      "ranking_bce": 0.00018264698456764092,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.8948786135377556,
+      "reconstruction_bce": 0.03349184347637769,
+      "kl_divergence": 8.30779582056506,
+      "ranking_bce": 2.8195870826984275,
+      "accuracy": 0.5689655172413793,
+      "f1_score": 0.5689655172413793,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          33,
+          25
+        ],
+        [
+          25,
+          33
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8360929999998916
+  },
+  {
+    "epoch": 79,
+    "optimization": {
+      "total_loss": 0.08363233814979422,
+      "reconstruction_bce": 0.0346454451952515,
+      "kl_divergence": 13.464808299623687,
+      "ranking_bce": 0.0008766390576119161
+    },
+    "train": {
+      "total_loss": 0.08016245786486001,
+      "reconstruction_bce": 0.034595952722533,
+      "kl_divergence": 10.107186712067703,
+      "ranking_bce": 0.000863364684407535,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.620576866741838,
+      "reconstruction_bce": 0.033474488761918296,
+      "kl_divergence": 5.800470006876979,
+      "ranking_bce": 2.5478274000102075,
+      "accuracy": 0.5258620689655172,
+      "f1_score": 0.5378151260504201,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          26,
+          32
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8316107919999922
+  },
+  {
+    "epoch": 80,
+    "optimization": {
+      "total_loss": 0.08049623231435644,
+      "reconstruction_bce": 0.03461233950380621,
+      "kl_divergence": 8.117198171286747,
+      "ranking_bce": 0.0031543550756333418
+    },
+    "train": {
+      "total_loss": 0.07851966008030135,
+      "reconstruction_bce": 0.034542578433094356,
+      "kl_divergence": 8.86058682408826,
+      "ranking_bce": 0.0005739166673296934,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.69771278315577,
+      "reconstruction_bce": 0.03340373817702819,
+      "kl_divergence": 4.98427440380228,
+      "ranking_bce": 2.6259210191923996,
+      "accuracy": 0.5172413793103449,
+      "f1_score": 0.5333333333333333,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          28,
+          30
+        ],
+        [
+          26,
+          32
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.840034166998521
+  },
+  {
+    "epoch": 81,
+    "optimization": {
+      "total_loss": 0.08022717592017405,
+      "reconstruction_bce": 0.03455824437069482,
+      "kl_divergence": 10.704943722692029,
+      "ranking_bce": 0.0004057429377851428
+    },
+    "train": {
+      "total_loss": 0.07820524223919573,
+      "reconstruction_bce": 0.03451039218183222,
+      "kl_divergence": 8.666490061529752,
+      "ranking_bce": 0.0005179673065993421,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.8057549986346015,
+      "reconstruction_bce": 0.033420950174331665,
+      "kl_divergence": 4.789945635302313,
+      "ranking_bce": 2.7341231231031746,
+      "accuracy": 0.5086206896551724,
+      "f1_score": 0.5289256198347108,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          27,
+          31
+        ],
+        [
+          26,
+          32
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8350942919987574
+  },
+  {
+    "epoch": 82,
+    "optimization": {
+      "total_loss": 0.08056100894664896,
+      "reconstruction_bce": 0.03453995364493337,
+      "kl_divergence": 8.695049335216654,
+      "ranking_bce": 0.002786051116909848
+    },
+    "train": {
+      "total_loss": 0.07913024877679758,
+      "reconstruction_bce": 0.03446429543967905,
+      "kl_divergence": 9.516194869732034,
+      "ranking_bce": 0.0006854620123390462,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.9149733987347832,
+      "reconstruction_bce": 0.033374051724014614,
+      "kl_divergence": 5.1629685862311,
+      "ranking_bce": 2.8430623350472284,
+      "accuracy": 0.5258620689655172,
+      "f1_score": 0.5378151260504201,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          26,
+          32
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8374956660009047
+  },
+  {
+    "epoch": 83,
+    "optimization": {
+      "total_loss": 0.08403528995555022,
+      "reconstruction_bce": 0.034480006658825384,
+      "kl_divergence": 10.259874804266568,
+      "ranking_bce": 0.004815401179477139
+    },
+    "train": {
+      "total_loss": 0.08206981805891826,
+      "reconstruction_bce": 0.03443790272135159,
+      "kl_divergence": 13.072721612864527,
+      "ranking_bce": 0.00012129049016572214,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 3.1263969108976166,
+      "reconstruction_bce": 0.03324023171745498,
+      "kl_divergence": 6.7296467485099,
+      "ranking_bce": 3.05318676192185,
+      "accuracy": 0.49137931034482757,
+      "f1_score": 0.48695652173913045,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          30,
+          28
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8310313750007481
+  },
+  {
+    "epoch": 84,
+    "optimization": {
+      "total_loss": 0.08153646413622231,
+      "reconstruction_bce": 0.03444416576932217,
+      "kl_divergence": 12.032668146593817,
+      "ranking_bce": 0.0006154637889079007
+    },
+    "train": {
+      "total_loss": 0.07821060845564151,
+      "reconstruction_bce": 0.03437488198537251,
+      "kl_divergence": 8.893331889448495,
+      "ranking_bce": 0.0005675112840655292,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.7725347897102095,
+      "reconstruction_bce": 0.033240155670149575,
+      "kl_divergence": 4.654112881627576,
+      "ranking_bce": 2.701400329326761,
+      "accuracy": 0.46551724137931033,
+      "f1_score": 0.4745762711864407,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          26,
+          32
+        ],
+        [
+          30,
+          28
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8291918750001059
+  },
+  {
+    "epoch": 85,
+    "optimization": {
+      "total_loss": 0.08084941064489298,
+      "reconstruction_bce": 0.03437541964752921,
+      "kl_divergence": 9.6008583923866,
+      "ranking_bce": 0.0024977135708468268
+    },
+    "train": {
+      "total_loss": 0.07876292384904006,
+      "reconstruction_bce": 0.034398929055394795,
+      "kl_divergence": 9.526502905220822,
+      "ranking_bce": 0.00043856272732855045,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 3.0674011625092605,
+      "reconstruction_bce": 0.033406604852142,
+      "kl_divergence": 5.2479546645592,
+      "ranking_bce": 2.995340001994166,
+      "accuracy": 0.49137931034482757,
+      "f1_score": 0.5042016806722689,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          27,
+          31
+        ],
+        [
+          28,
+          30
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.834667958000864
+  },
+  {
+    "epoch": 86,
+    "optimization": {
+      "total_loss": 0.07812459509948204,
+      "reconstruction_bce": 0.03434178734133984,
+      "kl_divergence": 8.381295105506634,
+      "ranking_bce": 0.0010597253863595362
+    },
+    "train": {
+      "total_loss": 0.07735318613463435,
+      "reconstruction_bce": 0.034306755225206244,
+      "kl_divergence": 6.912290852645348,
+      "ranking_bce": 0.001827386003148196,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.716315433896821,
+      "reconstruction_bce": 0.033098982839748776,
+      "kl_divergence": 4.053170302818561,
+      "ranking_bce": 2.6460642732422928,
+      "accuracy": 0.5086206896551724,
+      "f1_score": 0.5128205128205128,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          28,
+          30
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8297276670000429
+  },
+  {
+    "epoch": 87,
+    "optimization": {
+      "total_loss": 0.07721487355643306,
+      "reconstruction_bce": 0.03429635421469294,
+      "kl_divergence": 6.926331470752585,
+      "ranking_bce": 0.00169583301637964
+    },
+    "train": {
+      "total_loss": 0.07675853756995037,
+      "reconstruction_bce": 0.03424373590226831,
+      "kl_divergence": 7.746029771607498,
+      "ranking_bce": 0.0005250359423245817,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.9772417298678695,
+      "reconstruction_bce": 0.03310392989680685,
+      "kl_divergence": 4.227081907206569,
+      "ranking_bce": 2.9068067978168357,
+      "accuracy": 0.49137931034482757,
+      "f1_score": 0.49572649572649574,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          28,
+          30
+        ],
+        [
+          29,
+          29
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8353250000000116
+  },
+  {
+    "epoch": 88,
+    "optimization": {
+      "total_loss": 0.07726993283321118,
+      "reconstruction_bce": 0.034281018736033605,
+      "kl_divergence": 7.291855384563577,
+      "ranking_bce": 0.0014160400673502189
+    },
+    "train": {
+      "total_loss": 0.07692019769857669,
+      "reconstruction_bce": 0.034214087729824,
+      "kl_divergence": 8.037729033108416,
+      "ranking_bce": 0.00045429320831819243,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 3.023235189503637,
+      "reconstruction_bce": 0.033040916354491794,
+      "kl_divergence": 4.2944823133534396,
+      "ranking_bce": 2.9528588837590712,
+      "accuracy": 0.5,
+      "f1_score": 0.5,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          29,
+          29
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8349006660009763
+  },
+  {
+    "epoch": 89,
+    "optimization": {
+      "total_loss": 0.0778159907665746,
+      "reconstruction_bce": 0.034269712993810916,
+      "kl_divergence": 8.602651037018875,
+      "ranking_bce": 0.0006739127983219705
+    },
+    "train": {
+      "total_loss": 0.0766074374831956,
+      "reconstruction_bce": 0.03420938159628161,
+      "kl_divergence": 7.692545660610857,
+      "ranking_bce": 0.000496129371232859,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.981729449896977,
+      "reconstruction_bce": 0.033116635063598895,
+      "kl_divergence": 4.245805575929839,
+      "ranking_bce": 2.91125042685147,
+      "accuracy": 0.5258620689655172,
+      "f1_score": 0.5299145299145299,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          30,
+          28
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8249206250002317
+  },
+  {
+    "epoch": 90,
+    "optimization": {
+      "total_loss": 0.07664674392034268,
+      "reconstruction_bce": 0.03423849403344352,
+      "kl_divergence": 6.3814401955440125,
+      "ranking_bce": 0.0017883147264252204
+    },
+    "train": {
+      "total_loss": 0.07599039298707042,
+      "reconstruction_bce": 0.03420535950311299,
+      "kl_divergence": 6.387111532277074,
+      "ranking_bce": 0.0011925625344858795,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.8145977628642114,
+      "reconstruction_bce": 0.03310506354118216,
+      "kl_divergence": 3.5311639719995958,
+      "ranking_bce": 2.744856522001069,
+      "accuracy": 0.5172413793103449,
+      "f1_score": 0.5254237288135594,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8312946250007371
+  },
+  {
+    "epoch": 91,
+    "optimization": {
+      "total_loss": 0.08333820207365628,
+      "reconstruction_bce": 0.034201007272148955,
+      "kl_divergence": 8.130787652114343,
+      "ranking_bce": 0.006805399708080836
+    },
+    "train": {
+      "total_loss": 0.07861844193318794,
+      "reconstruction_bce": 0.03413446247577667,
+      "kl_divergence": 10.046841062348465,
+      "ranking_bce": 0.000302674416977017,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 3.257638528429229,
+      "reconstruction_bce": 0.03290654102276112,
+      "kl_divergence": 5.641138964685901,
+      "ranking_bce": 3.186184291181893,
+      "accuracy": 0.5431034482758621,
+      "f1_score": 0.5391304347826087,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          32,
+          26
+        ],
+        [
+          27,
+          31
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8317407079994155
+  },
+  {
+    "epoch": 92,
+    "optimization": {
+      "total_loss": 0.08359182214942472,
+      "reconstruction_bce": 0.03419905284355427,
+      "kl_divergence": 12.001965489880792,
+      "ranking_bce": 0.0031917510227215426
+    },
+    "train": {
+      "total_loss": 0.08201232963594897,
+      "reconstruction_bce": 0.03415339986055062,
+      "kl_divergence": 10.71239083388756,
+      "ranking_bce": 0.002993138886863719,
+      "accuracy": 0.9978448275862069,
+      "f1_score": 0.9978401727861771,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          1,
+          231
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.996752919821904,
+      "reconstruction_bce": 0.032952979335497165,
+      "kl_divergence": 6.398780625441979,
+      "ranking_bce": 2.924448144846949,
+      "accuracy": 0.5,
+      "f1_score": 0.49122807017543857,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          30,
+          28
+        ],
+        [
+          30,
+          28
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8336531669992837
+  },
+  {
+    "epoch": 93,
+    "optimization": {
+      "total_loss": 0.08294061263059747,
+      "reconstruction_bce": 0.03412325795868348,
+      "kl_divergence": 11.149192579861346,
+      "ranking_bce": 0.00354490334889149
+    },
+    "train": {
+      "total_loss": 0.13665283625495844,
+      "reconstruction_bce": 0.03406754431539569,
+      "kl_divergence": 12.729806439629916,
+      "ranking_bce": 0.05578794199491626,
+      "accuracy": 0.9913793103448276,
+      "f1_score": 0.9913793103448276,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          230,
+          2
+        ],
+        [
+          2,
+          230
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 3.5936087739878686,
+      "reconstruction_bce": 0.032884715831485285,
+      "kl_divergence": 7.750182645074252,
+      "ranking_bce": 3.520089264573722,
+      "accuracy": 0.5431034482758621,
+      "f1_score": 0.5619834710743802,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          24,
+          34
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8169239580001886
+  },
+  {
+    "epoch": 94,
+    "optimization": {
+      "total_loss": 0.11259149014949799,
+      "reconstruction_bce": 0.03414872802537063,
+      "kl_divergence": 13.304548904813569,
+      "ranking_bce": 0.030989484378676872
+    },
+    "train": {
+      "total_loss": 0.08528987138435759,
+      "reconstruction_bce": 0.03404281654491507,
+      "kl_divergence": 16.82558691090551,
+      "ranking_bce": 0.0003786510595028662,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 3.7143902614198883,
+      "reconstruction_bce": 0.03287399868512976,
+      "kl_divergence": 10.451021917935076,
+      "ranking_bce": 3.6381912231445312,
+      "accuracy": 0.49137931034482757,
+      "f1_score": 0.48695652173913045,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          30,
+          28
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8343719999993482
+  },
+  {
+    "epoch": 95,
+    "optimization": {
+      "total_loss": 0.09045098131072932,
+      "reconstruction_bce": 0.03406629223248054,
+      "kl_divergence": 13.801158674832049,
+      "ranking_bce": 0.008517237259340994
+    },
+    "train": {
+      "total_loss": 0.09106442280884447,
+      "reconstruction_bce": 0.03399214020063137,
+      "kl_divergence": 11.042725990558493,
+      "ranking_bce": 0.01203741549799251,
+      "accuracy": 0.9913793103448276,
+      "f1_score": 0.9913793103448276,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          230,
+          2
+        ],
+        [
+          2,
+          230
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 3.0301902211945633,
+      "reconstruction_bce": 0.032792747663012864,
+      "kl_divergence": 6.933384204732961,
+      "ranking_bce": 2.9576712641222724,
+      "accuracy": 0.5086206896551724,
+      "f1_score": 0.5043478260869565,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          30,
+          28
+        ],
+        [
+          29,
+          29
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8383809999995719
+  },
+  {
+    "epoch": 96,
+    "optimization": {
+      "total_loss": 0.0819294298517293,
+      "reconstruction_bce": 0.034027119263492785,
+      "kl_divergence": 11.563476233646787,
+      "ranking_bce": 0.002311714167545092
+    },
+    "train": {
+      "total_loss": 0.07991442572453926,
+      "reconstruction_bce": 0.033957156770188235,
+      "kl_divergence": 10.911406188175595,
+      "ranking_bce": 0.0010887054023473396,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 3.345014654356858,
+      "reconstruction_bce": 0.032822235134141196,
+      "kl_divergence": 6.55147490008124,
+      "ranking_bce": 3.2728186804672768,
+      "accuracy": 0.5086206896551724,
+      "f1_score": 0.5128205128205128,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          29,
+          29
+        ],
+        [
+          28,
+          30
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8289857920008217
+  },
+  {
+    "epoch": 97,
+    "optimization": {
+      "total_loss": 0.09624459491721515,
+      "reconstruction_bce": 0.034022218258730294,
+      "kl_divergence": 12.932063793313914,
+      "ranking_bce": 0.015268093848135322
+    },
+    "train": {
+      "total_loss": 0.08340317653170948,
+      "reconstruction_bce": 0.033958400888689635,
+      "kl_divergence": 11.741937472902496,
+      "ranking_bce": 0.0037444367208708767,
+      "accuracy": 1.0,
+      "f1_score": 1.0,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          0,
+          232
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 3.3470223032194992,
+      "reconstruction_bce": 0.03268026573390796,
+      "kl_divergence": 7.359871913646829,
+      "ranking_bce": 3.2743018742265373,
+      "accuracy": 0.46551724137931033,
+      "f1_score": 0.46551724137931033,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          27,
+          31
+        ],
+        [
+          31,
+          27
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8309130830002687
+  },
+  {
+    "epoch": 98,
+    "optimization": {
+      "total_loss": 0.09314814800846166,
+      "reconstruction_bce": 0.03402707635842521,
+      "kl_divergence": 14.110584522115774,
+      "ranking_bce": 0.010983410717989469
+    },
+    "train": {
+      "total_loss": 0.09751267088898297,
+      "reconstruction_bce": 0.033990738078438006,
+      "kl_divergence": 16.52426390812315,
+      "ranking_bce": 0.013006932209432777,
+      "accuracy": 0.9935344827586207,
+      "f1_score": 0.9935205183585313,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          231,
+          1
+        ],
+        [
+          2,
+          230
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 3.468533211740954,
+      "reconstruction_bce": 0.032869937861787865,
+      "kl_divergence": 9.487718911006533,
+      "ranking_bce": 3.3933056962901147,
+      "accuracy": 0.5086206896551724,
+      "f1_score": 0.5043478260869565,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          30,
+          28
+        ],
+        [
+          29,
+          29
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.8336798339987581
+  },
+  {
+    "epoch": 99,
+    "optimization": {
+      "total_loss": 0.09020855149318432,
+      "reconstruction_bce": 0.03397285128975737,
+      "kl_divergence": 15.939899970745218,
+      "ranking_bce": 0.006322947690681884
+    },
+    "train": {
+      "total_loss": 0.09114097829522758,
+      "reconstruction_bce": 0.03389706648886204,
+      "kl_divergence": 18.04811017266635,
+      "ranking_bce": 0.0052987332439035275,
+      "accuracy": 0.9978448275862069,
+      "f1_score": 0.9978401727861771,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          1,
+          231
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 3.9142074749387543,
+      "reconstruction_bce": 0.032658590967285225,
+      "kl_divergence": 10.75930799286941,
+      "ranking_bce": 3.8381309509277344,
+      "accuracy": 0.5517241379310345,
+      "f1_score": 0.5517241379310345,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          32,
+          26
+        ],
+        [
+          26,
+          32
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.830193292000331
+  },
+  {
+    "epoch": 100,
+    "optimization": {
+      "total_loss": 0.12723528619470267,
+      "reconstruction_bce": 0.03397679842751602,
+      "kl_divergence": 18.000177120340282,
+      "ranking_bce": 0.04128151067517796
+    },
+    "train": {
+      "total_loss": 0.09758600053088419,
+      "reconstruction_bce": 0.03404068856917579,
+      "kl_divergence": 16.11365712922195,
+      "ranking_bce": 0.013390965402479572,
+      "accuracy": 0.9978448275862069,
+      "f1_score": 0.9978401727861771,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          232,
+          0
+        ],
+        [
+          1,
+          231
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 232,
+        "1": 232
+      },
+      "ordered_examples": 464,
+      "comparisons": 232,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "validation": {
+      "total_loss": 2.2185817915817787,
+      "reconstruction_bce": 0.03264752505668279,
+      "kl_divergence": 11.60511746899835,
+      "ranking_bce": 2.141681638257257,
+      "accuracy": 0.5431034482758621,
+      "f1_score": 0.5309734513274337,
+      "f1_positive_label": 1,
+      "confusion_matrix": [
+        [
+          33,
+          25
+        ],
+        [
+          28,
+          30
+        ]
+      ],
+      "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+      "class_support": {
+        "0": 58,
+        "1": 58
+      },
+      "ordered_examples": 116,
+      "comparisons": 58,
+      "reporting_seed": 43,
+      "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+      "dropout_enabled": false
+    },
+    "seconds": 0.837603375000981
+  }
+]

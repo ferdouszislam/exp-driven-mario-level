@@ -1,0 +1,29 @@
+{
+  "total_loss": 2.712325671623493,
+  "reconstruction_bce": 0.03267879758415551,
+  "kl_divergence": 2.3685164533812424,
+  "ranking_bce": 2.6232829011719803,
+  "accuracy": 0.5172413793103449,
+  "f1_score": 0.5087719298245614,
+  "f1_positive_label": 1,
+  "confusion_matrix": [
+    [
+      31,
+      27
+    ],
+    [
+      29,
+      29
+    ]
+  ],
+  "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
+  "class_support": {
+    "0": 58,
+    "1": 58
+  },
+  "ordered_examples": 116,
+  "comparisons": 58,
+  "reporting_seed": 43,
+  "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
+  "dropout_enabled": false
+}
