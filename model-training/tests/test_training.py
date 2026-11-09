@@ -1,4 +1,4 @@
-"""Behavioral checks for the specified architecture and train-only pipeline."""
+"""Behavioral checks for the architecture and grouped training/validation pipeline."""
 
 from __future__ import annotations
 
@@ -97,6 +97,23 @@ class TrainingTests(unittest.TestCase):
             encoding="utf-8",
         )
         return entries
+
+    def _save_validation_entry(self) -> dict:
+        """Move one independent fixture group into a saved validation split."""
+        manifest_path = self.root / "manifest.json"
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        entry = manifest["instances"][3]
+        old_directory = self.root / entry["relative_directory"]
+        entry["split"] = "validation_set"
+        entry["relative_directory"] = f"validation_set/{entry['instance_id']}"
+        entry["ranking_file"] = f"{entry['relative_directory']}/ranking.txt"
+        for play in entry["playthroughs"]:
+            play["files"]["encoding"] = f"{entry['relative_directory']}/{play['level_id']}.npy"
+        new_directory = self.root / entry["relative_directory"]
+        new_directory.parent.mkdir()
+        old_directory.rename(new_directory)
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        return entry
 
     def test_architecture_shapes_and_one_shared_parameter_set(self) -> None:
         model = PairwiseCNNVAE()
@@ -361,6 +378,71 @@ class TrainingTests(unittest.TestCase):
         self.assertEqual(data.available_comparisons, 4)
         self.assertEqual(len(data.entries), 4)
         self.assertTrue(any(path.suffix == ".npy" for path in opened))
+
+    def test_saved_validation_is_loaded_whole_alongside_capped_training(self) -> None:
+        expected_validation = self._save_validation_entry()
+        original_open = Path.open
+
+        def guarded_open(path, *args, **kwargs):
+            if "test_set" in path.parts:
+                raise AssertionError(f"Attempted test access: {path}")
+            return original_open(path, *args, **kwargs)
+
+        with patch.object(Path, "open", guarded_open):
+            data = load_training_data(self.root, 1, 42)
+        self.assertEqual(data.available_comparisons, 3)
+        self.assertEqual(len(data.entries), 1)
+        self.assertEqual(data.validation_entries, [expected_validation])
+        validation = ComparisonDataset(data, data.validation_entries, ordered=True)
+        self.assertEqual(len(validation), 2)
+        self.assertEqual([validation[i][2].item() for i in range(2)], [1.0, 0.0])
+        with self.assertRaisesRegex(ValueError, "only selected"):
+            ComparisonDataset(data, [{"split": "test_set", "instance_id": "test"}], ordered=False)
+
+        encoding = self.root / expected_validation["playthroughs"][0]["files"]["encoding"]
+        array = np.load(encoding, allow_pickle=False)
+        array[21, 0, 0] = 2
+        np.save(encoding, array, allow_pickle=False)
+        with self.assertRaisesRegex(ValueError, "binary multi-hot"):
+            load_training_data(self.root, 1, 42)
+
+    def test_saved_validation_rejects_shared_groups_and_playthroughs(self) -> None:
+        self._save_validation_entry()
+        manifest_path = self.root / "manifest.json"
+        original = manifest_path.read_text(encoding="utf-8")
+        for identity in ("group", "playthrough"):
+            with self.subTest(identity=identity):
+                manifest = json.loads(original)
+                train, validation = manifest["instances"][0], manifest["instances"][3]
+                if identity == "group":
+                    validation["split_group_id"] = train["split_group_id"]
+                else:
+                    validation["playthroughs"][0]["playthrough_key"] = train["playthroughs"][0]["playthrough_key"]
+                manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, "share groups or playthroughs"):
+                    load_training_data(self.root, 1, 42)
+
+    def test_main_uses_saved_validation_without_another_split(self) -> None:
+        expected_validation = self._save_validation_entry()
+        output_temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(output_temporary.cleanup)
+        output = Path(output_temporary.name) / "run"
+        with patch.object(training, "split_training_groups", side_effect=AssertionError("Unexpected second split")), \
+                patch.object(training, "HYPERPARAMETER_COMBINATIONS", training.HYPERPARAMETER_COMBINATIONS[:1]), \
+                patch.object(training, "run_combination", return_value={"status": "completed"}) as run, \
+                patch.object(training, "write_report"):
+            training.main(["--dataset", str(self.root), "--num-training-samples", "1",
+                           "--validation-fraction", "0.8", "--epochs", "1", "--device", "cpu",
+                           "--output-dir", str(output)])
+        self.assertEqual(len(run.call_args.args[1]), 1)
+        self.assertEqual(run.call_args.args[2], [expected_validation])
+        config = json.loads((output / "run_config.json").read_text(encoding="utf-8"))
+        self.assertEqual(config["validation_source"], "validation_set")
+        self.assertIsNone(config["validation_fraction"])
+        split = json.loads((output / "split.json").read_text(encoding="utf-8"))
+        self.assertEqual(split["validation_instance_ids"], [expected_validation["instance_id"]])
+        self.assertEqual(json.loads((output / "selected_validation_comparisons.json").read_text(encoding="utf-8")),
+                         [expected_validation])
 
     def test_ordered_dataset_is_balanced_and_seeded_loader_is_deterministic(self) -> None:
         data = load_training_data(self.root, None, 42)

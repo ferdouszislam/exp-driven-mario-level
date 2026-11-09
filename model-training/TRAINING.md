@@ -2,7 +2,7 @@
 
 This pipeline implements the joint training stage of the project proposal using the specified layer dimensions. It trains one shared CNN-VAE and a fully connected classifier on two concatenated latent samples. The classifier predicts whether the first playthrough is preferred to the second. [Project proposal](player-exp-pairwise-cnn-vae-pcgml-proposal.pdf), [current architecture specification](model_arch_1.md).
 
-The current workflow trains **16 independent hyperparameter combinations for 50 epochs each**. Every epoch records fitting and validation measurements, and each combination produces curves for losses, overall accuracy, and normalized tile Hamming distance. You choose a combination and epoch from those records. Each experiment starts with a fresh model and uses the same grouped split drawn from the supplied training portion. Checkpoint saving is enabled by supplying both epoch-range bounds. The modules cover data loading, the model, experiment execution, and plotting. [data.py](data.py), [model.py](model.py), [train.py](train.py), [plotting.py](plotting.py).
+The current workflow trains **16 independent hyperparameter combinations for 50 epochs each**. Every epoch records fitting and validation measurements, and each combination produces curves for losses, overall accuracy, and normalized tile Hamming distance. You choose a combination and epoch from those records. Each experiment starts with a fresh model and uses the same saved `train_set` and `validation_set` assignments. Checkpoint saving is enabled by supplying both epoch-range bounds. The modules cover data loading, the model, experiment execution, and plotting. [data.py](data.py), [model.py](model.py), [train.py](train.py), [plotting.py](plotting.py).
 
 ## 1. Setup and commands
 
@@ -63,7 +63,7 @@ Each output directory must be new or empty. Omit `--output-dir` to create a new 
 .venv/bin/python model-training/train.py --help
 ```
 
-## 2. Inputs and training-only data access
+## 2. Inputs and training/validation data access
 
 The default dataset root is:
 
@@ -71,11 +71,11 @@ The default dataset root is:
 datasets/fun-study-dataset-analysis/preprocessed_dataset/
 ```
 
-The loader reads `channels.json` and the global `manifest.json`, filters manifest entries to `split == "train_set"`, and opens only their `train_set/` comparison files. It does not open test-set rankings or tensors. The default input location is resolved relative to `train.py`, so it also works when the script is launched from another working directory. `--dataset` can select a compatible preprocessed root containing `train_set/`, `channels.json`, and schema-version-2 `manifest.json`.
+The loader reads `channels.json` and the global `manifest.json`, then opens comparisons assigned to `train_set` and, when present, `validation_set`. It does not open test-set rankings or tensors. The default input location is resolved relative to `train.py`, so it also works when the script is launched from another working directory. `--dataset` can select a compatible preprocessed root containing `train_set/`, optional `validation_set/`, `channels.json`, and schema-version-2 `manifest.json`.
 
 The separate `encoding_level_images/train_set/` directory contains three rendered PNG illustrations. The network uses the saved multi-hot `.npy` tensors in `preprocessed_dataset/train_set/`. PNG pixel colors and black path-marker strokes are not model inputs. See [PREPROCESSING.md](../datasets/fun-study-dataset-analysis/PREPROCESSING.md) for how tensors and labels were formed.
 
-The supplied train portion has **290 original comparisons**, comprising 77 Experiment I comparisons and 213 pairs derived from Experiment II rankings. It contains 367 distinct participant-level playthroughs. Every comparison folder stores its own two `.npy` inputs and `ranking.txt`; the first line of that ranking file identifies the preferred level. A participant's path remains attached to its own level observation. Repeated level IDs are not merged across participants.
+The supplied `train_set` has **232 original comparisons**, comprising 67 Experiment I comparisons and 165 pairs derived from Experiment II rankings. The saved `validation_set` has **58 comparisons**: 10 from Experiment I and 48 from Experiment II. Together they contain the original 290 comparisons and 367 distinct participant-level playthroughs. The separate 73-comparison test set remains held out. Every comparison folder stores its own two `.npy` inputs and `ranking.txt`; the first line of that ranking file identifies the preferred level. A participant's path remains attached to its own level observation. Repeated level IDs are not merged across participants.
 
 Each tensor has shape **`(22, 16, 192)`**, channels first, and preserves all 192 stored columns. Loading converts binary `uint8` values to `float32` values 0 or 1 without rescaling. There is no crop, interpolation, normalization of pixel intensities, or image augmentation.
 
@@ -87,7 +87,7 @@ X S - % t T o Q @ U L 1 2 g k r K R y # |
 
 Channel 21 is `PATH`, represented by `P` in path text. Exactly one of the first 21 bits is active at every cell. A visited cell also has its independent path bit active, so tile and path can coexist. The saved codebook is checked against this order, shape, axis order, and path-channel index.
 
-The loader checks train-folder inventory against the train manifest entries, verifies ranking/level-ID agreement, and validates **all training arrays** for shape, dtype, binary values, and one active geometry bit. This validation also runs when a low sample cap is used. Only selected arrays are cached as float32 tensors. File paths must remain inside `train_set/`; paths that resolve outside it are rejected.
+The loader checks each train/validation folder inventory against its manifest entries, verifies ranking/level-ID agreement, and validates **all training and validation arrays** for shape, dtype, binary values, and one active geometry bit. This validation also runs when a low sample cap is used. Selected training arrays and all saved validation arrays are cached as float32 tensors. File paths must remain inside their assigned split directory. Shared `split_group_id` values or playthrough keys between training and saved validation are rejected.
 
 ## 3. Setting the number of training samples
 
@@ -97,11 +97,11 @@ Near the top of `train.py`, set:
 NUM_TRAINING_SAMPLES: int | None = None
 ```
 
-`None` uses all 290 train comparisons. Set a positive integer, such as `4`, for a smaller run. `--num-training-samples 4` overrides the variable for one invocation. The number counts **original comparison folders before reversing their order**, rather than individual playthroughs or optimization batches. A request larger than the available comparison count is rejected.
+`None` uses all 232 train comparisons. Set a positive integer, such as `4`, for a smaller run. `--num-training-samples 4` overrides the variable for one invocation. The number counts **original comparison folders before reversing their order**, rather than individual playthroughs or optimization batches. A request larger than the available comparison count is rejected. The cap applies only to `train_set`; all 58 saved validation comparisons are retained even for a small training run.
 
-Selection preserves entire `split_group_id` groups. It sorts group IDs, shuffles them with `random.Random(seed)`, and greedily includes each whole group if it fits within the cap. Selected entries are then sorted by instance ID. The actual selected count can therefore fall below the requested maximum; it never exceeds the cap. A cap that cannot fit any complete group fails explicitly. The current training portion has 148 groups: 77 single-comparison groups and 71 three-comparison groups.
+Selection preserves entire `split_group_id` groups. It sorts group IDs, shuffles them with `random.Random(seed)`, and greedily includes each whole group if it fits within the cap. Selected entries are then sorted by instance ID. The actual selected count can therefore fall below the requested maximum; it never exceeds the cap. A cap that cannot fit any complete group fails explicitly. The current training portion has 122 groups: 67 single-comparison groups and 55 three-comparison groups.
 
-This rule keeps all pairs from the same ranking and all other linked observations together. The same grouping also controls the fixed fitting/validation split shared by all 16 combinations. `run_config.json` records requested and actual comparison counts, and `selected_train_comparisons.json` records the complete selected entries.
+This rule keeps all pairs from the same ranking and all other linked observations together. The saved fitting/validation split uses the same grouping and is shared by all 16 combinations. `run_config.json` records requested and actual comparison counts, `selected_train_comparisons.json` records the complete selected training entries, and `selected_validation_comparisons.json` records the saved validation entries.
 
 ## 4. Ordered inputs and targets
 
@@ -112,7 +112,7 @@ For every retained comparison `preferred > other`, training presents both views:
 | Preferred playthrough | Other playthrough | 1 |
 | Other playthrough | Preferred playthrough | 0 |
 
-Thus the complete train portion yields **580 ordered examples** with 290 targets of each class. The default internal split assigns 464 ordered examples to fitting and 116 to validation. Reversal occurs after sample selection and after the fitting/validation split, so both orientations remain in the same group and partition. Fitting batches are shuffled each epoch, using a seeded DataLoader with `num_workers=0`.
+Thus the complete `train_set` yields **464 ordered examples** with 232 targets of each class. The saved validation portion yields 116 ordered examples with 58 targets of each class. Reversal occurs after sample selection and after the fitting/validation split, so both orientations remain in the same group and partition. Fitting batches are shuffled each epoch, using a seeded DataLoader with `num_workers=0`.
 
 Each original comparison has equal weight. There is no extra source-annotation normalization, duplicate removal, class weighting, or resampling. Consequently, a three-pair annotation contributes three original comparisons, exactly as stored in the prepared dataset. Reversing every pair doubles all comparison contributions equally. Repeated appearances of a playthrough remain part of their respective comparison losses.
 
@@ -236,11 +236,11 @@ The experiment grid combines two Adam learning rates, two KL weights, and four r
 
 Each combination receives a freshly initialized model and Adam optimizer. Resetting the configured seed, 42 by default, before each experiment gives the same initial model weights and fitting-data order across combinations. Adam uses its PyTorch defaults apart from the specified learning rate. The combination keeps its own learning rate and loss weights throughout its epoch budget.
 
-A single internal fitting/validation split is created from the selected `train_set` comparisons and reused across all experiments. The default `--validation-fraction 0.2` targets 20% of the original comparisons for validation. Group IDs are sorted and seeded-shuffled, then whole groups are assigned until the target is reached while retaining at least one group for fitting. With all 290 supplied comparisons and seed 42, this gives **232 fitting comparisons and 58 validation comparisons**. Both input orders are then generated inside their assigned portion.
+The saved `validation_set` is authoritative: fitting uses the selected `train_set` comparisons, and validation uses all saved validation comparisons across all experiments. Training does not split `train_set` a second time. The preprocessing default takes 20% of the original 290 training comparisons using whole groups and seed 42, giving **232 fitting comparisons and 58 validation comparisons**. Both input orders are then generated inside their assigned portion. `run_config.json` records `validation_source` as `validation_set` and sets its internal `validation_fraction` to `null` because no internal split was performed.
 
 Each combination fits on those 232 comparisons for its entire **50-epoch** default budget. The fixed validation portion supports comparison of epochs and experiments. After all experiments finish, you choose the combination and epoch using the recorded measurements and curves. Every combination completes the requested epoch budget independently.
 
-For a different subset or seed, indivisible group sizes can change the achieved validation fraction. If only one selected group is available, the fitting portion contains all selected comparisons and validation measurements are recorded as `null`.
+For legacy datasets without saved validation entries, training retains its internal split controlled by `--validation-fraction` (default `0.2`). It sorts and seeded-shuffles group IDs, then takes whole groups until reaching the target while retaining at least one fitting group. Indivisible groups can change the achieved fraction. If only one selected group is available in that legacy layout, validation measurements are recorded as `null`. In the saved layout, the training seed and sample cap do not change validation membership; change the preprocessing split to choose another validation set.
 
 The main controls are available near the top of `train.py` and through the CLI.
 
@@ -251,7 +251,7 @@ The main controls are available near the top of `train.py` and through the CLI.
 | `CHECKPOINT_START_EPOCH` / `--checkpoint-start-epoch` | `None` | Optional first checkpoint epoch, inclusive, supplied together with the end epoch |
 | `CHECKPOINT_END_EPOCH` / `--checkpoint-end-epoch` | `None` | Optional last checkpoint epoch, inclusive, supplied together with the start epoch |
 | `--batch-size` | 16 | Ordered fitting examples per optimization batch |
-| `--validation-fraction` | 0.2 | Target fraction of selected comparisons for fixed validation |
+| `--validation-fraction` | 0.2 | Fallback target fraction for legacy datasets without saved validation entries |
 | `--seed` | 42 | Initialization, sample selection, split, and random-stream seed |
 | `--device` | `auto` | CUDA when available, otherwise MPS when available, otherwise CPU |
 | `--cpu-threads` | 4 | PyTorch CPU thread count |
@@ -319,6 +319,7 @@ Each invocation creates one experiment root with the shared configuration and sp
 | `run_config.json` | Dataset and fingerprint, requested/actual sample counts, epoch budget, checkpoint start/end epochs or two `null` values when disabled, seed, device, environment, architecture, and shared run settings |
 | `channels.json` | Exact input channel codebook |
 | `selected_train_comparisons.json` | Selected manifest entries with participant, playthrough, and grouping provenance |
+| `selected_validation_comparisons.json` | Saved validation manifest entries when `validation_set` is present |
 | `split.json` | Fixed fitting and validation memberships shared by all combinations |
 | `experiments.json` | The 16 combinations, their `pending`, `running`, `completed`, or `failed` status, and completed experiment summaries, with `loss_graph` linking to each combination's `validation_curves.png` |
 | `REPORT.md` | Human-readable run settings and links to each combination's six-panel fitting/validation curves after all combinations finish |
@@ -341,7 +342,7 @@ The JSON history and complete epoch CSV are each replaced atomically after every
 
 The overall-accuracy and normalized-Hamming-distance panels use a vertical range of 0–1. Higher accuracy indicates more correct preference predictions. Lower normalized Hamming distance indicates closer tile reconstruction. The filename `validation_curves.png` applies to newly generated outputs. Existing run directories retain their recorded artifacts.
 
-The dataset SHA-256 fingerprint includes the codebook bytes and selected training-entry metadata, ranking bytes, and encoding bytes, with explicit boundaries between components. Its inputs are the selected training observations.
+The dataset SHA-256 fingerprint includes the codebook bytes, selected training-entry metadata, ranking bytes, and encoding bytes, plus the same information for all saved validation entries, with explicit boundaries between components.
 
 Checkpoint saving is **disabled by default**. Both `CHECKPOINT_START_EPOCH` and `CHECKPOINT_END_EPOCH` near the top of `train.py` default to `None`. Enable saving by supplying `--checkpoint-start-epoch` and `--checkpoint-end-epoch` together, or by setting both module constants to integer epochs. Supplying only one bound raises an argument error.
 

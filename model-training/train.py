@@ -377,7 +377,9 @@ def write_report(output: Path, config: dict, experiments: list[dict]) -> None:
              f"Each configuration trains for {config['epochs']} epochs.",
              f"The fixed group split contains {config['fitting_comparisons']} fitting comparisons "
              f"and {config['validation_comparisons']} validation comparisons.",
-             "Training metrics refer to the fitting portion. Both portions come from train_set.",
+             ("Training metrics use train_set; validation metrics use the saved validation_set."
+              if config.get("validation_source") == "validation_set" else
+              "Training metrics refer to the fitting portion. Both portions come from train_set."),
              "Choose a configuration and epoch from its curves and per-epoch metrics.",
              "", "| Configuration | Learning rate | Rec weight | KL weight | Rank weight | Epochs | Final train accuracy | Final validation accuracy | Checkpoints | Validation curves |",
              "|---|---:|---:|---:|---:|---:|---:|---:|---:|---|"]
@@ -432,7 +434,8 @@ def parse_args(argv=None):
                         help="Last epoch to save, inclusive; omit both bounds to disable checkpoints")
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE,
                         help="Ordered examples per optimization batch")
-    parser.add_argument("--validation-fraction", type=float, default=0.2)
+    parser.add_argument("--validation-fraction", type=float, default=0.2,
+                        help="Fallback validation fraction for datasets without a saved validation_set")
     parser.add_argument("--seed", type=int, default=SEED)
     parser.add_argument("--device", choices=("auto", "cpu", "cuda", "mps"), default="auto")
     parser.add_argument("--cpu-threads", type=int, default=4)
@@ -464,7 +467,12 @@ def main(argv=None) -> None:
     torch.set_num_threads(args.cpu_threads)
     device = resolve_device(args.device)
     data = load_training_data(args.dataset.resolve(), args.num_training_samples, args.seed)
-    fitting, validation = split_training_groups(data.entries, args.validation_fraction, args.seed)
+    if data.validation_entries:
+        fitting, validation = data.entries, data.validation_entries
+        validation_source = "validation_set"
+    else:
+        fitting, validation = split_training_groups(data.entries, args.validation_fraction, args.seed)
+        validation_source = "train_set"
     output = (args.output_dir or HERE / "runs" / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")).resolve()
     if output.exists() and any(output.iterdir()):
         raise ValueError(f"Output directory must be new or empty {output}")
@@ -482,7 +490,9 @@ def main(argv=None) -> None:
         "epochs": args.epochs, "combination_count": len(HYPERPARAMETER_COMBINATIONS),
         "checkpoint_start_epoch": args.checkpoint_start_epoch,
         "checkpoint_end_epoch": args.checkpoint_end_epoch,
-        "batch_size": args.batch_size, "validation_fraction": args.validation_fraction,
+        "batch_size": args.batch_size,
+        "validation_source": validation_source,
+        "validation_fraction": args.validation_fraction if validation_source == "train_set" else None,
         "seed": args.seed, "reporting_seed": (args.seed + 1) % (2**32),
         "device": str(device), "cpu_threads": args.cpu_threads,
         "architecture": architecture_metadata(),
@@ -493,10 +503,14 @@ def main(argv=None) -> None:
     write_json(output / "run_config.json", config)
     write_json(output / "channels.json", data.channels)
     write_json(output / "selected_train_comparisons.json", data.entries)
+    if data.validation_entries:
+        write_json(output / "selected_validation_comparisons.json", data.validation_entries)
     write_json(output / "split.json", {
         "fitting_instance_ids": [entry["instance_id"] for entry in fitting],
         "validation_instance_ids": [entry["instance_id"] for entry in validation],
-        "policy": "one fixed split of whole split_group_id groups for all configurations",
+        "policy": ("saved train_set/validation_set assignments reused for all configurations"
+                   if validation_source == "validation_set" else
+                   "one fixed split of whole split_group_id groups for all configurations"),
     })
     experiments = [
         {"combination_id": f"combination_{index:02d}", "hyperparameters": asdict(hp), "status": "pending"}

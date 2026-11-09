@@ -1,8 +1,8 @@
-"""Load only the prepared training comparisons, preserving annotation groups."""
+"""Load prepared training and validation comparisons, preserving annotation groups."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import hashlib
 import io
 import json
@@ -27,18 +27,21 @@ class TrainingData:
     available_comparisons: int
     dataset_fingerprint: str
     selection: dict
+    validation_entries: list[dict] = field(default_factory=list)
 
 
-def _training_path(root: Path, relative_path: str) -> Path:
-    """Reject paths that could resolve outside this root's train_set directory."""
+def _training_path(root: Path, relative_path: str, split: str = "train_set") -> Path:
+    """Reject paths that could resolve outside their training/validation split."""
     if not isinstance(relative_path, str):
         raise ValueError("A training file path must be a string")
     relative = PurePosixPath(relative_path)
-    if relative.is_absolute() or ".." in relative.parts or not relative.parts or relative.parts[0] != "train_set":
-        raise ValueError(f"Not a train_set path: {relative_path!r}")
+    if split not in ("train_set", "validation_set"):
+        raise ValueError(f"Unsupported training split: {split!r}")
+    if relative.is_absolute() or ".." in relative.parts or not relative.parts or relative.parts[0] != split:
+        raise ValueError(f"Not a {split} path: {relative_path!r}")
     target = root.joinpath(*relative.parts)
-    if not target.resolve().is_relative_to(root / "train_set"):
-        raise ValueError(f"Training path resolves outside train_set: {relative_path}")
+    if not target.resolve().is_relative_to(root / split):
+        raise ValueError(f"Training path resolves outside {split}: {relative_path}")
     return target
 
 
@@ -70,7 +73,9 @@ def load_training_data(root: Path, max_samples: int | None, seed: int) -> Traini
     """Validate training files and select at most max_samples whole comparisons.
 
     Selection never breaks a split_group_id. A cap may therefore be underfilled.
-    All training arrays are validated; only selected arrays are cached as float32.
+    All training and saved validation arrays are validated. Selected training
+    arrays and all saved validation arrays are cached as float32; the training
+    cap does not reduce a saved validation set.
     No path or array belonging to the test split is opened or hashed.
     """
     root = Path(root).resolve()
@@ -90,21 +95,39 @@ def load_training_data(root: Path, max_samples: int | None, seed: int) -> Traini
     if not entries:
         raise ValueError("No train_set comparisons in manifest.json")
     entries.sort(key=lambda entry: entry["instance_id"])
-    ids = [entry["instance_id"] for entry in entries]
+    validation_entries = sorted(
+        (entry for entry in manifest["instances"] if entry.get("split") == "validation_set"),
+        key=lambda entry: entry["instance_id"],
+    )
+    all_entries = entries + validation_entries
+    ids = [entry["instance_id"] for entry in all_entries]
     if len(set(ids)) != len(ids):
-        raise ValueError("Duplicate train_set instance IDs in manifest.json")
-    actual_ids = {directory.name for directory in train_root.iterdir() if directory.is_dir()}
-    if set(ids) != actual_ids:
-        raise ValueError("Train-set comparison directories do not match the train manifest entries")
+        raise ValueError("Duplicate training/validation instance IDs in manifest.json")
+    for split, split_entries in (("train_set", entries), ("validation_set", validation_entries)):
+        if not split_entries:
+            continue
+        split_root = root / split
+        if not split_root.is_dir() or split_root.resolve() != split_root:
+            raise ValueError(f"Expected an ordinary {split} directory inside {root}")
+        actual_ids = {directory.name for directory in split_root.iterdir() if directory.is_dir()}
+        if {entry["instance_id"] for entry in split_entries} != actual_ids:
+            raise ValueError(f"{split} comparison directories do not match the manifest entries")
     if max_samples is not None and max_samples > len(entries):
         raise ValueError(f"Requested {max_samples} comparisons, but train_set contains {len(entries)}")
 
     groups: dict[str, list[dict]] = {}
-    for entry in entries:
+    for entry in all_entries:
         group_id = entry.get("split_group_id")
         if not isinstance(group_id, str) or not group_id:
             raise ValueError(f"Missing split_group_id for {entry['instance_id']}")
-        groups.setdefault(group_id, []).append(entry)
+        if entry["split"] == "train_set":
+            groups.setdefault(group_id, []).append(entry)
+    if validation_entries:
+        validation_groups = {entry["split_group_id"] for entry in validation_entries}
+        training_plays = {play["playthrough_key"] for entry in entries for play in entry["playthroughs"]}
+        validation_plays = {play["playthrough_key"] for entry in validation_entries for play in entry["playthroughs"]}
+        if groups.keys() & validation_groups or training_plays & validation_plays:
+            raise ValueError("Training and saved validation sets share groups or playthroughs")
     group_ids = sorted(groups)
     random.Random(seed).shuffle(group_ids)
     selected: list[dict] = []
@@ -115,14 +138,15 @@ def load_training_data(root: Path, max_samples: int | None, seed: int) -> Traini
     selected.sort(key=lambda entry: entry["instance_id"])
     if not selected:
         raise ValueError("The sample cap is too small to fit any complete split_group_id")
-    selected_ids = {entry["instance_id"] for entry in selected}
+    selected_ids = {entry["instance_id"] for entry in selected + validation_entries}
 
     digest = hashlib.sha256()
     _hash_part(digest, "channels.json", channels_bytes)
     tensors: dict[str, Tensor] = {}
-    for entry in entries:
+    for entry in all_entries:
         instance_id = entry["instance_id"]
-        directory_name = f"train_set/{instance_id}"
+        split = entry["split"]
+        directory_name = f"{split}/{instance_id}"
         if PurePosixPath(instance_id).name != instance_id or instance_id in (".", ".."):
             raise ValueError(f"Invalid instance_id: {instance_id!r}")
         if entry.get("relative_directory") != directory_name:
@@ -130,7 +154,7 @@ def load_training_data(root: Path, max_samples: int | None, seed: int) -> Traini
         ranking_name = f"{directory_name}/ranking.txt"
         if entry.get("ranking_file") != ranking_name:
             raise ValueError(f"Unexpected ranking file for {instance_id}")
-        ranking_bytes = _training_path(root, ranking_name).read_bytes()
+        ranking_bytes = _training_path(root, ranking_name, split).read_bytes()
         ranking = ranking_bytes.decode("utf-8").splitlines()
         expected_ranking = [entry["preferred_level_id"], entry["less_preferred_level_id"]]
         if ranking != expected_ranking or len(set(ranking)) != 2:
@@ -149,7 +173,7 @@ def load_training_data(root: Path, max_samples: int | None, seed: int) -> Traini
             encoding_name = f"{directory_name}/{play['level_id']}.npy"
             if play["files"]["encoding"] != encoding_name:
                 raise ValueError(f"Unexpected encoding path for {instance_id}/{play['level_id']}")
-            encoding_bytes = _training_path(root, encoding_name).read_bytes()
+            encoding_bytes = _training_path(root, encoding_name, split).read_bytes()
             array = np.load(io.BytesIO(encoding_bytes), allow_pickle=False)
             if array.shape != INPUT_SHAPE or array.dtype != np.uint8:
                 raise ValueError(f"Expected uint8 {INPUT_SHAPE} array: {encoding_name}")
@@ -165,6 +189,7 @@ def load_training_data(root: Path, max_samples: int | None, seed: int) -> Traini
         channels=channels,
         available_comparisons=len(entries),
         dataset_fingerprint=digest.hexdigest(),
+        validation_entries=validation_entries,
         selection={
             "requested_max_samples": max_samples,
             "selected_comparisons": len(selected),
@@ -184,9 +209,11 @@ class ComparisonDataset(Dataset):
         self.data = data
         self.entries = entries
         self.ordered = ordered
-        selected_ids = {entry["instance_id"] for entry in data.entries}
-        if any(entry.get("split") != "train_set" or entry["instance_id"] not in selected_ids for entry in entries):
-            raise ValueError("ComparisonDataset accepts only the selected training entries")
+        selected_splits = {entry["instance_id"]: entry["split"]
+                           for entry in data.entries + data.validation_entries}
+        if any(entry.get("split") not in ("train_set", "validation_set")
+               or selected_splits.get(entry["instance_id"]) != entry.get("split") for entry in entries):
+            raise ValueError("ComparisonDataset accepts only selected training or saved validation entries")
 
     def __len__(self) -> int:
         return len(self.entries) * (2 if self.ordered else 1)
