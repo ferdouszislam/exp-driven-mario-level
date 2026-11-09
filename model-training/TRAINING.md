@@ -1,8 +1,8 @@
 # CNN-VAE and pairwise fun-ranking training
 
-This pipeline implements the joint training stage of the [project proposal](player-exp-pairwise-cnn-vae-pcgml-proposal.pdf), using the exact layer dimensions in [initial_model_architecture.md](initial_model_architecture.md). It trains one shared CNN-VAE and a fully connected classifier on two concatenated latent samples. The classifier predicts whether the first playthrough is preferred to the second; it does not assign absolute numerical fun ratings.
+This pipeline implements the joint training stage of the project proposal using the specified layer dimensions. It trains one shared CNN-VAE and a fully connected classifier on two concatenated latent samples. The classifier predicts whether the first playthrough is preferred to the second. [Project proposal](player-exp-pairwise-cnn-vae-pcgml-proposal.pdf), [architecture specification](initial_model_architecture.md).
 
-The implementation consists of [data.py](data.py) for loading and ordered comparisons, [model.py](model.py) for the network, and [train.py](train.py) for hyperparameter selection, final training, saving, and train-set reporting. The current selection rule chooses the smallest absolute difference between fitting and validation **weighted total loss**, as requested. This stage does not implement test-set evaluation or latent optimization for level generation. Earlier saved runs used the previous ranking-BCE selector and are identified separately in section 11.
+The current workflow trains **12 independent hyperparameter combinations for 100 epochs each**. Every epoch records fitting and validation measurements, and each combination produces loss curves. You choose a combination and epoch from those records. Each experiment starts with a fresh model and uses the same grouped split drawn from the supplied training portion. The modules cover data loading, the model, experiment execution, and plotting. [data.py](data.py), [model.py](model.py), [train.py](train.py), [plotting.py](plotting.py).
 
 ## 1. Setup and commands
 
@@ -13,26 +13,36 @@ python3 -m venv .venv
 .venv/bin/python -m pip install -r model-training/requirements.txt
 ```
 
-The installed environment was checked with Python **3.14.7**, PyTorch **2.15.0**, and NumPy **2.3.4**. The training code does not require Pillow, image resizing, scikit-learn, or a PDF reader.
+The installed environment was checked with Python **3.14.7**, PyTorch **2.15.0**, NumPy **2.3.4**, and Matplotlib **3.11.2**. Matplotlib generates the saved loss curves.
 
-For a small end-to-end run with four original comparisons:
+For a small end-to-end run with four original comparisons and two epochs per combination, use
 
 ```bash
 .venv/bin/python model-training/train.py \
   --num-training-samples 4 \
   --epochs 2 \
-  --tuning-epochs 1 \
-  --output-dir model-training/runs/smoke_total_loss_gap
+  --output-dir model-training/runs/comparison_smoke
 ```
 
-For the full supplied training portion with the defaults:
+For all 12 combinations using the complete supplied training portion and the 100-epoch default, use
 
 ```bash
 .venv/bin/python model-training/train.py \
-  --output-dir model-training/runs/full_train_total_loss_gap
+  --output-dir model-training/runs/comparison_100_epochs
 ```
 
-Each output directory must be new or empty. Omit `--output-dir` to create a new UTC-timestamped directory under `model-training/runs/`. The script rejects output inside the input dataset. View all flags with:
+The checkpoint-saving boundary can be exercised with four comparisons and 21 epochs per combination
+
+```bash
+.venv/bin/python model-training/train.py \
+  --num-training-samples 4 \
+  --epochs 21 \
+  --output-dir model-training/runs/comparison_checkpoint_check
+```
+
+That run saves one epoch-21 checkpoint per combination. Runs of 20 epochs or fewer produce epoch measurements and plots, with their checkpoint directories containing zero checkpoints.
+
+Each output directory must be new or empty. Omit `--output-dir` to create a new UTC-timestamped directory under `model-training/runs/`. The script rejects output inside the input dataset. View all flags with
 
 ```bash
 .venv/bin/python model-training/train.py --help
@@ -76,7 +86,7 @@ NUM_TRAINING_SAMPLES: int | None = None
 
 Selection preserves entire `split_group_id` groups. It sorts group IDs, shuffles them with `random.Random(seed)`, and greedily includes each whole group if it fits within the cap. Selected entries are then sorted by instance ID. The actual selected count can therefore fall below the requested maximum; it never exceeds the cap. A cap that cannot fit any complete group fails explicitly. The current training portion has 148 groups: 77 single-comparison groups and 71 three-comparison groups.
 
-This rule keeps all pairs from the same ranking and all other linked observations together. The same grouping also controls the temporary validation split. `config.json` records requested and actual comparison counts, and `selected_train_comparisons.json` records the complete selected entries.
+This rule keeps all pairs from the same ranking and all other linked observations together. The same grouping also controls the fixed fitting/validation split shared by all 12 combinations. `run_config.json` records requested and actual comparison counts, and `selected_train_comparisons.json` records the complete selected entries.
 
 ## 4. Ordered inputs and targets
 
@@ -87,7 +97,7 @@ For every retained comparison `preferred > other`, training presents both views:
 | Preferred playthrough | Other playthrough | 1 |
 | Other playthrough | Preferred playthrough | 0 |
 
-Thus the complete train portion yields **580 ordered examples** with 290 targets of each class. Reversal occurs after sample selection and after the fitting/validation split, so both orientations remain in the same group and partition. Batches are shuffled each epoch, using a seeded DataLoader with `num_workers=0`.
+Thus the complete train portion yields **580 ordered examples** with 290 targets of each class. The default internal split assigns 464 ordered examples to fitting and 116 to validation. Reversal occurs after sample selection and after the fitting/validation split, so both orientations remain in the same group and partition. Fitting batches are shuffled each epoch, using a seeded DataLoader with `num_workers=0`.
 
 Each original comparison has equal weight. There is no extra source-annotation normalization, duplicate removal, class weighting, or resampling. Consequently, a three-pair annotation contributes three original comparisons, exactly as stored in the prepared dataset. Reversing every pair doubles all comparison contributions equally. Repeated appearances of a playthrough remain part of their respective comparison losses.
 
@@ -191,90 +201,122 @@ Training reports each unweighted component and their weighted total. Epoch losse
 
 PyTorch documents the fused loss and its mean reduction in [BCEWithLogitsLoss](https://docs.pytorch.org/docs/2.15/generated/torch.nn.BCEWithLogitsLoss.html).
 
-## 7. Hyperparameter selection and final fitting
+## 7. Independent experiments and the fixed split
 
-The proposal requires selecting the three loss weights and Adam learning rate on a grouped validation subset. The pipeline performs this selection **inside the selected training portion**. It never uses the supplied test split for selection.
+The experiment grid combines two Adam learning rates, two KL weights, and three reconstruction/ranking weight pairs. Each invocation runs all **12 combinations**, ordered first by learning rate, then KL weight, then reconstruction/ranking pair.
 
-By default, it targets 20% of selected original comparisons for temporary validation (`--validation-fraction 0.2`). Group IDs are sorted and seeded-shuffled. Whole groups are assigned until the target count is reached, while leaving at least one whole group for fitting. With all 290 supplied comparisons and seed 42, this gives **232 fitting comparisons and 58 validation comparisons**. The achieved fraction can differ for another subset or seed because groups cannot be divided. Source annotation IDs, related pairs, and reused playthroughs therefore stay together. The manifest's existing group definitions are used; no new participant-held-out or map-held-out split is claimed.
-
-The declared small search uses these four joint candidates:
-
-| Candidate | Adam learning rate | λ_rec | λ_KL | λ_rank |
+| Directory | Adam learning rate | λ_rec | λ_KL | λ_rank |
 |---|---:|---:|---:|---:|
-| 1 | 0.001 | 1 | 0.001 | 1 |
-| 2 | 0.001 | 1 | 0.01 | 1 |
-| 3 | 0.0003 | 2 | 0.001 | 1 |
-| 4 | 0.0003 | 1 | 0.001 | 2 |
+| `combination_01` | 0.001 | 1 | 0.001 | 1 |
+| `combination_02` | 0.001 | 2 | 0.001 | 1 |
+| `combination_03` | 0.001 | 1 | 0.001 | 2 |
+| `combination_04` | 0.001 | 1 | 0.01 | 1 |
+| `combination_05` | 0.001 | 2 | 0.01 | 1 |
+| `combination_06` | 0.001 | 1 | 0.01 | 2 |
+| `combination_07` | 0.0003 | 1 | 0.001 | 1 |
+| `combination_08` | 0.0003 | 2 | 0.001 | 1 |
+| `combination_09` | 0.0003 | 1 | 0.001 | 2 |
+| `combination_10` | 0.0003 | 1 | 0.01 | 1 |
+| `combination_11` | 0.0003 | 2 | 0.01 | 1 |
+| `combination_12` | 0.0003 | 1 | 0.01 | 2 |
 
-These are explicit starting search choices; the proposal does not supply numerical values. Every candidate starts from the same seeded initialization and runs for **5 tuning epochs** by default. Adam uses its PyTorch defaults apart from the candidate learning rate.
+Each combination receives a freshly initialized model and Adam optimizer. Resetting the configured seed, 42 by default, before each experiment gives the same initial model weights and fitting-data order across combinations. Adam uses its PyTorch defaults apart from the specified learning rate. The combination keeps its own learning rate and loss weights throughout its epoch budget.
 
-After each candidate finishes fitting, the pipeline measures its fitting and validation losses with that **same fixed candidate model**. Both measurements use evaluation mode, disabled gradients, dropout off, and sampled latents with reporting seed `seed + 1`. The model is not updated during either measurement. Both portions use the same loss reductions and that candidate's existing weights:
+A single internal fitting/validation split is created from the selected `train_set` comparisons and reused across all experiments. The default `--validation-fraction 0.2` targets 20% of the original comparisons for validation. Group IDs are sorted and seeded-shuffled, then whole groups are assigned until the target is reached while retaining at least one group for fitting. With all 290 supplied comparisons and seed 42, this gives **232 fitting comparisons and 58 validation comparisons**. Both input orders are then generated inside their assigned portion.
+
+Each combination fits on those 232 comparisons for its entire **100-epoch** default budget. The fixed validation portion supports comparison of epochs and experiments. After all experiments finish, you choose the combination and epoch using the recorded measurements and curves. Every combination completes the requested epoch budget independently.
+
+For a different subset or seed, indivisible group sizes can change the achieved validation fraction. If only one selected group is available, the fitting portion contains all selected comparisons and validation measurements are recorded as `null`.
+
+The main controls are available near the top of `train.py` and through the CLI.
+
+| Control | Default | Meaning |
+|---|---:|---|
+| `NUM_TRAINING_SAMPLES` / `--num-training-samples` | `None` | Cap on original comparisons, preserving whole groups |
+| `EPOCHS` / `--epochs` | 100 | Full epoch budget for each of the 12 combinations |
+| `--batch-size` | 16 | Ordered fitting examples per optimization batch |
+| `--validation-fraction` | 0.2 | Target fraction of selected comparisons for fixed validation |
+| `--seed` | 42 | Initialization, sample selection, split, and random-stream seed |
+| `--device` | `auto` | CUDA when available, otherwise MPS when available, otherwise CPU |
+| `--cpu-threads` | 4 | PyTorch CPU thread count |
+| `--output-dir` | New timestamped directory | Root directory for all 12 experiments |
+
+`--dataset` can select a compatible preprocessed root. The default dataset path is resolved relative to the script. An explicitly requested unavailable accelerator raises an error.
+
+## 8. Measurements after every epoch
+
+Each epoch first performs its optimization updates with dropout and fresh posterior samples active. The optimizer sees fitting comparisons. At the end of that epoch, the fixed model is measured separately on the complete fitting portion and the complete validation portion.
+
+These two measurements use `model.eval()`, disabled gradients, and dropout off. Both use the reporting seed `(seed + 1) % (2**32)`, which is 43 by default. Reusing that seed at every epoch applies the same random noise sequence to the same input occurrences as model parameters evolve. Each pair's two sampled latent vectors are reused for both input orders. A playthrough appearing in several comparison folders is sampled separately for each occurrence.
+
+The evaluator saves and restores random-number-generator states around measurement. The next optimization epoch therefore continues its training random streams from their previous state. Measurement leaves model parameters fixed.
+
+For each measured pair, reconstruction BCE and KL are calculated once and averaged over its two inputs. Ranking BCE averages the forward target-1 and reverse target-0 losses. Dataset losses then average over original comparisons. The total uses that combination's own weights and the reductions defined in section 6.
+
+Every epoch prints fitting and validation values to the console and writes them to JSON and CSV. The recorded measurements include
+
+- Weighted total loss, reconstruction BCE, KL divergence, and ranking BCE.
+- Overall ordered-pair accuracy.
+- Accuracy within true class 0 and within true class 1.
+- Binary F1-score for positive class 1.
+
+Classification uses `sigmoid(logit) >= 0.5` to predict class 1 and assigns class 0 below that threshold. Class 1 means the first playthrough is preferred. Class 0 means the second playthrough is preferred. Both input orders contribute to the measurements. The confusion matrix has true-label rows and predicted-label columns ordered `[0, 1]`.
 
 ```text
-fitting_total_loss = λ_rec × fitting_reconstruction_BCE
-                   + λ_KL × fitting_KL + λ_rank × fitting_ranking_BCE
+accuracy = (confusion_matrix[0][0] + confusion_matrix[1][1]) / ordered_examples
+accuracy_class_0 = confusion_matrix[0][0] / class_support["0"]
+accuracy_class_1 = confusion_matrix[1][1] / class_support["1"]
 
-validation_total_loss = λ_rec × validation_reconstruction_BCE
-                      + λ_KL × validation_KL + λ_rank × validation_ranking_BCE
-
-signed_gap = validation_total_loss - fitting_total_loss
-selection_value = abs(signed_gap)
-```
-
-The selector chooses the candidate with the **smallest `selection_value`**. An exact tie is resolved only by the original candidate order. The fitting loss here is a fresh measurement of the final tuning model, rather than the last optimization epoch's averaged stochastic loss. No extra common validation weights, loss penalties, acceptance thresholds, or early stopping are introduced. Ranking BCE, accuracy, and binary F1-score remain reported measurements and do not select the candidate.
-
-For example, suppose candidate A has fitting loss 0.80 and validation loss 0.83: its signed gap is `+0.03`, and its absolute gap is `0.03`. Candidate B has fitting loss 0.90 and validation loss 0.88: its signed gap is `-0.02`, and its absolute gap is `0.02`. The rule selects B because its absolute gap is smaller, even though its validation loss is higher. These are illustrative values, not results from a saved run. Taking the absolute value treats validation losses above and below fitting loss consistently.
-
-The intent is to reduce fitting/validation mismatch associated with overfitting. A small gap does not establish good fit: both losses can be equally high, indicating underfitting. Candidate-specific weights also rescale the total-loss gap, and component differences can cancel in the weighted sum. Finally, a small gap after 5 tuning epochs does not guarantee avoidance of overfitting after the later 50-epoch fit. The implementation applies the requested gap rule directly and records the underlying losses so these limits remain visible.
-
-For every candidate, `tuning.json` saves `fitting_metrics`, `validation_metrics`, `validation_minus_fitting_total_loss`, and `absolute_total_loss_gap`. Its top-level `selected_absolute_total_loss_gap` records the selected gap.
-
-After selection, the tuning model is discarded. A freshly initialized model is trained on **all selected training comparisons**, including the temporary validation portion, for **50 final epochs** by default. Final epoch count is fixed; there is no early stopping or test-driven model selection.
-
-If a very small run selects only one group, a grouped fitting/validation split is impossible. The script explicitly records `skipped_single_group_smoke_run`, uses candidate 1 provisionally, and still exercises final training and artifact creation. Such a run verifies the pipeline; it does not claim validation-based tuning.
-
-Default controls are `batch_size=16` ordered examples, `seed=42`, and `cpu_threads=4`. `--device auto` chooses CUDA if available, otherwise Apple MPS if available, otherwise CPU. Explicit `--device cpu`, `--device cuda`, or `--device mps` can be supplied; an unavailable requested accelerator fails clearly.
-
-## 8. Final train-only measurements
-
-After final fitting, the script runs one reporting pass on exactly the selected original comparisons. It calls `model.eval()` and disables gradients. Dropout is off. With reporting seed **`seed + 2`**, it draws one posterior sample for each input occurrence and reuses those same two latent samples when reversing the order. A playthrough appearing in several comparison folders is sampled separately for each occurrence. The report does not replace sampled latents with posterior means or average over multiple draws.
-
-For each pair, reconstruction BCE and KL are calculated once and averaged over its two inputs. Ranking BCE averages the forward target-1 and reverse target-0 losses. Dataset losses then average over original comparisons. These reductions correspond to the balanced ordered representation while avoiding a second random latent draw for the reverse direction.
-
-Classification uses `sigmoid(logit) >= 0.5` to predict class 1 and assigns class 0 below that threshold. Accuracy and binary F1-score include **both input orders**. The positive class is **1**, meaning the first playthrough is preferred. The confusion matrix uses true-label rows and predicted-label columns in the order `[0, 1]`.
-
-```text
-accuracy = number of correct ordered predictions / number of ordered examples
 TP = confusion_matrix[1][1]
 FP = confusion_matrix[0][1]
 FN = confusion_matrix[1][0]
 f1_score = 2 × TP / (2 × TP + FP + FN)
 ```
 
-The F1-score is defined as 0 when its denominator is zero. Saved metrics use `f1_score` for this positive-class result and `f1_positive_label=1` to identify the class. Each class's F1 remains available in `f1_by_class`, alongside `class_support` and `confusion_matrix`. Class 0 means the second playthrough is preferred.
+Each class-specific accuracy is the fraction of correctly classified examples among examples whose true label is that class. Saved metrics expose these values through `accuracy_by_class`. Binary F1 uses `f1_score` and `f1_positive_label=1`. Per-class F1 diagnostics, class supports, and the confusion matrix are also saved. A zero denominator gives a value of 0.
 
-Final reporting losses can differ from the last optimization epoch because the final model is fixed, dropout is off, and reporting uses its own posterior draws. The reported train accuracy and binary F1-score measure fit to the selected training data. They do not estimate performance on held-out comparisons.
+Epoch history also records `total_loss_gap = abs(validation_total_loss - train_total_loss)` when validation is available. This value accompanies the curves for manual comparison of combinations and epochs. The gap is `null` for a single-group run.
 
-Python, NumPy, PyTorch, available accelerator RNGs, and DataLoader shuffling are seeded. cuDNN benchmarking is disabled and its deterministic option is enabled when available. Exact numerical agreement across devices, PyTorch releases, or different batch sizes is not guaranteed; see PyTorch's [reproducibility guidance](https://docs.pytorch.org/docs/2.15/notes/randomness.html). The run records its environment and reporting seed.
+The optimization loss averaged during an epoch can differ from that epoch's fitting measurement because optimization uses changing weights, active dropout, and fresh posterior draws. The fitting measurement uses the fixed model at the end of the epoch.
 
-## 9. Saved artifacts and reloading
+Python, NumPy, PyTorch, accelerator RNGs, and fitting-data shuffling are seeded. cuDNN benchmarking is disabled and its deterministic option is enabled when available. Numerical results can vary across devices, PyTorch releases, or batch sizes. The run records its environment and reporting convention. [PyTorch reproducibility guidance](https://docs.pytorch.org/docs/2.15/notes/randomness.html).
 
-Every completed run writes:
+## 9. Saved outputs, curves, and checkpoints
+
+Each invocation creates one experiment root with the shared configuration and split.
 
 | File | Contents |
 |---|---|
-| `model.pt` | Final model state, Adam state, configuration/architecture, full channel codebook, selected instance IDs, and final train metrics |
-| `config.json` | Dataset location and fingerprint, requested/actual comparison counts, epochs, device, seed, selected hyperparameters, selection rule and selected tuning gap, architecture, environment, parameter count, and elapsed time |
-| `selected_train_comparisons.json` | Selected training manifest entries with participant/playthrough and grouping provenance |
-| `tuning.json` | Fitting/validation instance IDs, candidate settings and histories, post-fit `fitting_metrics` and `validation_metrics`, signed `validation_minus_fitting_total_loss`, `absolute_total_loss_gap`, and the selected `selected_absolute_total_loss_gap`; or an explicit single-group smoke-run fallback |
-| `train_history.json` | Per-epoch final-fitting losses and epoch duration |
-| `train_metrics.json` | Final loss components, weighted total, accuracy, binary `f1_score` with `f1_positive_label=1`, per-class F1 diagnostics, confusion matrix, class supports, and reporting convention |
-| `train_predictions.csv` | Every ordered train prediction, its target, probability, and comparison/level IDs |
-| `REPORT.md` | Human-readable final train results, run settings, selection rule, and the selected tuning candidate's fitting/validation total losses and gap |
+| `run_config.json` | Dataset and fingerprint, requested/actual sample counts, epoch budget, seed, device, environment, architecture, and shared run settings |
+| `channels.json` | Exact input channel codebook |
+| `selected_train_comparisons.json` | Selected manifest entries with participant, playthrough, and grouping provenance |
+| `split.json` | Fixed fitting and validation memberships shared by all combinations |
+| `experiments.json` | The 12 combinations, their `pending`, `running`, `completed`, or `failed` status, and completed experiment summaries |
+| `REPORT.md` | Human-readable run settings and links to experiment outputs after all combinations finish |
 
-The dataset SHA-256 fingerprint includes the channel-codebook bytes and selected training-entry metadata, ranking bytes, and encoding bytes, with explicit boundaries between components. No test-entry metadata or test-file contents enter this fingerprint.
+Each `combination_01/` through `combination_12/` directory contains its own outputs.
 
-Model-state tensors are saved on CPU. The optimizer state is also retained and may originate from the training device. To reload the model for inspection on CPU, run from the repository root:
+| File | Contents |
+|---|---|
+| `config.json` | This combination's hyperparameters and experiment settings |
+| `train_history.json` | One row per epoch containing `epoch`, optimization losses, full `train` metrics, `validation` metrics or `null`, `total_loss_gap` or `null`, and duration in seconds |
+| `epoch_metrics.csv` | Flattened per-epoch measurements using `optimization_`, `train_`, and `validation_` column prefixes, plus duration and the absolute total-loss gap |
+| `train_metrics.json` | Complete fitting metrics at the final epoch |
+| `validation_metrics.json` | Complete validation metrics at the final epoch, or JSON `null` for a single-group run |
+| `train_predictions.csv` | Final-epoch ordered predictions for the fitting portion |
+| `validation_predictions.csv` | Final-epoch ordered validation predictions when validation is available |
+| `loss_curves.png` | A 2×2 figure for weighted total loss, reconstruction BCE, KL divergence, and ranking BCE, each showing fitting and validation values against epoch number |
+| `checkpoints/epoch_021.pt`, etc. | Model and optimizer state for each completed epoch strictly greater than 20 |
+
+The JSON history and complete epoch CSV are each replaced atomically after every epoch's measurements. This makes completed epoch measurements available while the experiment continues. Prediction CSV files summarize the final epoch. The history retains measurements for earlier epochs.
+
+The dataset SHA-256 fingerprint includes the codebook bytes and selected training-entry metadata, ranking bytes, and encoding bytes, with explicit boundaries between components. Its inputs are the selected training observations.
+
+Checkpoint saving starts at **epoch 21**. With 100 epochs, each combination produces checkpoints for epochs **21–100 inclusive**, giving **80 per combination and 960 across all 12 combinations**. A checkpoint containing the 1,138,199-parameter model and Adam state is approximately **13.7 MB**. The complete default checkpoint collection therefore uses roughly **13 GB**, plus reports and plots. A run ending at epoch 20 or earlier has zero checkpoints.
+
+Each checkpoint contains `epoch`, `model_state_dict`, `optimizer_state_dict`, `config`, `channels`, `selected_instance_ids`, `fitting_instance_ids`, `validation_instance_ids`, `train_metrics`, and `validation_metrics`. The configuration and split memberships identify the experiment and data associated with that saved epoch.
+
+To inspect a checkpoint you have generated, choose its combination and epoch explicitly. This example loads combination 1 at epoch 21 from the full-run command in section 1.
 
 ```python
 from pathlib import Path
@@ -285,48 +327,39 @@ sys.path.insert(0, str(Path("model-training").resolve()))
 from model import PairwiseCNNVAE
 
 checkpoint = torch.load(
-    "model-training/runs/full_train/model.pt",
+    "model-training/runs/comparison_100_epochs/combination_01/checkpoints/epoch_021.pt",
     map_location="cpu",
     weights_only=True,
 )
+assert checkpoint["epoch"] == 21
+assert checkpoint["config"]["combination_id"] == "combination_01"
+assert checkpoint["config"]["hyperparameters"] == {
+    "learning_rate": 0.001,
+    "lambda_rec": 1.0,
+    "lambda_kl": 0.001,
+    "lambda_rank": 1.0,
+}
+print(checkpoint["config"])
+print(checkpoint["fitting_instance_ids"])
+print(checkpoint["validation_instance_ids"])
+
 model = PairwiseCNNVAE()
 model.load_state_dict(checkpoint["model_state_dict"])
 model.eval()
 print(checkpoint["train_metrics"])
+print(checkpoint["validation_metrics"])
 ```
 
-`map_location="cpu"` also remaps saved optimizer tensors during loading. The example loads the historical `full_train` checkpoint described in section 11; use a new run's checkpoint path to inspect a model selected by the current total-loss-gap rule. This example restores the trained network; the CLI does not provide resume-training support.
+The assertions verify the saved epoch, combination ID, and hyperparameters against the chosen grid row. `map_location="cpu"` maps the saved model and optimizer tensors to CPU during loading.
 
-## 10. Verification
+## 10. Verification and existing artifacts
 
-Run the pipeline checks from the repository root:
+Run the behavioral checks from the repository root.
 
 ```bash
 .venv/bin/python -m unittest discover -s model-training/tests -v
 ```
 
-The small training command in section 1 exercises loading, grouped selection, hyperparameter selection when at least two groups are available, forward/backward passes, final reporting, and checkpoint creation. Inspect its `REPORT.md`, `train_metrics.json`, and `tuning.json` to distinguish a smoke run from a full-data training run. Use a fresh output directory when repeating it.
+The two-epoch command in section 1 exercises all 12 independent experiments, per-epoch measurements, JSON/CSV export, and curves. The 21-epoch command additionally exercises the checkpoint boundary. Use a fresh output directory for each invocation.
 
-Numerical results belong to each run's saved report. The implementation does not infer fun ratings from filenames, train on rendered PNGs, or consult the test tensors when producing those results.
-
-## 11. Historical runs from the previous selector
-
-The existing `full_train` and `smoke` directories were produced **before the total-loss-gap selector was introduced**. They used the previous rule: lowest validation ranking BCE, with reconstruction BCE as a tie-breaker. Their saved models, selection records, and measurements are historical results of that earlier rule; they have not been relabeled as results of the current selector.
-
-Both runs also predate binary-F1 reporting. Their saved `macro_f1` values record the mean of the two class F1 values, and their original reports and checkpoints retain that metric. The `f1_score` schema described in sections 8–9 applies to newly generated measurements.
-
-The historical [full training report](runs/full_train/REPORT.md) records the completed 50-epoch CPU run on all 290 comparisons. Hyperparameter selection used 232 comparisons for fitting and 58 for temporary validation, with no shared annotation groups or recorded playthroughs across that temporary split. Candidate 2 was selected by the previous ranking-BCE rule, then final fitting started from scratch on all 290 comparisons.
-
-The [saved model](runs/full_train/model.pt), [exact metrics](runs/full_train/train_metrics.json), and [580 ordered predictions](runs/full_train/train_predictions.csv) are available in that run directory. Reloading the checkpoint on CPU reproduced every reported loss, metric, and exported prediction exactly. Independently counting the CSV predictions gave 575 correct predictions out of 580. All nine behavioral tests passed.
-
-The separate historical [smoke report](runs/smoke/REPORT.md) records the four-comparison, two-epoch pipeline check under the previous selector. Its checkpoint was also reloaded and its metrics reproduced. Both historical output directories remain available. The commands in section 1 use new output directory names for the current selector; choose another new directory or omit `--output-dir` when rerunning them.
-
-## 12. Verification of the current selector
-
-The [total-loss-gap smoke report](runs/smoke_total_loss_gap/REPORT.md) records a completed run with four original comparisons, one tuning epoch per candidate, and two final epochs. Its [tuning record](runs/smoke_total_loss_gap/tuning.json) includes both post-fit total losses and both gap values for all four candidates. Candidate 2 had the smallest absolute gap, approximately `0.00507331`, and was selected by the new rule. This is a pipeline check, rather than a full-data performance result.
-
-This smoke run also predates binary-F1 reporting. Its saved `macro_f1` and original report retain the recorded macro-F1 measurement. Its total-loss-gap selection record remains a verification of that selector.
-
-The saved losses and selected gap were independently checked against the formula above. The [smoke checkpoint](runs/smoke_total_loss_gap/model.pt) records the new selection rule and gap, and reloading it reproduced the saved final train metrics exactly. A separate single-group CLI check confirmed that the gap is explicitly unavailable (`null`) when grouped validation cannot be performed. At that stage, all **12 behavioral tests** passed, including tests that distinguish absolute-gap selection from lowest-loss selection, check post-fit measurements and exact ties, and exercise the single-group fallback.
-
-The full 290-comparison model has **not been retrained with this new selector**. Its existing checkpoint remains the historical result described in section 11. `smoke_total_loss_gap` now exists too, so choose a new output directory or omit `--output-dir` for another run.
+Existing directories under `model-training/runs/` contain artifacts from earlier training workflows. Their saved configurations and reports identify the procedure and metric schema used for those runs. The experiment layout, commands, and checkpoint policy above describe newly generated runs under the current workflow.

@@ -2,14 +2,16 @@
 
 from __future__ import annotations
 
+from contextlib import redirect_stderr
+import io
 import json
 import math
 from pathlib import Path
+import random
 import sys
 import tempfile
-from types import SimpleNamespace
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import numpy as np
 import torch
@@ -187,12 +189,14 @@ class TrainingTests(unittest.TestCase):
 
     def test_accuracy_binary_f1_and_single_predicted_class(self) -> None:
         cases = [
-            ([0, 0, 0, 1, 1, 1, 1, 1], [0, 0, 1, 0, 0, 1, 1, 1], [[2, 1], [2, 3]], 5 / 8, 2 / 3, 4 / 7),
-            ([0, 1], [1, 1], [[0, 1], [0, 1]], 0.5, 2 / 3, 0.0),
-            ([0, 0, 0, 0, 1, 1, 1, 1], [0, 0, 0, 0, 0, 1, 1, 1], [[4, 0], [1, 3]], 7 / 8, 6 / 7, 8 / 9),
-            ([0, 0], [0, 0], [[2, 0], [0, 0]], 1.0, 0.0, 1.0),
+            ([0, 0, 0, 1, 1, 1, 1, 1], [0, 0, 1, 0, 0, 1, 1, 1],
+             [[2, 1], [2, 3]], 5 / 8, 2 / 3, 4 / 7, {"0": 2 / 3, "1": 3 / 5}),
+            ([0, 1], [1, 1], [[0, 1], [0, 1]], 0.5, 2 / 3, 0.0, {"0": 0.0, "1": 1.0}),
+            ([0, 0, 0, 0, 1, 1, 1, 1], [0, 0, 0, 0, 0, 1, 1, 1],
+             [[4, 0], [1, 3]], 7 / 8, 6 / 7, 8 / 9, {"0": 1.0, "1": 3 / 4}),
+            ([0, 0], [0, 0], [[2, 0], [0, 0]], 1.0, 0.0, 1.0, {"0": 1.0, "1": 0.0}),
         ]
-        for targets, predictions, matrix, accuracy, positive_f1, negative_f1 in cases:
+        for targets, predictions, matrix, accuracy, positive_f1, negative_f1, class_accuracy in cases:
             with self.subTest(predictions=predictions):
                 metrics = classification_metrics(targets, predictions)
                 self.assertEqual(metrics["confusion_matrix"], matrix)
@@ -201,6 +205,7 @@ class TrainingTests(unittest.TestCase):
                 self.assertEqual(metrics["f1_positive_label"], 1)
                 self.assertAlmostEqual(metrics["f1_by_class"]["0"], negative_f1)
                 self.assertAlmostEqual(metrics["f1_by_class"]["1"], positive_f1)
+                self.assertEqual(metrics["accuracy_by_class"], class_accuracy)
                 self.assertNotIn("macro_f1", metrics)
         with self.assertRaises(ValueError):
             classification_metrics([], [])
@@ -269,106 +274,41 @@ class TrainingTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Ranking"):
             load_training_data(self.root, None, 42)
 
-    def _run_mock_tuning(self, measured_totals: list[tuple[float, float]],
-                         history_totals: list[float]):
-        """Supply measured losses independently of the optimizer's epoch history."""
+    def test_twelve_configuration_grid_and_epoch_cli_defaults(self) -> None:
+        expected = {
+            Hyperparameters(learning_rate, reconstruction, kl, ranking)
+            for learning_rate in (1e-3, 3e-4)
+            for kl in (1e-3, 1e-2)
+            for reconstruction, ranking in ((1.0, 1.0), (2.0, 1.0), (1.0, 2.0))
+        }
+        self.assertEqual(len(training.HYPERPARAMETER_COMBINATIONS), 12)
+        self.assertEqual(set(training.HYPERPARAMETER_COMBINATIONS), expected)
+        self.assertEqual(training.EPOCHS, 100)
+        self.assertEqual(training.CHECKPOINT_START_EPOCH, 21)
+        self.assertEqual(training.parse_args([]).epochs, 100)
+        self.assertEqual(training.parse_args(["--epochs", "100"]).epochs, 100)
+        self.assertFalse(hasattr(training.parse_args([]), "tuning_epochs"))
+        with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as rejected:
+            training.parse_args(["--tuning-epochs", "2"])
+        self.assertEqual(rejected.exception.code, 2)
+
+    def test_evaluation_preserves_training_random_number_states(self) -> None:
         data = load_training_data(self.root, None, 42)
-        args = SimpleNamespace(validation_fraction=0.2, seed=42, tuning_epochs=3, batch_size=7)
-        device = torch.device("cpu")
-        fitting, validation = split_training_groups(data.entries, args.validation_fraction, args.seed)
-        models = [Mock(name=f"candidate_{i}") for i in range(len(training.TUNING_CANDIDATES))]
-        for model in models:
-            model.to.return_value = model
-        candidate_index = {hp: i for i, hp in enumerate(training.TUNING_CANDIDATES)}
-        events = []
-
-        def fake_fit(model, supplied_data, entries, hp, epochs, batch_size,
-                     supplied_device, seed, phase):
-            index = candidate_index[hp]
-            self.assertIs(model, models[index])
-            self.assertIs(supplied_data, data)
-            self.assertEqual(entries, fitting)
-            self.assertEqual((epochs, batch_size, seed), (3, 7, 42))
-            self.assertIs(supplied_device, device)
-            events.append(("fit", index))
-            return Mock(), [{"epoch": 3, "total_loss": history_totals[index]}]
-
-        def fake_evaluate(model, supplied_data, entries, hp, batch_size, supplied_device, seed):
-            index = candidate_index[hp]
-            self.assertIs(model, models[index])
-            self.assertIs(supplied_data, data)
-            self.assertIs(supplied_device, device)
-            self.assertEqual((batch_size, seed), (7, 43))
-            self.assertIn(("fit", index), events)
-            if entries == fitting:
-                side = 0
-                events.append(("evaluate_fitting", index))
-            else:
-                self.assertEqual(entries, validation)
-                side = 1
-                events.append(("evaluate_validation", index))
-            return {
-                "total_loss": measured_totals[index][side],
-                "ranking_bce": 0.01 + index,
-                "reconstruction_bce": 0.5,
-            }, []
-
-        with patch.object(training, "PairwiseCNNVAE", side_effect=models) as factory, \
-                patch.object(training, "fit", side_effect=fake_fit), \
-                patch.object(training, "evaluate_training_pairs", side_effect=fake_evaluate):
-            selected, record = training.tune(data, args, device)
-        self.assertEqual(factory.call_count, len(models))
-        for model in models:
-            model.to.assert_called_once_with(device)
-        expected_events = []
-        for index in range(len(models)):
-            expected_events.extend([
-                ("fit", index), ("evaluate_fitting", index), ("evaluate_validation", index)
-            ])
-        self.assertEqual(events, expected_events)
-        return selected, record
-
-    def test_tuning_selects_smallest_absolute_measured_loss_gap(self) -> None:
-        # Candidate 0 has the lowest validation total/ranking loss and the most
-        # negative signed gap, but candidate 1 has the smallest absolute gap.
-        totals = [(10.0, 1.0), (3.0, 3.5), (5.0, 4.0), (1.0, 4.0)]
-        selected, record = self._run_mock_tuning(totals, [1.0, 3.5, 4.0, 4.0])
-        self.assertEqual(selected, training.TUNING_CANDIDATES[1])
-        self.assertEqual(record["selected_candidate_index"], 1)
-        self.assertEqual(record["selected_absolute_total_loss_gap"], 0.5)
-        for candidate, (fitting_total, validation_total) in zip(record["candidates"], totals, strict=True):
-            self.assertEqual(candidate["fitting_metrics"]["total_loss"], fitting_total)
-            self.assertEqual(candidate["validation_metrics"]["total_loss"], validation_total)
-            self.assertEqual(candidate["validation_minus_fitting_total_loss"], validation_total - fitting_total)
-            self.assertEqual(candidate["absolute_total_loss_gap"], abs(validation_total - fitting_total))
-
-    def test_tuning_measures_after_fit_and_uses_candidate_order_for_exact_ties(self) -> None:
-        # All measured gaps tie exactly. Optimizer history would incorrectly
-        # favor a later candidate, so it cannot substitute for post-fit loss.
-        totals = [(50.0, 50.25), (51.0, 51.25), (52.0, 52.25), (53.0, 53.25)]
-        selected, record = self._run_mock_tuning(totals, [200.0, 51.25, 52.25, 53.25])
-        self.assertEqual(selected, training.TUNING_CANDIDATES[0])
-        self.assertEqual(record["selected_candidate_index"], 0)
-        self.assertEqual(record["selected_absolute_total_loss_gap"], 0.25)
-        self.assertEqual(record["candidates"][0]["fitting_metrics"]["total_loss"], 50.0)
-        self.assertEqual(record["candidates"][0]["fit_history"][0]["total_loss"], 200.0)
-
-    def test_single_group_tuning_fallback_does_not_claim_a_measured_gap(self) -> None:
-        data = load_training_data(self.root, None, 42)
-        data.entries = [e for e in data.entries if e["split_group_id"] == "shared"]
-        args = SimpleNamespace(validation_fraction=0.2, seed=42, tuning_epochs=3, batch_size=7)
-        with patch.object(training, "PairwiseCNNVAE") as factory, \
-                patch.object(training, "fit") as fit, \
-                patch.object(training, "evaluate_training_pairs") as evaluate:
-            selected, record = training.tune(data, args, torch.device("cpu"))
-        self.assertEqual(selected, training.TUNING_CANDIDATES[0])
-        self.assertEqual(record["status"], "skipped_single_group_smoke_run")
-        self.assertEqual(record["candidates"], [])
-        self.assertFalse(record.get("validation_instance_ids"))
-        self.assertIsNone(record.get("selected_absolute_total_loss_gap"))
-        factory.assert_not_called()
-        fit.assert_not_called()
-        evaluate.assert_not_called()
+        model = PairwiseCNNVAE()
+        hp = Hyperparameters(1e-3, 1.0, 0.001, 1.0)
+        random.seed(901)
+        np.random.seed(902)
+        torch.manual_seed(903)
+        python_state = random.getstate()
+        numpy_state = np.random.get_state()
+        torch_state = torch.random.get_rng_state().clone()
+        evaluate_training_pairs(model, data, data.entries, hp, 2, torch.device("cpu"), 123)
+        self.assertEqual(random.getstate(), python_state)
+        restored_numpy_state = np.random.get_state()
+        self.assertEqual(restored_numpy_state[0], numpy_state[0])
+        np.testing.assert_array_equal(restored_numpy_state[1], numpy_state[1])
+        self.assertEqual(restored_numpy_state[2:], numpy_state[2:])
+        self.assertTrue(torch.equal(torch.random.get_rng_state(), torch_state))
 
 
 if __name__ == "__main__":

@@ -1,8 +1,9 @@
-"""Train the proposal's shared CNN-VAE and concatenated-latent FC-Tail."""
+"""Compare twelve fixed CNN-VAE training configurations over complete runs."""
 
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 import csv
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
@@ -19,14 +20,15 @@ from torch.utils.data import DataLoader
 
 from data import ComparisonDataset, load_training_data
 from model import PairwiseCNNVAE, architecture_metadata
+from plotting import plot_loss_curves
 
 
 # Set this to a small positive number for a quick run; None uses all train pairs.
 # Counts original comparison folders BEFORE generating both input orders.
 # Whole comparison groups are retained, so the actual count can be below this cap.
 NUM_TRAINING_SAMPLES: int | None = None
-EPOCHS = 50
-TUNING_EPOCHS = 5
+EPOCHS = 100
+CHECKPOINT_START_EPOCH = 21
 BATCH_SIZE = 16
 SEED = 42
 HERE = Path(__file__).resolve().parent
@@ -41,16 +43,14 @@ class Hyperparameters:
     lambda_rank: float
 
 
-# A small, declared joint search, rather than weights chosen using test results.
-TUNING_CANDIDATES = (
-    Hyperparameters(1e-3, 1.0, 1e-3, 1.0),
-    Hyperparameters(1e-3, 1.0, 1e-2, 1.0),
-    Hyperparameters(3e-4, 2.0, 1e-3, 1.0),
-    Hyperparameters(3e-4, 1.0, 1e-3, 2.0),
+# Each configuration gets the complete epoch budget and its own fresh model.
+HYPERPARAMETER_COMBINATIONS = tuple(
+    Hyperparameters(learning_rate, lambda_rec, lambda_kl, lambda_rank)
+    for learning_rate in (1e-3, 3e-4)
+    for lambda_kl in (1e-3, 1e-2)
+    for lambda_rec, lambda_rank in ((1.0, 1.0), (2.0, 1.0), (1.0, 2.0))
 )
-SELECTION_RULE = (
-    "smallest absolute fitting/validation total-loss gap; ties use candidate order"
-)
+LOSS_NAMES = ("total_loss", "reconstruction_bce", "kl_divergence", "ranking_bce")
 
 
 def seed_everything(seed: int) -> None:
@@ -76,6 +76,26 @@ def resolve_device(requested: str) -> torch.device:
     if requested == "mps" and not torch.backends.mps.is_available():
         raise ValueError("MPS was requested but is unavailable.")
     return torch.device(requested)
+
+
+@contextmanager
+def preserve_random_state():
+    """Keep seeded reporting passes from resetting the training random stream."""
+    python_state = random.getstate()
+    numpy_state = np.random.get_state()
+    torch_state = torch.get_rng_state()
+    cuda_states = torch.cuda.get_rng_state_all() if torch.cuda.is_available() else None
+    mps_state = torch.mps.get_rng_state() if torch.backends.mps.is_available() else None
+    try:
+        yield
+    finally:
+        random.setstate(python_state)
+        np.random.set_state(numpy_state)
+        torch.set_rng_state(torch_state)
+        if cuda_states is not None:
+            torch.cuda.set_rng_state_all(cuda_states)
+        if mps_state is not None:
+            torch.mps.set_rng_state(mps_state)
 
 
 def loss_components(output: dict, x_a: torch.Tensor, x_b: torch.Tensor,
@@ -119,6 +139,10 @@ def classification_metrics(targets: list[int], predictions: list[int]) -> dict:
         "f1_score": f1[1],
         "f1_positive_label": 1,
         "f1_by_class": {"0": f1[0], "1": f1[1]},
+        "accuracy_by_class": {
+            str(label): matrix[label][label] / sum(matrix[label]) if sum(matrix[label]) else 0.0
+            for label in (0, 1)
+        },
         "confusion_matrix": matrix,
         "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
         "class_support": {"0": sum(matrix[0]), "1": sum(matrix[1])},
@@ -134,44 +158,31 @@ def make_loader(data, entries, batch_size: int, *, ordered: bool, shuffle: bool,
                       generator=generator)
 
 
-def fit(model: PairwiseCNNVAE, data, entries: list[dict], hp: Hyperparameters,
-        epochs: int, batch_size: int, device: torch.device, seed: int,
-        phase: str) -> tuple[torch.optim.Optimizer, list[dict]]:
-    loader = make_loader(data, entries, batch_size, ordered=True, shuffle=True, seed=seed)
-    optimizer = torch.optim.Adam(model.parameters(), lr=hp.learning_rate)
-    history = []
-    for epoch in range(1, epochs + 1):
-        model.train()
-        totals = {name: 0.0 for name in (
-            "total_loss", "reconstruction_bce", "kl_divergence", "ranking_bce")}
-        count = 0
-        start = time.monotonic()
-        for x_a, x_b, target in loader:
-            x_a, x_b, target = x_a.to(device), x_b.to(device), target.to(device)
-            optimizer.zero_grad(set_to_none=True)
-            output = model(x_a, x_b)
-            parts = loss_components(output, x_a, x_b, target)
-            loss = weighted_loss(parts, hp)
-            if not torch.isfinite(loss):
-                raise FloatingPointError(f"Non-finite loss in {phase}, epoch {epoch}.")
-            loss.backward()
-            optimizer.step()
-            n = target.numel()
-            count += n
-            totals["total_loss"] += loss.item() * n
-            for name, value in parts.items():
-                totals[name] += value.item() * n
-        row = {"epoch": epoch, **{k: v / count for k, v in totals.items()},
-               "seconds": time.monotonic() - start}
-        history.append(row)
-        print(f"{phase} epoch {epoch}/{epochs}: "
-              f"total={row['total_loss']:.6f} rec={row['reconstruction_bce']:.6f} "
-              f"KL={row['kl_divergence']:.6f} rank={row['ranking_bce']:.6f} "
-              f"({row['seconds']:.2f}s)", flush=True)
-    return optimizer, history
+def train_one_epoch(model: PairwiseCNNVAE, loader: DataLoader,
+                    optimizer: torch.optim.Optimizer, hp: Hyperparameters,
+                    device: torch.device) -> dict[str, float]:
+    model.train()
+    totals = {name: 0.0 for name in LOSS_NAMES}
+    count = 0
+    for x_a, x_b, target in loader:
+        x_a, x_b, target = x_a.to(device), x_b.to(device), target.to(device)
+        optimizer.zero_grad(set_to_none=True)
+        parts = loss_components(model(x_a, x_b), x_a, x_b, target)
+        loss = weighted_loss(parts, hp)
+        if not torch.isfinite(loss):
+            raise FloatingPointError("Non-finite optimization loss.")
+        loss.backward()
+        optimizer.step()
+        n = target.numel()
+        count += n
+        totals["total_loss"] += loss.item() * n
+        for name, value in parts.items():
+            totals[name] += value.item() * n
+    return {name: value / count for name, value in totals.items()}
 
 
 @torch.no_grad()
+@preserve_random_state()
 def evaluate_training_pairs(model: PairwiseCNNVAE, data, entries: list[dict],
                             hp: Hyperparameters, batch_size: int,
                             device: torch.device, seed: int) -> tuple[dict, list[dict]]:
@@ -240,100 +251,158 @@ def split_training_groups(entries: list[dict], fraction: float, seed: int) -> tu
     return fitting, validation
 
 
-def tune(data, args, device: torch.device) -> tuple[Hyperparameters, dict]:
-    fitting, validation = split_training_groups(data.entries, args.validation_fraction, args.seed)
-    record = {
-        "fitting_instance_ids": [e["instance_id"] for e in fitting],
-        "validation_instance_ids": [e["instance_id"] for e in validation],
-        "selection_rule": SELECTION_RULE,
-        "selection_loss": "candidate-weighted total_loss on both portions",
-        "comparison_policy": "post-fit evaluation mode; no gradients; seed + 1 on both portions",
-        "selected_absolute_total_loss_gap": None,
-        "candidates": [],
-    }
-    if not validation:
-        record.update({"status": "skipped_single_group_smoke_run",
-                       "reason": "At least two training comparison groups are needed for validation.",
-                       "selected_hyperparameters": asdict(TUNING_CANDIDATES[0])})
-        print("Only one selected group: provisional first candidate, no validation tuning.", flush=True)
-        return TUNING_CANDIDATES[0], record
-    for index, hp in enumerate(TUNING_CANDIDATES):
-        seed_everything(args.seed)  # Same initialization/shuffle seed for all candidates.
-        model = PairwiseCNNVAE().to(device)
-        _, history = fit(model, data, fitting, hp, args.tuning_epochs, args.batch_size,
-                         device, args.seed, f"tuning {index + 1}/{len(TUNING_CANDIDATES)}")
-        # Compare the SAME fixed candidate on both portions, with dropout off.
-        # Epoch history averages changing weights and active dropout, so it is
-        # not the fitting loss used for this comparison.
-        fitting_metrics, _ = evaluate_training_pairs(model, data, fitting, hp, args.batch_size,
-                                                     device, args.seed + 1)
-        validation_metrics, _ = evaluate_training_pairs(model, data, validation, hp, args.batch_size,
-                                                        device, args.seed + 1)
-        signed_gap = validation_metrics["total_loss"] - fitting_metrics["total_loss"]
-        absolute_gap = abs(signed_gap)
-        record["candidates"].append({"hyperparameters": asdict(hp),
-                                     "fit_history": history, "fitting_metrics": fitting_metrics,
-                                     "validation_metrics": validation_metrics,
-                                     "validation_minus_fitting_total_loss": signed_gap,
-                                     "absolute_total_loss_gap": absolute_gap})
-        print(f"tuning {index + 1}: fitting total={fitting_metrics['total_loss']:.6f} "
-              f"validation total={validation_metrics['total_loss']:.6f} "
-              f"absolute gap={absolute_gap:.6f}", flush=True)
-        del model
-    # min retains the first candidate on an exact tie. Do not use the signed
-    # difference: validation can be lower than fitting without having a small gap.
-    selected = min(range(len(TUNING_CANDIDATES)),
-                   key=lambda i: record["candidates"][i]["absolute_total_loss_gap"])
-    record.update({"status": "completed", "selected_candidate_index": selected,
-                   "selected_absolute_total_loss_gap": record["candidates"][selected]["absolute_total_loss_gap"],
-                   "selected_hyperparameters": asdict(TUNING_CANDIDATES[selected])})
-    return TUNING_CANDIDATES[selected], record
-
-
 def write_json(path: Path, value) -> None:
-    path.write_text(json.dumps(value, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(json.dumps(value, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+    temporary.replace(path)
 
 
-def write_report(output: Path, config: dict, metrics: dict, tuning: dict) -> None:
-    hp = config["hyperparameters"]
-    lines = ["# Training results", "", "This run uses only the selected training comparisons.", "",
-             f"- Comparisons: {metrics['comparisons']} of {config['available_comparisons']}",
-             f"- Ordered examples: {metrics['ordered_examples']} (both orders, balanced labels)",
-             f"- Final fitting epochs: {config['epochs']}", f"- Device: {config['device']}",
-             f"- Hyperparameter selection: {tuning['status']}",
-             f"- Hyperparameter selection rule: {tuning['selection_rule']}",
-             f"- Adam learning rate: {hp['learning_rate']}",
-             f"- Weights (reconstruction, KL, ranking): {hp['lambda_rec']}, {hp['lambda_kl']}, {hp['lambda_rank']}",
-             ""]
-    if tuning["status"] == "completed":
-        candidate = tuning["candidates"][tuning["selected_candidate_index"]]
-        lines += ["The selected tuning candidate was measured in evaluation mode on both portions:",
-                  "", "| Tuning comparison | Value |", "|---|---:|",
-                  f"| Fitting total loss | {candidate['fitting_metrics']['total_loss']:.10f} |",
-                  f"| Validation total loss | {candidate['validation_metrics']['total_loss']:.10f} |",
-                  f"| Validation minus fitting total loss | {candidate['validation_minus_fitting_total_loss']:.10f} |",
-                  f"| Absolute total-loss gap (selection score) | {candidate['absolute_total_loss_gap']:.10f} |",
-                  "", "This gap belongs to the tuning candidate before fresh final training.",
-                  "A small gap can also occur when both losses are high; it does not guarantee",
-                  "that the model avoids overfitting.", ""]
-    else:
-        lines += ["The tuning gap is unavailable because the selected data has only one group.", ""]
-    lines += ["| Final train measurement | Value |", "|---|---:|"]
-    for label, key in (("Weighted total loss", "total_loss"),
-                       ("Reconstruction BCE (mean per bit)", "reconstruction_bce"),
-                       ("KL divergence (sum per latent, mean per input)", "kl_divergence"),
-                       ("Fun-ranking BCE", "ranking_bce"),
-                       ("Fun-ranking accuracy", "accuracy"),
-                       ("Fun-ranking F1 (positive class 1)", "f1_score")):
-        lines.append(f"| {label} | {metrics[key]:.10f} |")
-    lines += ["", "Final measurements use evaluation mode and one seeded posterior draw per input;",
-              "the same two latent samples are reused for the two orders. These are in-sample",
-              "training results, not estimates of held-out performance. No test examples are loaded.",
-              "", f"Confusion matrix (true rows, predicted columns; labels 0, 1): `{metrics['confusion_matrix']}`.",
-              "", "`model.pt` contains model and Adam states, architecture, codebook, selected IDs,",
-              "configuration, dataset fingerprint and final train metrics. `train_predictions.csv`",
-              "contains every ordered prediction. See `tuning.json` and `train_history.json` for",
-              "selection details and stochastic optimization losses."]
+def write_csv(path: Path, rows: list[dict]) -> None:
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    with temporary.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+    temporary.replace(path)
+
+
+def flatten_epoch_metrics(row: dict) -> dict:
+    flat = {"epoch": row["epoch"], "seconds": row["seconds"]}
+    for name in LOSS_NAMES:
+        flat[f"optimization_{name}"] = row["optimization"][name]
+    for portion in ("train", "validation"):
+        metrics = row[portion]
+        for name in (*LOSS_NAMES, "accuracy", "f1_score"):
+            flat[f"{portion}_{name}"] = metrics[name] if metrics is not None else None
+        for label in ("0", "1"):
+            flat[f"{portion}_accuracy_class_{label}"] = (
+                metrics["accuracy_by_class"][label] if metrics is not None else None
+            )
+    flat["total_loss_gap"] = row["total_loss_gap"]
+    return flat
+
+
+def save_epoch_checkpoint(path: Path, model: PairwiseCNNVAE,
+                          optimizer: torch.optim.Optimizer, config: dict,
+                          data, fitting: list[dict], validation: list[dict],
+                          row: dict) -> None:
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    torch.save({
+        "epoch": row["epoch"],
+        "model_state_dict": {name: value.detach().cpu() for name, value in model.state_dict().items()},
+        "optimizer_state_dict": optimizer.state_dict(),
+        "config": config,
+        "channels": data.channels,
+        "selected_instance_ids": [entry["instance_id"] for entry in data.entries],
+        "fitting_instance_ids": [entry["instance_id"] for entry in fitting],
+        "validation_instance_ids": [entry["instance_id"] for entry in validation],
+        "train_metrics": row["train"],
+        "validation_metrics": row["validation"],
+    }, temporary)
+    temporary.replace(path)
+
+
+def run_combination(data, fitting: list[dict], validation: list[dict],
+                    hp: Hyperparameters, args, device: torch.device,
+                    output: Path, combination_id: str, run_config: dict) -> dict:
+    output.mkdir()
+    checkpoints = output / "checkpoints"
+    checkpoints.mkdir()
+    config = {**run_config, "combination_id": combination_id,
+              "hyperparameters": asdict(hp)}
+    write_json(output / "config.json", config)
+    seed_everything(args.seed)
+    model = PairwiseCNNVAE().to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=hp.learning_rate)
+    loader = make_loader(data, fitting, args.batch_size, ordered=True,
+                         shuffle=True, seed=args.seed)
+    history, csv_rows, saved_checkpoints = [], [], []
+    print(f"Starting {combination_id} with {asdict(hp)}", flush=True)
+    try:
+        for epoch in range(1, args.epochs + 1):
+            start = time.monotonic()
+            optimization = train_one_epoch(model, loader, optimizer, hp, device)
+            train_metrics, train_predictions = evaluate_training_pairs(
+                model, data, fitting, hp, args.batch_size, device, config["reporting_seed"]
+            )
+            validation_metrics, validation_predictions = None, []
+            if validation:
+                validation_metrics, validation_predictions = evaluate_training_pairs(
+                    model, data, validation, hp, args.batch_size, device, config["reporting_seed"]
+                )
+            gap = None
+            if validation_metrics is not None:
+                gap = abs(validation_metrics["total_loss"] - train_metrics["total_loss"])
+            row = {"epoch": epoch, "optimization": optimization,
+                   "train": train_metrics, "validation": validation_metrics,
+                   "total_loss_gap": gap, "seconds": time.monotonic() - start}
+            history.append(row)
+            csv_rows.append(flatten_epoch_metrics(row))
+            write_json(output / "train_history.json", history)
+            write_csv(output / "epoch_metrics.csv", csv_rows)
+            for portion, metrics in (("train", train_metrics), ("validation", validation_metrics)):
+                if metrics is not None:
+                    print(f"{combination_id} epoch {epoch}/{args.epochs} {portion} "
+                          f"total={metrics['total_loss']:.6f} "
+                          f"rec={metrics['reconstruction_bce']:.6f} "
+                          f"KL={metrics['kl_divergence']:.6f} "
+                          f"rank={metrics['ranking_bce']:.6f} "
+                          f"accuracy={metrics['accuracy']:.4f} "
+                          f"class0={metrics['accuracy_by_class']['0']:.4f} "
+                          f"class1={metrics['accuracy_by_class']['1']:.4f} "
+                          f"F1={metrics['f1_score']:.4f}", flush=True)
+            if epoch >= CHECKPOINT_START_EPOCH:
+                checkpoint = checkpoints / f"epoch_{epoch:03d}.pt"
+                save_epoch_checkpoint(checkpoint, model, optimizer, config, data,
+                                      fitting, validation, row)
+                saved_checkpoints.append(checkpoint.relative_to(output).as_posix())
+    finally:
+        if history:
+            plot_loss_curves(history, asdict(hp), output / "loss_curves.png", combination_id)
+    write_json(output / "train_metrics.json", train_metrics)
+    write_json(output / "validation_metrics.json", validation_metrics)
+    write_csv(output / "train_predictions.csv", train_predictions)
+    if validation_predictions:
+        write_csv(output / "validation_predictions.csv", validation_predictions)
+    return {
+        "combination_id": combination_id,
+        "directory": output.name,
+        "hyperparameters": asdict(hp),
+        "status": "completed",
+        "completed_epochs": len(history),
+        "last_train_metrics": train_metrics,
+        "last_validation_metrics": validation_metrics,
+        "checkpoint_files": saved_checkpoints,
+        "loss_graph": f"{output.name}/loss_curves.png",
+    }
+
+
+def write_report(output: Path, config: dict, experiments: list[dict]) -> None:
+    lines = ["# Hyperparameter comparison", "",
+             f"Each configuration trains for {config['epochs']} epochs.",
+             f"The fixed group split contains {config['fitting_comparisons']} fitting comparisons "
+             f"and {config['validation_comparisons']} validation comparisons.",
+             "Training metrics refer to the fitting portion. Both portions come from train_set.",
+             "Choose a configuration and epoch from its loss curves and per-epoch metrics.",
+             "", "| Configuration | Learning rate | Rec weight | KL weight | Rank weight | Epochs | Final train accuracy | Final validation accuracy | Checkpoints | Loss graph |",
+             "|---|---:|---:|---:|---:|---:|---:|---:|---:|---|"]
+    for experiment in experiments:
+        hp = experiment["hyperparameters"]
+        validation = experiment["last_validation_metrics"]
+        validation_accuracy = f"{validation['accuracy']:.6f}" if validation is not None else "unavailable"
+        directory = experiment["directory"]
+        lines.append(
+            f"| {experiment['combination_id']} | {hp['learning_rate']} | {hp['lambda_rec']} | "
+            f"{hp['lambda_kl']} | {hp['lambda_rank']} | {experiment['completed_epochs']} | "
+            f"{experiment['last_train_metrics']['accuracy']:.6f} | {validation_accuracy} | "
+            f"{len(experiment['checkpoint_files'])} | [Curves]({directory}/loss_curves.png) |"
+        )
+    lines += ["", "Each graph contains total loss, reconstruction BCE, KL divergence, and ranking BCE panels.",
+              "The panels show fitting and validation curves against num_epochs.",
+              "Each configuration's train_history.json and epoch_metrics.csv record every epoch's losses,",
+              "overall accuracy, class-0 accuracy, class-1 accuracy, and binary F1 for positive class 1.",
+              "", f"Checkpoints start at epoch {CHECKPOINT_START_EPOCH} and are saved after every later epoch.",
+              "For example, combination_01/checkpoints/epoch_021.pt holds that configuration at epoch 21."]
     (output / "REPORT.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -342,9 +411,9 @@ def parse_args(argv=None):
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET,
                         help="Preprocessed root containing train_set, channels.json and manifest.json")
     parser.add_argument("--num-training-samples", type=int, default=NUM_TRAINING_SAMPLES,
-                        help="Cap on original comparisons, keeping whole groups; default: all")
-    parser.add_argument("--epochs", type=int, default=EPOCHS)
-    parser.add_argument("--tuning-epochs", type=int, default=TUNING_EPOCHS)
+                        help="Cap on original comparisons, keeping whole groups; default all")
+    parser.add_argument("--epochs", type=int, default=EPOCHS,
+                        help="Complete training duration for every one of the twelve configurations")
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE,
                         help="Ordered examples per optimization batch")
     parser.add_argument("--validation-fraction", type=float, default=0.2)
@@ -352,75 +421,82 @@ def parse_args(argv=None):
     parser.add_argument("--device", choices=("auto", "cpu", "cuda", "mps"), default="auto")
     parser.add_argument("--cpu-threads", type=int, default=4)
     parser.add_argument("--output-dir", type=Path,
-                        help="New or empty output directory; defaults to a timestamped run")
+                        help="New or empty comparison directory, default a timestamped run")
     args = parser.parse_args(argv)
-    for name in ("epochs", "tuning_epochs", "batch_size", "cpu_threads"):
+    for name in ("epochs", "batch_size", "cpu_threads"):
         if getattr(args, name) < 1:
             parser.error(f"--{name.replace('_', '-')} must be positive")
     if args.num_training_samples is not None and args.num_training_samples < 1:
         parser.error("--num-training-samples must be positive")
     if not 0 < args.validation_fraction < 1:
         parser.error("--validation-fraction must be between zero and one")
-    if not 0 <= args.seed < 2**32 - 2:
-        parser.error("--seed must be in [0, 2**32 - 3]")
+    if not 0 <= args.seed < 2**32:
+        parser.error("--seed must be in [0, 2**32 - 1]")
     return args
 
 
 def main(argv=None) -> None:
     args = parse_args(argv)
-    started = time.monotonic()
     torch.set_num_threads(args.cpu_threads)
     device = resolve_device(args.device)
     data = load_training_data(args.dataset.resolve(), args.num_training_samples, args.seed)
+    fitting, validation = split_training_groups(data.entries, args.validation_fraction, args.seed)
     output = (args.output_dir or HERE / "runs" / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")).resolve()
     if output.exists() and any(output.iterdir()):
-        raise ValueError(f"Output directory must be new or empty: {output}")
-    # Prevent output artifacts from altering a supplied dataset.
+        raise ValueError(f"Output directory must be new or empty {output}")
     if output == args.dataset.resolve() or args.dataset.resolve() in output.parents:
         raise ValueError("Output directory must be outside the preprocessed dataset.")
     output.mkdir(parents=True, exist_ok=True)
-    print(f"Loaded {len(data.entries)}/{data.available_comparisons} train comparisons "
-          f"({2 * len(data.entries)} ordered examples); device={device}", flush=True)
-    hp, tuning_record = tune(data, args, device)
-    write_json(output / "tuning.json", tuning_record)
-    print(f"Selected {asdict(hp)}; retraining from scratch on all selected train pairs.", flush=True)
-    seed_everything(args.seed)
-    model = PairwiseCNNVAE().to(device)
-    optimizer, history = fit(model, data, data.entries, hp, args.epochs, args.batch_size,
-                             device, args.seed, "final train")
-    metrics, predictions = evaluate_training_pairs(model, data, data.entries, hp,
-                                                   args.batch_size, device, args.seed + 2)
     config = {
-        "created_utc": datetime.now(timezone.utc).isoformat(), "dataset": str(args.dataset.resolve()),
-        "dataset_fingerprint": data.dataset_fingerprint,
+        "created_utc": datetime.now(timezone.utc).isoformat(),
+        "workflow": "twelve independent fixed-configuration runs, user selects configuration and epoch",
+        "dataset": str(args.dataset.resolve()), "dataset_fingerprint": data.dataset_fingerprint,
         "requested_sample_cap": args.num_training_samples,
-        "available_comparisons": data.available_comparisons, "selected_comparisons": len(data.entries),
-        "epochs": args.epochs, "tuning_epochs": args.tuning_epochs, "batch_size": args.batch_size,
-        "validation_fraction": args.validation_fraction, "seed": args.seed,
+        "available_comparisons": data.available_comparisons,
+        "selected_comparisons": len(data.entries),
+        "fitting_comparisons": len(fitting), "validation_comparisons": len(validation),
+        "epochs": args.epochs, "combination_count": len(HYPERPARAMETER_COMBINATIONS),
+        "checkpoint_start_epoch": CHECKPOINT_START_EPOCH,
+        "batch_size": args.batch_size, "validation_fraction": args.validation_fraction,
+        "seed": args.seed, "reporting_seed": (args.seed + 1) % (2**32),
         "device": str(device), "cpu_threads": args.cpu_threads,
-        "hyperparameters": asdict(hp), "architecture": architecture_metadata(),
-        "hyperparameter_selection_rule": tuning_record["selection_rule"],
-        "selected_tuning_total_loss_gap": tuning_record.get("selected_absolute_total_loss_gap"),
+        "architecture": architecture_metadata(),
         "python_version": platform.python_version(), "pytorch_version": str(torch.__version__),
         "numpy_version": np.__version__, "platform": platform.platform(),
-        "parameter_count": sum(p.numel() for p in model.parameters()),
-        "elapsed_seconds": time.monotonic() - started,
+        "parameter_count": sum(p.numel() for p in PairwiseCNNVAE().parameters()),
     }
-    selected_ids = [e["instance_id"] for e in data.entries]
-    write_json(output / "config.json", config)
+    write_json(output / "run_config.json", config)
+    write_json(output / "channels.json", data.channels)
     write_json(output / "selected_train_comparisons.json", data.entries)
-    write_json(output / "train_history.json", history)
-    write_json(output / "train_metrics.json", metrics)
-    with (output / "train_predictions.csv").open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(predictions[0]))
-        writer.writeheader()
-        writer.writerows(predictions)
-    torch.save({"model_state_dict": {k: v.detach().cpu() for k, v in model.state_dict().items()},
-                "optimizer_state_dict": optimizer.state_dict(), "config": config,
-                "channels": data.channels, "selected_instance_ids": selected_ids,
-                "train_metrics": metrics}, output / "model.pt")
-    write_report(output, config, metrics, tuning_record)
-    print(json.dumps({"output_dir": str(output), "train_metrics": metrics}, indent=2), flush=True)
+    write_json(output / "split.json", {
+        "fitting_instance_ids": [entry["instance_id"] for entry in fitting],
+        "validation_instance_ids": [entry["instance_id"] for entry in validation],
+        "policy": "one fixed split of whole split_group_id groups for all configurations",
+    })
+    experiments = [
+        {"combination_id": f"combination_{index:02d}", "hyperparameters": asdict(hp), "status": "pending"}
+        for index, hp in enumerate(HYPERPARAMETER_COMBINATIONS, 1)
+    ]
+    write_json(output / "experiments.json", experiments)
+    print(f"Loaded {len(data.entries)} comparisons, fitting={len(fitting)}, "
+          f"validation={len(validation)}, configurations={len(experiments)}, device={device}", flush=True)
+    for index, hp in enumerate(HYPERPARAMETER_COMBINATIONS):
+        combination_id = experiments[index]["combination_id"]
+        experiments[index]["status"] = "running"
+        write_json(output / "experiments.json", experiments)
+        try:
+            experiments[index] = run_combination(
+                data, fitting, validation, hp, args, device,
+                output / combination_id, combination_id, config
+            )
+        except BaseException as error:
+            experiments[index]["status"] = "failed"
+            experiments[index]["error"] = str(error)
+            write_json(output / "experiments.json", experiments)
+            raise
+        write_json(output / "experiments.json", experiments)
+    write_report(output, config, experiments)
+    print(f"Completed all {len(experiments)} configurations. Review {output / 'REPORT.md'}", flush=True)
 
 
 if __name__ == "__main__":
