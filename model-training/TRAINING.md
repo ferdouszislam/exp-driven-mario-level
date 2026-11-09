@@ -40,7 +40,18 @@ The checkpoint-saving boundary can be exercised with four comparisons and 21 epo
   --output-dir model-training/runs/comparison_checkpoint_check
 ```
 
-That run saves one epoch-21 checkpoint per combination. Runs of 20 epochs or fewer produce epoch measurements and plots, with their checkpoint directories containing zero checkpoints.
+That run saves one epoch-21 checkpoint per combination. With the default checkpoint window, runs of 20 epochs or fewer produce epoch measurements and plots with zero checkpoints.
+
+To train for the default 100 epochs and save epochs 30 through 70 inclusive, use
+
+```bash
+.venv/bin/python model-training/train.py \
+  --checkpoint-start-epoch 30 \
+  --checkpoint-end-epoch 70 \
+  --output-dir model-training/runs/comparison_30_to_70
+```
+
+This saves 41 checkpoints per combination. The window controls saving while each experiment completes its full training budget.
 
 Each output directory must be new or empty. Omit `--output-dir` to create a new UTC-timestamped directory under `model-training/runs/`. The script rejects output inside the input dataset. View all flags with
 
@@ -234,6 +245,8 @@ The main controls are available near the top of `train.py` and through the CLI.
 |---|---:|---|
 | `NUM_TRAINING_SAMPLES` / `--num-training-samples` | `None` | Cap on original comparisons, preserving whole groups |
 | `EPOCHS` / `--epochs` | 100 | Full epoch budget for each of the 12 combinations |
+| `CHECKPOINT_START_EPOCH` / `--checkpoint-start-epoch` | 21 | First checkpoint epoch, inclusive |
+| `CHECKPOINT_END_EPOCH` / `--checkpoint-end-epoch` | `None` | Last checkpoint epoch, inclusive, resolved to `--epochs` by default |
 | `--batch-size` | 16 | Ordered fitting examples per optimization batch |
 | `--validation-fraction` | 0.2 | Target fraction of selected comparisons for fixed validation |
 | `--seed` | 42 | Initialization, sample selection, split, and random-stream seed |
@@ -257,15 +270,13 @@ Every epoch prints fitting and validation values to the console and writes them 
 
 - Weighted total loss, reconstruction BCE, KL divergence, and ranking BCE.
 - Overall ordered-pair accuracy.
-- Accuracy within true class 0 and within true class 1.
 - Binary F1-score for positive class 1.
 
 Classification uses `sigmoid(logit) >= 0.5` to predict class 1 and assigns class 0 below that threshold. Class 1 means the first playthrough is preferred. Class 0 means the second playthrough is preferred. Both input orders contribute to the measurements. The confusion matrix has true-label rows and predicted-label columns ordered `[0, 1]`.
 
 ```text
-accuracy = (confusion_matrix[0][0] + confusion_matrix[1][1]) / ordered_examples
-accuracy_class_0 = confusion_matrix[0][0] / class_support["0"]
-accuracy_class_1 = confusion_matrix[1][1] / class_support["1"]
+correct_ordered_predictions = confusion_matrix[0][0] + confusion_matrix[1][1]
+accuracy = correct_ordered_predictions / ordered_examples
 
 TP = confusion_matrix[1][1]
 FP = confusion_matrix[0][1]
@@ -273,9 +284,7 @@ FN = confusion_matrix[1][0]
 f1_score = 2 × TP / (2 × TP + FP + FN)
 ```
 
-Each class-specific accuracy is the fraction of correctly classified examples among examples whose true label is that class. Saved metrics expose these values through `accuracy_by_class`. Binary F1 uses `f1_score` and `f1_positive_label=1`. Per-class F1 diagnostics, class supports, and the confusion matrix are also saved. A zero denominator gives a value of 0.
-
-Epoch history also records `total_loss_gap = abs(validation_total_loss - train_total_loss)` when validation is available. This value accompanies the curves for manual comparison of combinations and epochs. The gap is `null` for a single-group run.
+Binary F1 uses `f1_score` and `f1_positive_label=1`. Its value is 0 when the denominator is zero. Saved `class_support` and `confusion_matrix` diagnostics provide the underlying label and prediction counts.
 
 The optimization loss averaged during an epoch can differ from that epoch's fitting measurement because optimization uses changing weights, active dropout, and fresh posterior draws. The fitting measurement uses the fixed model at the end of the epoch.
 
@@ -287,7 +296,7 @@ Each invocation creates one experiment root with the shared configuration and sp
 
 | File | Contents |
 |---|---|
-| `run_config.json` | Dataset and fingerprint, requested/actual sample counts, epoch budget, seed, device, environment, architecture, and shared run settings |
+| `run_config.json` | Dataset and fingerprint, requested/actual sample counts, epoch budget, resolved checkpoint start/end epochs, seed, device, environment, architecture, and shared run settings |
 | `channels.json` | Exact input channel codebook |
 | `selected_train_comparisons.json` | Selected manifest entries with participant, playthrough, and grouping provenance |
 | `split.json` | Fixed fitting and validation memberships shared by all combinations |
@@ -299,20 +308,24 @@ Each `combination_01/` through `combination_12/` directory contains its own outp
 | File | Contents |
 |---|---|
 | `config.json` | This combination's hyperparameters and experiment settings |
-| `train_history.json` | One row per epoch containing `epoch`, optimization losses, full `train` metrics, `validation` metrics or `null`, `total_loss_gap` or `null`, and duration in seconds |
-| `epoch_metrics.csv` | Flattened per-epoch measurements using `optimization_`, `train_`, and `validation_` column prefixes, plus duration and the absolute total-loss gap |
+| `train_history.json` | One row per epoch containing `epoch`, optimization losses, full `train` metrics, `validation` metrics or `null`, and duration in seconds |
+| `epoch_metrics.csv` | Flattened per-epoch losses, overall accuracy, and binary F1 using `optimization_`, `train_`, and `validation_` column prefixes, plus duration |
 | `train_metrics.json` | Complete fitting metrics at the final epoch |
 | `validation_metrics.json` | Complete validation metrics at the final epoch, or JSON `null` for a single-group run |
 | `train_predictions.csv` | Final-epoch ordered predictions for the fitting portion |
 | `validation_predictions.csv` | Final-epoch ordered validation predictions when validation is available |
 | `loss_curves.png` | A 2×2 figure for weighted total loss, reconstruction BCE, KL divergence, and ranking BCE, each showing fitting and validation values against epoch number |
-| `checkpoints/epoch_021.pt`, etc. | Model and optimizer state for each completed epoch strictly greater than 20 |
+| `checkpoints/epoch_021.pt`, etc. | Model and optimizer state for each completed epoch within the inclusive checkpoint window |
 
 The JSON history and complete epoch CSV are each replaced atomically after every epoch's measurements. This makes completed epoch measurements available while the experiment continues. Prediction CSV files summarize the final epoch. The history retains measurements for earlier epochs.
 
 The dataset SHA-256 fingerprint includes the codebook bytes and selected training-entry metadata, ranking bytes, and encoding bytes, with explicit boundaries between components. Its inputs are the selected training observations.
 
-Checkpoint saving starts at **epoch 21**. With 100 epochs, each combination produces checkpoints for epochs **21–100 inclusive**, giving **80 per combination and 960 across all 12 combinations**. A checkpoint containing the 1,138,199-parameter model and Adam state is approximately **13.7 MB**. The complete default checkpoint collection therefore uses roughly **13 GB**, plus reports and plots. A run ending at epoch 20 or earlier has zero checkpoints.
+Checkpoint saving uses the inclusive window defined by `--checkpoint-start-epoch` and `--checkpoint-end-epoch`. The defaults are **21** and **`None`**, with `None` resolved to the final training epoch specified by `--epochs`. The equivalent module constants are `CHECKPOINT_START_EPOCH` and `CHECKPOINT_END_EPOCH` near the top of `train.py`.
+
+Both endpoints must be positive, and an explicitly supplied end epoch must be at least the start epoch. Endpoints can extend beyond the training budget. The actual checkpoint epochs are the intersection of the configured window with completed training epochs. A short run ending before the default start epoch is valid and produces zero checkpoints. The resolved start and end are saved in the run and combination configurations.
+
+With the default 100 epochs, each combination produces checkpoints for **epochs 21–100 inclusive**, giving **80 per combination and 960 across all 12 combinations**. A checkpoint containing the 1,138,199-parameter model and Adam state is approximately **13.7 MB**. The complete default checkpoint collection therefore uses roughly **13 GB**, plus reports and plots.
 
 Each checkpoint contains `epoch`, `model_state_dict`, `optimizer_state_dict`, `config`, `channels`, `selected_instance_ids`, `fitting_instance_ids`, `validation_instance_ids`, `train_metrics`, and `validation_metrics`. The configuration and split memberships identify the experiment and data associated with that saved epoch.
 
@@ -333,6 +346,8 @@ checkpoint = torch.load(
 )
 assert checkpoint["epoch"] == 21
 assert checkpoint["config"]["combination_id"] == "combination_01"
+assert checkpoint["config"]["checkpoint_start_epoch"] == 21
+assert checkpoint["config"]["checkpoint_end_epoch"] == 100
 assert checkpoint["config"]["hyperparameters"] == {
     "learning_rate": 0.001,
     "lambda_rec": 1.0,
@@ -350,7 +365,7 @@ print(checkpoint["train_metrics"])
 print(checkpoint["validation_metrics"])
 ```
 
-The assertions verify the saved epoch, combination ID, and hyperparameters against the chosen grid row. `map_location="cpu"` maps the saved model and optimizer tensors to CPU during loading.
+The assertions verify the saved epoch, checkpoint window, combination ID, and hyperparameters against the chosen grid row. `map_location="cpu"` maps the saved model and optimizer tensors to CPU during loading.
 
 ## 10. Verification and existing artifacts
 

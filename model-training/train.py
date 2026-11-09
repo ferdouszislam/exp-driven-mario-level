@@ -28,7 +28,9 @@ from plotting import plot_loss_curves
 # Whole comparison groups are retained, so the actual count can be below this cap.
 NUM_TRAINING_SAMPLES: int | None = None
 EPOCHS = 100
+# Inclusive checkpoint bounds. None uses the final training epoch.
 CHECKPOINT_START_EPOCH = 21
+CHECKPOINT_END_EPOCH: int | None = None
 BATCH_SIZE = 16
 SEED = 42
 HERE = Path(__file__).resolve().parent
@@ -128,21 +130,12 @@ def classification_metrics(targets: list[int], predictions: list[int]) -> dict:
         matrix[target][predicted] += 1
     if not targets:
         raise ValueError("Cannot compute metrics without observations.")
-    f1 = []
-    for label in (0, 1):
-        tp = matrix[label][label]
-        fp, fn = matrix[1 - label][label], matrix[label][1 - label]
-        denominator = 2 * tp + fp + fn
-        f1.append(2 * tp / denominator if denominator else 0.0)
+    tp, fp, fn = matrix[1][1], matrix[0][1], matrix[1][0]
+    denominator = 2 * tp + fp + fn
     return {
         "accuracy": (matrix[0][0] + matrix[1][1]) / len(targets),
-        "f1_score": f1[1],
+        "f1_score": 2 * tp / denominator if denominator else 0.0,
         "f1_positive_label": 1,
-        "f1_by_class": {"0": f1[0], "1": f1[1]},
-        "accuracy_by_class": {
-            str(label): matrix[label][label] / sum(matrix[label]) if sum(matrix[label]) else 0.0
-            for label in (0, 1)
-        },
         "confusion_matrix": matrix,
         "confusion_matrix_axes": "rows=true, columns=predicted; labels=[0,1]",
         "class_support": {"0": sum(matrix[0]), "1": sum(matrix[1])},
@@ -274,11 +267,6 @@ def flatten_epoch_metrics(row: dict) -> dict:
         metrics = row[portion]
         for name in (*LOSS_NAMES, "accuracy", "f1_score"):
             flat[f"{portion}_{name}"] = metrics[name] if metrics is not None else None
-        for label in ("0", "1"):
-            flat[f"{portion}_accuracy_class_{label}"] = (
-                metrics["accuracy_by_class"][label] if metrics is not None else None
-            )
-    flat["total_loss_gap"] = row["total_loss_gap"]
     return flat
 
 
@@ -330,12 +318,9 @@ def run_combination(data, fitting: list[dict], validation: list[dict],
                 validation_metrics, validation_predictions = evaluate_training_pairs(
                     model, data, validation, hp, args.batch_size, device, config["reporting_seed"]
                 )
-            gap = None
-            if validation_metrics is not None:
-                gap = abs(validation_metrics["total_loss"] - train_metrics["total_loss"])
             row = {"epoch": epoch, "optimization": optimization,
                    "train": train_metrics, "validation": validation_metrics,
-                   "total_loss_gap": gap, "seconds": time.monotonic() - start}
+                   "seconds": time.monotonic() - start}
             history.append(row)
             csv_rows.append(flatten_epoch_metrics(row))
             write_json(output / "train_history.json", history)
@@ -348,10 +333,8 @@ def run_combination(data, fitting: list[dict], validation: list[dict],
                           f"KL={metrics['kl_divergence']:.6f} "
                           f"rank={metrics['ranking_bce']:.6f} "
                           f"accuracy={metrics['accuracy']:.4f} "
-                          f"class0={metrics['accuracy_by_class']['0']:.4f} "
-                          f"class1={metrics['accuracy_by_class']['1']:.4f} "
                           f"F1={metrics['f1_score']:.4f}", flush=True)
-            if epoch >= CHECKPOINT_START_EPOCH:
+            if args.checkpoint_start_epoch <= epoch <= args.checkpoint_end_epoch:
                 checkpoint = checkpoints / f"epoch_{epoch:03d}.pt"
                 save_epoch_checkpoint(checkpoint, model, optimizer, config, data,
                                       fitting, validation, row)
@@ -397,12 +380,23 @@ def write_report(output: Path, config: dict, experiments: list[dict]) -> None:
             f"{experiment['last_train_metrics']['accuracy']:.6f} | {validation_accuracy} | "
             f"{len(experiment['checkpoint_files'])} | [Curves]({directory}/loss_curves.png) |"
         )
+    first_checkpoint_epoch = config["checkpoint_start_epoch"]
+    last_checkpoint_epoch = min(config["epochs"], config["checkpoint_end_epoch"])
+    if first_checkpoint_epoch <= last_checkpoint_epoch:
+        checkpoint_summary = (
+            f"Checkpoints cover epochs {first_checkpoint_epoch}–{last_checkpoint_epoch}, inclusive."
+        )
+    else:
+        checkpoint_summary = (
+            f"Checkpoint saving begins at epoch {first_checkpoint_epoch}, "
+            f"beyond this run's {config['epochs']}-epoch budget."
+        )
     lines += ["", "Each graph contains total loss, reconstruction BCE, KL divergence, and ranking BCE panels.",
               "The panels show fitting and validation curves against num_epochs.",
               "Each configuration's train_history.json and epoch_metrics.csv record every epoch's losses,",
-              "overall accuracy, class-0 accuracy, class-1 accuracy, and binary F1 for positive class 1.",
-              "", f"Checkpoints start at epoch {CHECKPOINT_START_EPOCH} and are saved after every later epoch.",
-              "For example, combination_01/checkpoints/epoch_021.pt holds that configuration at epoch 21."]
+              "overall accuracy and binary F1.",
+              "", checkpoint_summary,
+              "Each checkpoint filename identifies its saved epoch, such as epoch_021.pt for epoch 21."]
     (output / "REPORT.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -414,6 +408,10 @@ def parse_args(argv=None):
                         help="Cap on original comparisons, keeping whole groups; default all")
     parser.add_argument("--epochs", type=int, default=EPOCHS,
                         help="Complete training duration for every one of the twelve configurations")
+    parser.add_argument("--checkpoint-start-epoch", type=int, default=CHECKPOINT_START_EPOCH,
+                        help="First epoch to save, inclusive (default 21)")
+    parser.add_argument("--checkpoint-end-epoch", type=int, default=CHECKPOINT_END_EPOCH,
+                        help="Last epoch to save, inclusive (default final training epoch)")
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE,
                         help="Ordered examples per optimization batch")
     parser.add_argument("--validation-fraction", type=float, default=0.2)
@@ -423,9 +421,16 @@ def parse_args(argv=None):
     parser.add_argument("--output-dir", type=Path,
                         help="New or empty comparison directory, default a timestamped run")
     args = parser.parse_args(argv)
-    for name in ("epochs", "batch_size", "cpu_threads"):
+    for name in ("epochs", "batch_size", "cpu_threads", "checkpoint_start_epoch"):
         if getattr(args, name) < 1:
             parser.error(f"--{name.replace('_', '-')} must be positive")
+    if args.checkpoint_end_epoch is not None:
+        if args.checkpoint_end_epoch < 1:
+            parser.error("--checkpoint-end-epoch must be positive")
+        if args.checkpoint_end_epoch < args.checkpoint_start_epoch:
+            parser.error("--checkpoint-end-epoch must be at least --checkpoint-start-epoch")
+    else:
+        args.checkpoint_end_epoch = args.epochs
     if args.num_training_samples is not None and args.num_training_samples < 1:
         parser.error("--num-training-samples must be positive")
     if not 0 < args.validation_fraction < 1:
@@ -456,7 +461,8 @@ def main(argv=None) -> None:
         "selected_comparisons": len(data.entries),
         "fitting_comparisons": len(fitting), "validation_comparisons": len(validation),
         "epochs": args.epochs, "combination_count": len(HYPERPARAMETER_COMBINATIONS),
-        "checkpoint_start_epoch": CHECKPOINT_START_EPOCH,
+        "checkpoint_start_epoch": args.checkpoint_start_epoch,
+        "checkpoint_end_epoch": args.checkpoint_end_epoch,
         "batch_size": args.batch_size, "validation_fraction": args.validation_fraction,
         "seed": args.seed, "reporting_seed": (args.seed + 1) % (2**32),
         "device": str(device), "cpu_threads": args.cpu_threads,

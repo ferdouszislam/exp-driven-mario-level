@@ -190,25 +190,35 @@ class TrainingTests(unittest.TestCase):
     def test_accuracy_binary_f1_and_single_predicted_class(self) -> None:
         cases = [
             ([0, 0, 0, 1, 1, 1, 1, 1], [0, 0, 1, 0, 0, 1, 1, 1],
-             [[2, 1], [2, 3]], 5 / 8, 2 / 3, 4 / 7, {"0": 2 / 3, "1": 3 / 5}),
-            ([0, 1], [1, 1], [[0, 1], [0, 1]], 0.5, 2 / 3, 0.0, {"0": 0.0, "1": 1.0}),
+             [[2, 1], [2, 3]], 5 / 8, 2 / 3),
+            ([0, 1], [1, 1], [[0, 1], [0, 1]], 0.5, 2 / 3),
             ([0, 0, 0, 0, 1, 1, 1, 1], [0, 0, 0, 0, 0, 1, 1, 1],
-             [[4, 0], [1, 3]], 7 / 8, 6 / 7, 8 / 9, {"0": 1.0, "1": 3 / 4}),
-            ([0, 0], [0, 0], [[2, 0], [0, 0]], 1.0, 0.0, 1.0, {"0": 1.0, "1": 0.0}),
+             [[4, 0], [1, 3]], 7 / 8, 6 / 7),
+            ([0, 0], [0, 0], [[2, 0], [0, 0]], 1.0, 0.0),
         ]
-        for targets, predictions, matrix, accuracy, positive_f1, negative_f1, class_accuracy in cases:
+        for targets, predictions, matrix, accuracy, positive_f1 in cases:
             with self.subTest(predictions=predictions):
                 metrics = classification_metrics(targets, predictions)
                 self.assertEqual(metrics["confusion_matrix"], matrix)
                 self.assertAlmostEqual(metrics["accuracy"], accuracy)
                 self.assertAlmostEqual(metrics["f1_score"], positive_f1)
                 self.assertEqual(metrics["f1_positive_label"], 1)
-                self.assertAlmostEqual(metrics["f1_by_class"]["0"], negative_f1)
-                self.assertAlmostEqual(metrics["f1_by_class"]["1"], positive_f1)
-                self.assertEqual(metrics["accuracy_by_class"], class_accuracy)
+                self.assertNotIn("f1_by_class", metrics)
+                self.assertNotIn("accuracy_by_class", metrics)
                 self.assertNotIn("macro_f1", metrics)
         with self.assertRaises(ValueError):
             classification_metrics([], [])
+        losses = {name: 0.25 for name in training.LOSS_NAMES}
+        measured = {**losses, **classification_metrics([0, 1], [0, 1])}
+        row = {"epoch": 1, "seconds": 0.1, "optimization": losses,
+               "train": measured, "validation": measured}
+        expected_fields = {"epoch", "seconds"}
+        expected_fields.update(f"optimization_{name}" for name in training.LOSS_NAMES)
+        for portion in ("train", "validation"):
+            expected_fields.update(
+                f"{portion}_{name}" for name in (*training.LOSS_NAMES, "accuracy", "f1_score")
+            )
+        self.assertEqual(set(training.flatten_epoch_metrics(row)), expected_fields)
 
     def test_grouped_cap_and_validation_keep_reused_playthroughs_together(self) -> None:
         data = load_training_data(self.root, 3, 42)
@@ -285,12 +295,36 @@ class TrainingTests(unittest.TestCase):
         self.assertEqual(set(training.HYPERPARAMETER_COMBINATIONS), expected)
         self.assertEqual(training.EPOCHS, 100)
         self.assertEqual(training.CHECKPOINT_START_EPOCH, 21)
-        self.assertEqual(training.parse_args([]).epochs, 100)
+        self.assertIsNone(training.CHECKPOINT_END_EPOCH)
+        defaults = training.parse_args([])
+        self.assertEqual(defaults.epochs, 100)
+        self.assertEqual((defaults.checkpoint_start_epoch, defaults.checkpoint_end_epoch), (21, 100))
         self.assertEqual(training.parse_args(["--epochs", "100"]).epochs, 100)
         self.assertFalse(hasattr(training.parse_args([]), "tuning_epochs"))
         with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as rejected:
             training.parse_args(["--tuning-epochs", "2"])
         self.assertEqual(rejected.exception.code, 2)
+        valid_ranges = [
+            (["--epochs", "2"], (21, 2)),
+            (["--epochs", "5", "--checkpoint-start-epoch", "2", "--checkpoint-end-epoch", "3"], (2, 3)),
+            (["--epochs", "5", "--checkpoint-start-epoch", "2", "--checkpoint-end-epoch", "2"], (2, 2)),
+            (["--epochs", "5", "--checkpoint-start-epoch", "10", "--checkpoint-end-epoch", "12"], (10, 12)),
+            (["--epochs", "5", "--checkpoint-start-epoch", "2"], (2, 5)),
+        ]
+        for arguments, expected_range in valid_ranges:
+            with self.subTest(arguments=arguments):
+                parsed = training.parse_args(arguments)
+                self.assertEqual((parsed.checkpoint_start_epoch, parsed.checkpoint_end_epoch), expected_range)
+        invalid_ranges = [
+            ["--checkpoint-start-epoch", "0"],
+            ["--checkpoint-end-epoch", "0"],
+            ["--checkpoint-start-epoch", "3", "--checkpoint-end-epoch", "2"],
+        ]
+        for arguments in invalid_ranges:
+            with self.subTest(arguments=arguments), redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit) as rejected:
+                    training.parse_args(arguments)
+                self.assertEqual(rejected.exception.code, 2)
 
     def test_evaluation_preserves_training_random_number_states(self) -> None:
         data = load_training_data(self.root, None, 42)
