@@ -1,4 +1,4 @@
-"""Shared CNN-VAE and ordered-pair FC tail for model_arch_1."""
+"""Shared CNN-VAE and ordered-pair FC tail for model_arch_2."""
 
 from __future__ import annotations
 
@@ -8,8 +8,8 @@ from torch import Tensor, nn
 
 INPUT_SHAPE = (22, 16, 192)
 LATENT_DIM = 32
-ARCHITECTURE_VERSION = "model_arch_1"
-ENCODED_SHAPE = (32, 2, 24)
+ARCHITECTURE_VERSION = "model_arch_2"
+ENCODED_SHAPE = (128, 1, 12)
 ENCODED_FEATURES = 1536
 
 
@@ -31,7 +31,10 @@ class PairwiseCNNVAE(nn.Module):
             nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1),
             nn.LayerNorm((64, 4, 48)),
             nn.ReLU(),
-            nn.Conv2d(64, 32, kernel_size=4, stride=2, padding=1),
+            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1),
+            nn.LayerNorm((128, 2, 24)),
+            nn.ReLU(),
+            nn.Conv2d(128, 128, kernel_size=4, stride=2, padding=1),
             nn.LayerNorm(ENCODED_SHAPE),
             nn.ReLU(),
         )
@@ -42,9 +45,11 @@ class PairwiseCNNVAE(nn.Module):
         self.log_var_head = nn.Linear(128, LATENT_DIM)
 
         self.decoder_projection = nn.Linear(LATENT_DIM, ENCODED_FEATURES)
-        self.decoder_activation = nn.ReLU()
         self.decoder_convs = nn.Sequential(
-            nn.ConvTranspose2d(32, 64, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(128, 128, kernel_size=4, stride=2, padding=1),
+            nn.LayerNorm((128, 2, 24)),
+            nn.ReLU(),
+            nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
             nn.LayerNorm((64, 4, 48)),
             nn.ReLU(),
             nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),
@@ -59,7 +64,6 @@ class PairwiseCNNVAE(nn.Module):
             nn.Dropout(p=0.2),
             nn.Linear(64, 32),
             nn.ReLU(),
-            nn.Dropout(p=0.2),
             nn.Linear(32, 1),
         )
 
@@ -77,7 +81,7 @@ class PairwiseCNNVAE(nn.Module):
 
     def decode(self, z: Tensor) -> Tensor:
         """Return 22-channel reconstruction logits from a latent batch."""
-        projected = self.decoder_activation(self.decoder_projection(z)).reshape(-1, *ENCODED_SHAPE)
+        projected = self.decoder_projection(z).reshape(-1, *ENCODED_SHAPE)
         return self.decoder_convs(projected)
 
     def preference_logits(self, z_a: Tensor, z_b: Tensor) -> Tensor:
@@ -114,13 +118,13 @@ def architecture_metadata() -> dict[str, object]:
         "layer_norm_axes": ["channel", "height", "width"],
         "layer_norm_eps": 1e-5,
         "layer_norm_elementwise_affine": True,
-        "encoder_layer_norm_shapes": [[32, 8, 96], [64, 4, 48], list(ENCODED_SHAPE)],
-        "decoder_layer_norm_shapes": [[64, 4, 48], [32, 8, 96]],
+        "encoder_layer_norm_shapes": [[32, 8, 96], [64, 4, 48], [128, 2, 24], list(ENCODED_SHAPE)],
+        "decoder_layer_norm_shapes": [[128, 2, 24], [64, 4, 48], [32, 8, 96]],
         "kernel_size": [4, 4],
         "stride": [2, 2],
         "padding": [1, 1],
-        "encoder_channels": [22, 32, 64, 32],
-        "encoder_output_shapes": [[32, 8, 96], [64, 4, 48], list(ENCODED_SHAPE)],
+        "encoder_channels": [22, 32, 64, 128, 128],
+        "encoder_output_shapes": [[32, 8, 96], [64, 4, 48], [128, 2, 24], list(ENCODED_SHAPE)],
         "encoded_shape": list(ENCODED_SHAPE),
         "flattened_features": ENCODED_FEATURES,
         "encoder_hidden": [ENCODED_FEATURES, 128],
@@ -128,14 +132,14 @@ def architecture_metadata() -> dict[str, object]:
         "encoder_hidden_activation": "ReLU",
         "gaussian_parameter_head_activation": "linear",
         "decoder_projection": [LATENT_DIM, ENCODED_FEATURES],
-        "decoder_projection_activation": "ReLU",
-        "decoder_channels": [32, 64, 32, 22],
-        "decoder_output_shapes": [[64, 4, 48], [32, 8, 96], list(INPUT_SHAPE)],
-        "decoder_convolution_activation": "ReLU after first two transposed convolutions",
-        "layer_norm_placement": "after all three encoder convolutions and first two decoder convolutions",
+        "decoder_projection_activation": "linear",
+        "decoder_channels": [128, 128, 64, 32, 22],
+        "decoder_output_shapes": [[128, 2, 24], [64, 4, 48], [32, 8, 96], list(INPUT_SHAPE)],
+        "decoder_convolution_activation": "ReLU after first three transposed convolutions",
+        "layer_norm_placement": "after all four encoder convolutions and first three decoder convolutions",
         "fc_tail_sizes": [64, 64, 32, 1],
         "fc_tail_hidden_activation": "ReLU",
         "dropout": 0.2,
-        "dropout_after_fc_layers": [1, 2],
+        "dropout_after_fc_layers": [1],
         "outputs": "reconstruction and preference logits",
     }

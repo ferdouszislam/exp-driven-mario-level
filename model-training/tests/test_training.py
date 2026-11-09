@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from contextlib import redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 import io
 import json
 import math
@@ -118,71 +118,97 @@ class TrainingTests(unittest.TestCase):
     def test_architecture_shapes_and_one_shared_parameter_set(self) -> None:
         model = PairwiseCNNVAE()
         x = torch.zeros(2, *INPUT_SHAPE)
-        encoder_calls, decoder_calls = [], []
-        encoder_handle = model.encoder_convs.register_forward_hook(
-            lambda module, inputs, output: encoder_calls.append((id(module), tuple(output.shape)))
-        )
-        decoder_handle = model.decoder_convs.register_forward_hook(
-            lambda module, inputs, output: decoder_calls.append((id(module), tuple(output.shape)))
-        )
+        encoder_calls, decoder_calls, encoder_stages, decoder_stages = [], [], [], []
+        decoder_inputs = []
+        handles = [
+            model.encoder_convs.register_forward_hook(
+                lambda module, inputs, output: encoder_calls.append((id(module), tuple(output.shape)))
+            ),
+            model.decoder_convs.register_forward_hook(
+                lambda module, inputs, output: decoder_calls.append((id(module), tuple(output.shape)))
+            ),
+            model.decoder_convs.register_forward_pre_hook(
+                lambda module, inputs: decoder_inputs.append(inputs[0].detach().clone())
+            ),
+        ]
+        for module in model.encoder_convs:
+            if isinstance(module, nn.Conv2d):
+                handles.append(module.register_forward_hook(
+                    lambda module, inputs, output: encoder_stages.append((id(module), tuple(output.shape)))
+                ))
+        for module in model.decoder_convs:
+            if isinstance(module, nn.ConvTranspose2d):
+                handles.append(module.register_forward_hook(
+                    lambda module, inputs, output: decoder_stages.append((id(module), tuple(output.shape)))
+                ))
         try:
-            output = model(x, x)
+            with torch.no_grad():
+                output = model(x, x)
         finally:
-            encoder_handle.remove()
-            decoder_handle.remove()
-        self.assertEqual(encoder_calls, [(id(model.encoder_convs), (2, 32, 2, 24))] * 2)
+            for handle in handles:
+                handle.remove()
+        self.assertEqual(encoder_calls, [(id(model.encoder_convs), (2, 128, 1, 12))] * 2)
         self.assertEqual(decoder_calls, [(id(model.decoder_convs), (2, *INPUT_SHAPE))] * 2)
-        self.assertEqual(tuple(model.encoder_convs[0](x).shape), (2, 32, 8, 96))
-        self.assertEqual(tuple(model.decoder_convs[0](torch.zeros(2, 32, 2, 24)).shape), (2, 64, 4, 48))
+        encoder_shapes = [(32, 8, 96), (64, 4, 48), (128, 2, 24), (128, 1, 12)]
+        decoder_shapes = [(128, 2, 24), (64, 4, 48), (32, 8, 96), INPUT_SHAPE]
+        encoder_layers = [m for m in model.encoder_convs if isinstance(m, nn.Conv2d)]
+        decoder_layers = [m for m in model.decoder_convs if isinstance(m, nn.ConvTranspose2d)]
+        self.assertEqual(encoder_stages,
+                         [(id(m), (2, *shape)) for m, shape in zip(encoder_layers, encoder_shapes, strict=True)] * 2)
+        self.assertEqual(decoder_stages,
+                         [(id(m), (2, *shape)) for m, shape in zip(decoder_layers, decoder_shapes, strict=True)] * 2)
         for side in ("a", "b"):
             self.assertEqual(tuple(output[f"reconstruction_logits_{side}"].shape), (2, *INPUT_SHAPE))
             self.assertEqual(tuple(output[f"mu_{side}"].shape), (2, 32))
             self.assertEqual(tuple(output[f"log_var_{side}"].shape), (2, 32))
+        for decoder_input, side in zip(decoder_inputs, ("a", "b"), strict=True):
+            projected = model.decoder_projection(output[f"z_{side}"]).reshape(2, 128, 1, 12)
+            torch.testing.assert_close(decoder_input, projected)
         self.assertEqual(tuple(output["rank_logits"].shape), (2,))
-        self.assertEqual(sum(p.numel() for p in model.parameters()), 566_327)
-        self.assertEqual(sum(isinstance(m, nn.Conv2d) for m in model.modules()), 3)
-        self.assertEqual(sum(isinstance(m, nn.ConvTranspose2d) for m in model.modules()), 3)
-        self.assertEqual([(m.in_channels, m.out_channels) for m in model.modules() if isinstance(m, nn.Conv2d)],
-                         [(22, 32), (32, 64), (64, 32)])
-        self.assertEqual([(m.in_channels, m.out_channels) for m in model.modules() if isinstance(m, nn.ConvTranspose2d)],
-                         [(32, 64), (64, 32), (32, 22)])
+        self.assertEqual(sum(p.numel() for p in model.parameters()), 1_312_151)
+        self.assertEqual([(m.in_channels, m.out_channels) for m in encoder_layers],
+                         [(22, 32), (32, 64), (64, 128), (128, 128)])
+        self.assertEqual([(m.in_channels, m.out_channels) for m in decoder_layers],
+                         [(128, 128), (128, 64), (64, 32), (32, 22)])
         for module in model.modules():
             if isinstance(module, (nn.Conv2d, nn.ConvTranspose2d)):
                 self.assertEqual(module.kernel_size, (4, 4))
                 self.assertEqual(module.stride, (2, 2))
                 self.assertEqual(module.padding, (1, 1))
-        self.assertIsInstance(model.encoder_convs[2], nn.ReLU)
-        self.assertIsInstance(model.encoder_convs[5], nn.ReLU)
-        self.assertIsInstance(model.encoder_convs[8], nn.ReLU)
-        self.assertIsInstance(model.decoder_convs[2], nn.ReLU)
-        self.assertIsInstance(model.decoder_convs[5], nn.ReLU)
-        self.assertFalse(any(isinstance(module, nn.LeakyReLU) for module in model.modules()))
+        self.assertEqual([type(m) for m in model.encoder_convs],
+                         [nn.Conv2d, nn.LayerNorm, nn.ReLU] * 4)
+        self.assertEqual([type(m) for m in model.decoder_convs],
+                         [nn.ConvTranspose2d, nn.LayerNorm, nn.ReLU] * 3 + [nn.ConvTranspose2d])
         self.assertEqual(model.encoder_hidden[1].in_features, 1_536)
         self.assertIsInstance(model.encoder_hidden[2], nn.ReLU)
         self.assertEqual(model.decoder_projection.out_features, 1_536)
-        self.assertIsInstance(model.decoder_activation, nn.ReLU)
+        self.assertIsInstance(model.decoder_projection, nn.Linear)
         self.assertEqual(
             [type(module) for module in model.fc_tail],
-            [nn.Linear, nn.ReLU, nn.Dropout, nn.Linear, nn.ReLU, nn.Dropout, nn.Linear],
+            [nn.Linear, nn.ReLU, nn.Dropout, nn.Linear, nn.ReLU, nn.Linear],
         )
         self.assertEqual([module.p for module in model.fc_tail if isinstance(module, nn.Dropout)],
-                         [0.2, 0.2])
+                         [0.2])
         metadata = architecture_metadata()
-        self.assertEqual(metadata["architecture_version"], "model_arch_1")
-        self.assertEqual(metadata["encoded_shape"], [32, 2, 24])
+        self.assertEqual(metadata["architecture_version"], "model_arch_2")
+        self.assertEqual(metadata["encoded_shape"], [128, 1, 12])
         self.assertEqual(metadata["flattened_features"], 1_536)
         self.assertEqual(metadata["stride"], [2, 2])
-        self.assertEqual(metadata["encoder_output_shapes"], [[32, 8, 96], [64, 4, 48], [32, 2, 24]])
-        self.assertEqual(metadata["decoder_output_shapes"], [[64, 4, 48], [32, 8, 96], [22, 16, 192]])
+        self.assertEqual(metadata["encoder_output_shapes"], [list(shape) for shape in encoder_shapes])
+        self.assertEqual(metadata["decoder_output_shapes"], [list(shape) for shape in decoder_shapes])
         self.assertEqual(metadata["encoder_convolution_activation"], "ReLU")
-        self.assertEqual(metadata["decoder_convolution_activation"], "ReLU after first two transposed convolutions")
-        self.assertEqual(metadata["encoder_channels"], [22, 32, 64, 32])
-        self.assertEqual(metadata["decoder_channels"], [32, 64, 32, 22])
-        self.assertEqual(metadata["dropout_after_fc_layers"], [1, 2])
-        self.assertFalse(any(isinstance(m, (nn.MaxPool2d, nn.MaxUnpool2d)) for m in model.modules()))
-        self.assertFalse(any(isinstance(m, nn.GroupNorm) for m in model.modules()))
-        normalization_shapes = [(32, 8, 96), (64, 4, 48), (32, 2, 24), (64, 4, 48), (32, 8, 96)]
+        self.assertEqual(metadata["encoder_hidden_activation"], "ReLU")
+        self.assertEqual(metadata["decoder_convolution_activation"], "ReLU after first three transposed convolutions")
+        self.assertEqual(metadata["decoder_projection_activation"], "linear")
+        self.assertEqual(metadata["encoder_channels"], [22, 32, 64, 128, 128])
+        self.assertEqual(metadata["decoder_channels"], [128, 128, 64, 32, 22])
+        self.assertEqual(metadata["dropout_after_fc_layers"], [1])
+        self.assertEqual(metadata["fc_tail_hidden_activation"], "ReLU")
+        self.assertEqual(metadata["dropout"], 0.2)
+        self.assertFalse(any(isinstance(m, (nn.MaxPool2d, nn.MaxUnpool2d, nn.GroupNorm, nn.LeakyReLU, nn.Sigmoid))
+                             for m in model.modules()))
         normalization_layers = [m for m in model.modules() if isinstance(m, nn.LayerNorm)]
+        normalization_shapes = encoder_shapes + decoder_shapes[:-1]
         self.assertEqual([m.normalized_shape for m in normalization_layers], normalization_shapes)
         for layer in normalization_layers:
             self.assertTrue(layer.elementwise_affine)
@@ -191,9 +217,12 @@ class TrainingTests(unittest.TestCase):
             self.assertEqual(tuple(layer.bias.shape), layer.normalized_shape)
         self.assertEqual(metadata["normalization"], "LayerNorm")
         self.assertEqual(metadata["layer_norm_axes"], ["channel", "height", "width"])
-        self.assertEqual(metadata["encoder_layer_norm_shapes"], [[32, 8, 96], [64, 4, 48], [32, 2, 24]])
-        self.assertEqual(metadata["decoder_layer_norm_shapes"], [[64, 4, 48], [32, 8, 96]])
+        self.assertEqual(metadata["layer_norm_eps"], 1e-5)
+        self.assertTrue(metadata["layer_norm_elementwise_affine"])
+        self.assertEqual(metadata["encoder_layer_norm_shapes"], [list(shape) for shape in encoder_shapes])
+        self.assertEqual(metadata["decoder_layer_norm_shapes"], [list(shape) for shape in decoder_shapes[:-1]])
         self.assertNotIn("group_norm_groups", metadata)
+        self.assertNotIn("leaky_relu_negative_slope", metadata)
 
     def test_loss_matches_hand_calculated_bce_kl_and_weighting(self) -> None:
         x = torch.zeros(2, *INPUT_SHAPE)
@@ -427,16 +456,33 @@ class TrainingTests(unittest.TestCase):
         output_temporary = tempfile.TemporaryDirectory()
         self.addCleanup(output_temporary.cleanup)
         output = Path(output_temporary.name) / "run"
+        hyperparameters_file = self.root / "custom-hyperparameters.txt"
+        hyperparameters_file.write_text(
+            "learning_rate: 5e-5, 1e-6\nlambda_kl: 0.001\nlambda_rec: 0.01\nlambda_rank: 1\n",
+            encoding="utf-8",
+        )
+        expected_combinations = [Hyperparameters(lr, 0.01, 0.001, 1) for lr in (5e-5, 1e-6)]
         with patch.object(training, "split_training_groups", side_effect=AssertionError("Unexpected second split")), \
-                patch.object(training, "HYPERPARAMETER_COMBINATIONS", training.HYPERPARAMETER_COMBINATIONS[:1]), \
                 patch.object(training, "run_combination", return_value={"status": "completed"}) as run, \
                 patch.object(training, "write_report"):
             training.main(["--dataset", str(self.root), "--num-training-samples", "1",
                            "--validation-fraction", "0.8", "--epochs", "1", "--device", "cpu",
+                           "--hyperparameters-file", str(hyperparameters_file),
                            "--output-dir", str(output)])
+        self.assertEqual(run.call_count, 2)
+        self.assertEqual([call.args[3] for call in run.call_args_list], expected_combinations)
+        self.assertEqual([call.args[7] for call in run.call_args_list],
+                         ["combination_01", "combination_02"])
+        self.assertEqual([call.args[6] for call in run.call_args_list],
+                         [output.resolve() / "5e-5_1e-2_1e-3_1", output.resolve() / "1e-6_1e-2_1e-3_1"])
+        self.assertTrue(all(call.args[1] == run.call_args.args[1] for call in run.call_args_list))
         self.assertEqual(len(run.call_args.args[1]), 1)
         self.assertEqual(run.call_args.args[2], [expected_validation])
         config = json.loads((output / "run_config.json").read_text(encoding="utf-8"))
+        self.assertEqual(config["combination_count"], 2)
+        self.assertEqual(config["hyperparameters_file"], str(hyperparameters_file.resolve()))
+        self.assertEqual([Hyperparameters(**hp) for hp in config["hyperparameter_combinations"]],
+                         expected_combinations)
         self.assertEqual(config["validation_source"], "validation_set")
         self.assertIsNone(config["validation_fraction"])
         split = json.loads((output / "split.json").read_text(encoding="utf-8"))
@@ -459,6 +505,64 @@ class TrainingTests(unittest.TestCase):
         for batch_a, batch_b in zip(first, second, strict=True):
             self.assertTrue(all(torch.equal(a, b) for a, b in zip(batch_a, batch_b, strict=True)))
 
+    def test_every_saved_checkpoint_gets_previews_without_changing_training(self) -> None:
+        expected_validation = self._save_validation_entry()
+        hyperparameters_file = self.root / "preview-hyperparameters.txt"
+        hyperparameters_file.write_text(
+            "learning_rate: 1e-4\nlambda_kl: 0.001\nlambda_rec: 0.01\nlambda_rank: 1\n",
+            encoding="utf-8",
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            output = Path(temporary) / "with-previews"
+            baseline = Path(temporary) / "without-checkpoints"
+            arguments = ["--dataset", str(self.root), "--hyperparameters-file", str(hyperparameters_file),
+                         "--num-training-samples", "1", "--epochs", "3", "--batch-size", "2", "--device", "cpu"]
+            with patch.object(training, "plot_loss_curves"), redirect_stdout(io.StringIO()):
+                training.main(arguments + ["--output-dir", str(output),
+                                           "--checkpoint-start-epoch", "1", "--checkpoint-end-epoch", "2"])
+                training.main(arguments + ["--output-dir", str(baseline)])
+            directory_name = "1e-4_1e-2_1e-3_1"
+            combination = output / directory_name
+            experiments = json.loads((output / "experiments.json").read_text(encoding="utf-8"))
+            self.assertEqual(experiments[0]["combination_id"], "combination_01")
+            self.assertEqual(experiments[0]["directory"], directory_name)
+            self.assertEqual(experiments[0]["loss_graph"], f"{directory_name}/validation_curves.png")
+            previews = json.loads((combination / "checkpoint_previews.json").read_text(encoding="utf-8"))
+            self.assertEqual([preview["epoch"] for preview in previews], [1, 2])
+            self.assertFalse((combination / "reconstructions/epoch_003").exists())
+            expected_levels = {play["level_id"] for play in expected_validation["playthroughs"]}
+            manifests = []
+            for preview in previews:
+                self.assertEqual(preview["sample_count"], 2)
+                checkpoint = torch.load(combination / preview["checkpoint"], map_location="cpu", weights_only=True)
+                restored = PairwiseCNNVAE()
+                restored.load_state_dict(checkpoint["model_state_dict"], strict=True)
+                self.assertEqual(checkpoint["epoch"], preview["epoch"])
+                self.assertEqual(checkpoint["config"]["combination_id"], "combination_01")
+                architecture = checkpoint["config"]["architecture"]
+                self.assertEqual(architecture["architecture_version"], "model_arch_2")
+                self.assertEqual(architecture["normalization"], "LayerNorm")
+                self.assertEqual(architecture["dropout"], 0.2)
+                self.assertEqual(architecture["dropout_after_fc_layers"], [1])
+                manifest = json.loads((combination / preview["samples_file"]).read_text(encoding="utf-8"))
+                self.assertEqual({sample["level_id"] for sample in manifest["samples"]}, expected_levels)
+                self.assertTrue(all(sample["encoding"].startswith("validation_set/")
+                                    for sample in manifest["samples"]))
+                self.assertGreater((combination / preview["comparison_image"]).stat().st_size, 0)
+                manifests.append(manifest)
+            self.assertEqual([sample["level_id"] for sample in manifests[0]["samples"]],
+                             [sample["level_id"] for sample in manifests[1]["samples"]])
+            with_history = json.loads((combination / "train_history.json").read_text(encoding="utf-8"))
+            baseline_history = json.loads((baseline / directory_name / "train_history.json").read_text(encoding="utf-8"))
+            for actual, expected in zip(with_history, baseline_history, strict=True):
+                for portion in ("optimization", "train", "validation"):
+                    self.assertEqual(actual[portion], expected[portion])
+            report = (output / "REPORT.md").read_text(encoding="utf-8")
+            for preview in previews:
+                self.assertIn(f"{directory_name}/{preview['comparison_image']}", report)
+                self.assertIn(f"{directory_name}/{preview['checkpoint']}", report)
+            self.assertFalse((baseline / directory_name / "checkpoint_previews.json").exists())
+
     def test_loader_rejects_nonbinary_encoding_and_inconsistent_rank(self) -> None:
         entry = self.source_entries[0]
         array_path = self.root / entry["playthroughs"][0]["files"]["encoding"]
@@ -473,20 +577,49 @@ class TrainingTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Ranking"):
             load_training_data(self.root, None, 42)
 
-    def test_sixteen_configuration_grid_and_epoch_cli_defaults(self) -> None:
+    def test_hyperparameter_directory_names_follow_parameter_order_and_keep_precision(self) -> None:
+        cases = (
+            (Hyperparameters(1e-4, 1, 1e-3, 1), "1e-4_1_1e-3_1"),
+            (Hyperparameters(5e-6, 3, 0.001, 0.01), "5e-6_3_1e-3_1e-2"),
+            (Hyperparameters(0.5, 0.01, 0.001, 0.2), "5e-1_1e-2_1e-3_2e-1"),
+            (Hyperparameters(1.0, 3.0, 0.0, 10.25), "1_3_0_10.25"),
+            (Hyperparameters(1e-10, 1, 1e-3, 1), "1e-10_1_1e-3_1"),
+        )
+        for hp, expected in cases:
+            with self.subTest(hyperparameters=hp):
+                self.assertEqual(training.hyperparameter_directory_name(hp), expected)
+        first = Hyperparameters(1e-4, 0.01, 0.001, 1)
+        second = Hyperparameters(1e-4, math.nextafter(0.01, math.inf), 0.001, 1)
+        first_name = training.hyperparameter_directory_name(first)
+        second_name = training.hyperparameter_directory_name(second)
+        self.assertNotEqual(first_name, second_name)
+        for hp, name in ((first, first_name), (second, second_name)):
+            self.assertEqual(tuple(float(value) for value in name.split("_")),
+                             (hp.learning_rate, hp.lambda_rec, hp.lambda_kl, hp.lambda_rank))
+
+    def test_hyperparameter_grid_and_epoch_cli_defaults(self) -> None:
+        hyperparameters_file = self.root / "twenty-combinations.txt"
+        hyperparameters_file.write_text(
+            "learning_rate: 1e-4, 1e-5, 5e-5, 1e-6, 5e-6\n"
+            "lambda_kl: 0.001\nlambda_rec: 0.01, 1\nlambda_rank: 0.01, 1\n",
+            encoding="utf-8",
+        )
         expected = tuple(
             Hyperparameters(learning_rate, reconstruction, kl, ranking)
-            for learning_rate in (1e-4, 1e-5)
-            for kl in (1e-3, 1e-4)
-            for reconstruction, ranking in ((0.5, 0.5), (1.0, 0.5), (0.5, 1.0), (1.0, 1.0))
+            for learning_rate in (1e-4, 1e-5, 5e-5, 1e-6, 5e-6)
+            for kl in (0.001,)
+            for reconstruction in (0.01, 1)
+            for ranking in (0.01, 1)
         )
-        self.assertEqual(len(training.HYPERPARAMETER_COMBINATIONS), 16)
-        self.assertEqual(len(set(training.HYPERPARAMETER_COMBINATIONS)), 16)
-        self.assertEqual(training.HYPERPARAMETER_COMBINATIONS, expected)
+        combinations = training.load_hyperparameter_combinations(hyperparameters_file)
+        self.assertEqual(len(combinations), 20)
+        self.assertEqual(len(set(combinations)), 20)
+        self.assertEqual(combinations, expected)
         self.assertEqual(training.EPOCHS, 50)
         self.assertIsNone(training.CHECKPOINT_START_EPOCH)
         self.assertIsNone(training.CHECKPOINT_END_EPOCH)
         defaults = training.parse_args([])
+        self.assertEqual(defaults.hyperparameters_file, TRAINING_DIR / "hyperparameter-combinations.txt")
         self.assertEqual(defaults.epochs, 50)
         self.assertEqual((defaults.checkpoint_start_epoch, defaults.checkpoint_end_epoch), (None, None))
         self.assertEqual(training.parse_args(["--epochs", "100"]).epochs, 100)
@@ -518,6 +651,43 @@ class TrainingTests(unittest.TestCase):
                 with self.assertRaises(SystemExit) as rejected:
                     training.parse_args(arguments)
                 self.assertEqual(rejected.exception.code, 2)
+
+    def test_custom_hyperparameter_file_accepts_comments_and_zero_loss_weights(self) -> None:
+        path = self.root / "hyperparameters.txt"
+        path.write_text(
+            "# Editable grid\n\n lambda_rank: 0, 1 # ranking ablation\n"
+            "lambda_rec: 0.01\nlambda_kl: 0\nlearning_rate: 5e-6, 1e-4\n",
+            encoding="utf-8",
+        )
+        expected = tuple(Hyperparameters(lr, 0.01, 0, rank)
+                         for lr in (5e-6, 1e-4) for rank in (0, 1))
+        self.assertEqual(training.load_hyperparameter_combinations(path), expected)
+        self.assertEqual(training.parse_args(["--hyperparameters-file", str(path)]).hyperparameters_file, path)
+
+    def test_invalid_hyperparameter_files_fail_before_loading_data_or_creating_output(self) -> None:
+        valid = "learning_rate: 1e-4\nlambda_kl: 0.001\nlambda_rec: 0.01\nlambda_rank: 1\n"
+        invalid = (
+            "", valid.replace("lambda_kl: 0.001\n", ""),
+            valid.replace("lambda_rank", "lamda_rank"),
+            valid.replace("learning_rate: 1e-4", "learning_rate = 1e-4"),
+            valid + "lambda_rec: 1\n",
+            *(valid.replace("learning_rate: 1e-4", f"learning_rate: {value}")
+              for value in ("0", "-1e-4", "nan", "inf", "1e-4,", "1e-4, 0.0001", "")),
+            *(valid.replace("lambda_rec: 0.01", f"lambda_rec: {value}")
+              for value in ("-0.01", "nan", "inf", "text", "")),
+        )
+        path = self.root / "invalid-hyperparameters.txt"
+        output = self.root / "should-not-exist"
+        for content in invalid:
+            with self.subTest(content=content):
+                path.write_text(content, encoding="utf-8")
+                with patch.object(training, "load_training_data") as load_data:
+                    with self.assertRaisesRegex(ValueError, str(path)):
+                        training.main(["--hyperparameters-file", str(path), "--output-dir", str(output)])
+                load_data.assert_not_called()
+                self.assertFalse(output.exists())
+        with self.assertRaises(FileNotFoundError):
+            training.load_hyperparameter_combinations(self.root / "missing.txt")
 
     def test_evaluation_preserves_training_random_number_states(self) -> None:
         data = load_training_data(self.root, None, 42)

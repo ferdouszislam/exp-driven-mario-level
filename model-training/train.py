@@ -1,4 +1,4 @@
-"""Compare sixteen fixed CNN-VAE training configurations over complete runs."""
+"""Compare CNN-VAE hyperparameter combinations from an editable text file."""
 
 from __future__ import annotations
 
@@ -7,7 +7,9 @@ from contextlib import contextmanager
 import csv
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
+from decimal import Decimal
 import json
+import math
 from pathlib import Path
 import platform
 import random
@@ -21,6 +23,9 @@ from torch.utils.data import DataLoader
 from data import ComparisonDataset, load_training_data
 from model import PairwiseCNNVAE, architecture_metadata
 from plotting import plot_loss_curves
+from reconstruction_previews import (
+    PREVIEW_COUNT, save_checkpoint_reconstructions, select_validation_levels,
+)
 
 
 # Set this to a small positive number for a quick run; None uses all train pairs.
@@ -35,6 +40,7 @@ BATCH_SIZE = 16
 SEED = 42
 HERE = Path(__file__).resolve().parent
 DEFAULT_DATASET = HERE.parent / "datasets/fun-study-dataset-analysis/preprocessed_dataset"
+DEFAULT_HYPERPARAMETERS = HERE / "hyperparameter-combinations.txt"
 
 
 @dataclass(frozen=True)
@@ -45,14 +51,62 @@ class Hyperparameters:
     lambda_rank: float
 
 
-# Each configuration gets the complete epoch budget and its own fresh model.
-HYPERPARAMETER_COMBINATIONS = tuple(
-    Hyperparameters(learning_rate, lambda_rec, lambda_kl, lambda_rank)
-    for learning_rate in (1e-4, 1e-5)
-    for lambda_kl in (1e-3, 1e-4)
-    for lambda_rec, lambda_rank in ((0.5, 0.5), (1.0, 0.5), (0.5, 1.0), (1.0, 1.0))
-)
 LOSS_NAMES = ("total_loss", "reconstruction_bce", "kl_divergence", "ranking_bce")
+
+
+def hyperparameter_directory_name(hp: Hyperparameters) -> str:
+    """Name a run by learning rate, reconstruction, KL, then ranking weight."""
+    def format_value(value: float) -> str:
+        number = Decimal(str(value)).normalize()
+        if number == 0:
+            return "0"
+        if abs(number) < 1:
+            coefficient, exponent = format(number, "e").split("e")
+            return f"{coefficient}e{int(exponent)}"
+        return format(number, "f")
+
+    return "_".join(format_value(value) for value in (
+        hp.learning_rate, hp.lambda_rec, hp.lambda_kl, hp.lambda_rank,
+    ))
+
+
+def load_hyperparameter_combinations(path: Path) -> tuple[Hyperparameters, ...]:
+    """Expand comma-separated parameter values into every possible combination."""
+    names = ("learning_rate", "lambda_kl", "lambda_rec", "lambda_rank")
+    values = {}
+    for line_number, raw_line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        line = raw_line.split("#", 1)[0].strip()
+        if not line:
+            continue
+        name, separator, raw_values = line.partition(":")
+        name = name.strip()
+        location = f"{path}:{line_number}"
+        if not separator or name not in names:
+            raise ValueError(f"{location}: Expected a parameter name followed by ':'; use {', '.join(names)}.")
+        if name in values:
+            raise ValueError(f"{location}: Duplicate parameter {name}.")
+        try:
+            parsed = tuple(float(value.strip()) for value in raw_values.split(","))
+        except ValueError as error:
+            raise ValueError(f"{location}: {name} needs comma-separated numeric values.") from error
+        if any(not math.isfinite(value) or value < 0 or (name == "learning_rate" and value == 0)
+               for value in parsed):
+            requirement = "positive" if name == "learning_rate" else "non-negative"
+            raise ValueError(f"{location}: {name} values must be finite and {requirement}.")
+        if len(set(parsed)) != len(parsed):
+            raise ValueError(f"{location}: Duplicate values for {name}.")
+        values[name] = parsed
+    missing = [name for name in names if name not in values]
+    if missing:
+        raise ValueError(f"{path}: Missing parameters: {', '.join(missing)}.")
+    # Each combination gets the complete epoch budget and its own fresh model.
+    return tuple(
+        Hyperparameters(learning_rate, lambda_rec, lambda_kl, lambda_rank)
+        for learning_rate in values["learning_rate"]
+        for lambda_kl in values["lambda_kl"]
+        for lambda_rec in values["lambda_rec"]
+        for lambda_rank in values["lambda_rank"]
+    )
 
 
 def seed_everything(seed: int) -> None:
@@ -314,7 +368,7 @@ def run_combination(data, fitting: list[dict], validation: list[dict],
     optimizer = torch.optim.Adam(model.parameters(), lr=hp.learning_rate)
     loader = make_loader(data, fitting, args.batch_size, ordered=True,
                          shuffle=True, seed=args.seed)
-    history, csv_rows, saved_checkpoints = [], [], []
+    history, csv_rows, saved_checkpoints, checkpoint_previews = [], [], [], []
     print(f"Starting {combination_id} with {asdict(hp)}", flush=True)
     try:
         for epoch in range(1, args.epochs + 1):
@@ -351,6 +405,27 @@ def run_combination(data, fitting: list[dict], validation: list[dict],
                 save_epoch_checkpoint(checkpoint, model, optimizer, config, data,
                                       fitting, validation, row)
                 saved_checkpoints.append(checkpoint.relative_to(output).as_posix())
+                preview_directory = output / "reconstructions" / checkpoint.stem
+                with preserve_random_state():
+                    seed_everything(config["preview_seed"])
+                    preview = save_checkpoint_reconstructions(
+                        model, data, config["validation_preview_samples"], preview_directory,
+                        device, config["preview_seed"], checkpoint.relative_to(output).as_posix(), epoch,
+                        selection_seed=config["seed"],
+                    )
+                relative_directory = preview_directory.relative_to(output).as_posix()
+                checkpoint_previews.append({
+                    "epoch": epoch,
+                    "checkpoint": checkpoint.relative_to(output).as_posix(),
+                    "sample_count": preview["sample_count"],
+                    "comparison_image": (f"{relative_directory}/{preview['comparison_image']}"
+                                         if preview["comparison_image"] is not None else None),
+                    "samples_file": f"{relative_directory}/samples.json",
+                })
+                write_json(output / "checkpoint_previews.json", checkpoint_previews)
+                if preview["sample_count"]:
+                    print(f"{combination_id} epoch {epoch} validation reconstructions: "
+                          f"{preview_directory / preview['comparison_image']}", flush=True)
     finally:
         if history:
             plot_loss_curves(history, asdict(hp), output / "validation_curves.png", combination_id)
@@ -368,6 +443,7 @@ def run_combination(data, fitting: list[dict], validation: list[dict],
         "last_train_metrics": train_metrics,
         "last_validation_metrics": validation_metrics,
         "checkpoint_files": saved_checkpoints,
+        "checkpoint_previews": checkpoint_previews,
         "loss_graph": f"{output.name}/validation_curves.png",
     }
 
@@ -417,6 +493,25 @@ def write_report(output: Path, config: dict, experiments: list[dict]) -> None:
               "using the highest-logit geometry tile at each position and averaging over both inputs.",
               "", checkpoint_summary,
               "Each checkpoint filename identifies its saved epoch, such as epoch_021.pt for epoch 21."]
+    previews = [(experiment, preview) for experiment in experiments
+                for preview in experiment.get("checkpoint_previews", [])]
+    if previews:
+        lines += ["", "## Saved-model validation reconstructions", "",
+                  f"Up to {PREVIEW_COUNT} distinct validation levels are randomly selected once and reused",
+                  "for every checkpoint and configuration. Each sheet shows the original input followed",
+                  "by its VAE reconstruction from a sampled posterior latent vector. Sampling uses the",
+                  "same seed for each checkpoint. Black X markers show the input or reconstructed path.",
+                  "Tile channels use argmax; the independent path channel uses probability >= 0.5."]
+        for experiment, preview in previews:
+            directory = experiment["directory"]
+            lines += ["", f"### {experiment['combination_id']} / epoch {preview['epoch']}", "",
+                      f"[Saved model]({directory}/{preview['checkpoint']}) | "
+                      f"[Sample details]({directory}/{preview['samples_file']})", ""]
+            if preview["comparison_image"] is not None:
+                lines.append(f"![{preview['sample_count']} validation inputs and VAE reconstructions]"
+                             f"({directory}/{preview['comparison_image']})")
+            else:
+                lines.append("No validation levels were available for reconstruction previews.")
     (output / "REPORT.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -424,10 +519,12 @@ def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET,
                         help="Preprocessed root containing train_set, channels.json and manifest.json")
+    parser.add_argument("--hyperparameters-file", type=Path, default=DEFAULT_HYPERPARAMETERS,
+                        help="Parameter values to combine; default hyperparameter-combinations.txt beside train.py")
     parser.add_argument("--num-training-samples", type=int, default=NUM_TRAINING_SAMPLES,
                         help="Cap on original comparisons, keeping whole groups; default all")
     parser.add_argument("--epochs", type=int, default=EPOCHS,
-                        help="Complete training duration for every one of the sixteen configurations")
+                        help="Complete training duration for every hyperparameter combination")
     parser.add_argument("--checkpoint-start-epoch", type=int, default=CHECKPOINT_START_EPOCH,
                         help="First epoch to save, inclusive; specify with --checkpoint-end-epoch")
     parser.add_argument("--checkpoint-end-epoch", type=int, default=CHECKPOINT_END_EPOCH,
@@ -464,6 +561,7 @@ def parse_args(argv=None):
 
 def main(argv=None) -> None:
     args = parse_args(argv)
+    combinations = load_hyperparameter_combinations(args.hyperparameters_file)
     torch.set_num_threads(args.cpu_threads)
     device = resolve_device(args.device)
     data = load_training_data(args.dataset.resolve(), args.num_training_samples, args.seed)
@@ -473,6 +571,7 @@ def main(argv=None) -> None:
     else:
         fitting, validation = split_training_groups(data.entries, args.validation_fraction, args.seed)
         validation_source = "train_set"
+    preview_samples = select_validation_levels(validation, args.seed)
     output = (args.output_dir or HERE / "runs" / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")).resolve()
     if output.exists() and any(output.iterdir()):
         raise ValueError(f"Output directory must be new or empty {output}")
@@ -481,19 +580,24 @@ def main(argv=None) -> None:
     output.mkdir(parents=True, exist_ok=True)
     config = {
         "created_utc": datetime.now(timezone.utc).isoformat(),
-        "workflow": "sixteen independent fixed-configuration runs, user selects configuration and epoch",
+        "workflow": "independent runs for all specified combinations, user selects configuration and epoch",
+        "hyperparameters_file": str(args.hyperparameters_file.resolve()),
+        "hyperparameter_combinations": [asdict(hp) for hp in combinations],
         "dataset": str(args.dataset.resolve()), "dataset_fingerprint": data.dataset_fingerprint,
         "requested_sample_cap": args.num_training_samples,
         "available_comparisons": data.available_comparisons,
         "selected_comparisons": len(data.entries),
         "fitting_comparisons": len(fitting), "validation_comparisons": len(validation),
-        "epochs": args.epochs, "combination_count": len(HYPERPARAMETER_COMBINATIONS),
+        "epochs": args.epochs, "combination_count": len(combinations),
         "checkpoint_start_epoch": args.checkpoint_start_epoch,
         "checkpoint_end_epoch": args.checkpoint_end_epoch,
         "batch_size": args.batch_size,
         "validation_source": validation_source,
         "validation_fraction": args.validation_fraction if validation_source == "train_set" else None,
         "seed": args.seed, "reporting_seed": (args.seed + 1) % (2**32),
+        "preview_seed": (args.seed + 2) % (2**32),
+        "validation_preview_requested_levels": PREVIEW_COUNT,
+        "validation_preview_samples": preview_samples,
         "device": str(device), "cpu_threads": args.cpu_threads,
         "architecture": architecture_metadata(),
         "python_version": platform.python_version(), "pytorch_version": str(torch.__version__),
@@ -513,20 +617,22 @@ def main(argv=None) -> None:
                    "one fixed split of whole split_group_id groups for all configurations"),
     })
     experiments = [
-        {"combination_id": f"combination_{index:02d}", "hyperparameters": asdict(hp), "status": "pending"}
-        for index, hp in enumerate(HYPERPARAMETER_COMBINATIONS, 1)
+        {"combination_id": f"combination_{index:02d}",
+         "directory": hyperparameter_directory_name(hp),
+         "hyperparameters": asdict(hp), "status": "pending"}
+        for index, hp in enumerate(combinations, 1)
     ]
     write_json(output / "experiments.json", experiments)
     print(f"Loaded {len(data.entries)} comparisons, fitting={len(fitting)}, "
           f"validation={len(validation)}, configurations={len(experiments)}, device={device}", flush=True)
-    for index, hp in enumerate(HYPERPARAMETER_COMBINATIONS):
+    for index, hp in enumerate(combinations):
         combination_id = experiments[index]["combination_id"]
         experiments[index]["status"] = "running"
         write_json(output / "experiments.json", experiments)
         try:
             experiments[index] = run_combination(
                 data, fitting, validation, hp, args, device,
-                output / combination_id, combination_id, config
+                output / experiments[index]["directory"], combination_id, config
             )
         except BaseException as error:
             experiments[index]["status"] = "failed"
