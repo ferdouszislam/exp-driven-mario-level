@@ -1,8 +1,8 @@
 # CNN-VAE and pairwise fun-ranking training
 
-This pipeline implements the joint training stage of the project proposal using the specified layer dimensions. It trains one shared CNN-VAE and a fully connected classifier on two concatenated latent samples. The classifier predicts whether the first playthrough is preferred to the second. [Project proposal](player-exp-pairwise-cnn-vae-pcgml-proposal.pdf), [architecture specification](initial_model_architecture.md).
+This pipeline implements the joint training stage of the project proposal using the specified layer dimensions. It trains one shared CNN-VAE and a fully connected classifier on two concatenated latent samples. The classifier predicts whether the first playthrough is preferred to the second. [Project proposal](player-exp-pairwise-cnn-vae-pcgml-proposal.pdf), [current architecture specification](model_arch_1.md).
 
-The current workflow trains **12 independent hyperparameter combinations for 100 epochs each**. Every epoch records fitting and validation measurements, and each combination produces curves for losses, overall accuracy, and normalized tile Hamming distance. You choose a combination and epoch from those records. Each experiment starts with a fresh model and uses the same grouped split drawn from the supplied training portion. The modules cover data loading, the model, experiment execution, and plotting. [data.py](data.py), [model.py](model.py), [train.py](train.py), [plotting.py](plotting.py).
+The current workflow trains **12 independent hyperparameter combinations for 50 epochs each**. Every epoch records fitting and validation measurements, and each combination produces curves for losses, overall accuracy, and normalized tile Hamming distance. You choose a combination and epoch from those records. Each experiment starts with a fresh model and uses the same grouped split drawn from the supplied training portion. Checkpoint saving is enabled by supplying both epoch-range bounds. The modules cover data loading, the model, experiment execution, and plotting. [data.py](data.py), [model.py](model.py), [train.py](train.py), [plotting.py](plotting.py).
 
 ## 1. Setup and commands
 
@@ -24,34 +24,38 @@ For a small end-to-end run with four original comparisons and two epochs per com
   --output-dir model-training/runs/comparison_smoke
 ```
 
-For all 12 combinations using the complete supplied training portion and the 100-epoch default, use
+For all 12 combinations using the complete supplied training portion and the 50-epoch default, use
 
 ```bash
 .venv/bin/python model-training/train.py \
-  --output-dir model-training/runs/comparison_100_epochs
+  --output-dir model-training/runs/comparison_50_epochs
 ```
 
-The checkpoint-saving boundary can be exercised with four comparisons and 21 epochs per combination
+This command records measurements and curves with checkpoint saving disabled.
+
+An explicit single-epoch checkpoint range can be exercised with four comparisons and 21 training epochs per combination
 
 ```bash
 .venv/bin/python model-training/train.py \
   --num-training-samples 4 \
   --epochs 21 \
+  --checkpoint-start-epoch 21 \
+  --checkpoint-end-epoch 21 \
   --output-dir model-training/runs/comparison_checkpoint_check
 ```
 
-That run saves one epoch-21 checkpoint per combination. With the default checkpoint window, runs of 20 epochs or fewer produce epoch measurements and plots with zero checkpoints.
+That run saves one epoch-21 checkpoint per combination.
 
-To train for the default 100 epochs and save epochs 30 through 70 inclusive, use
+To train for the default 50 epochs and save epochs 30 through 40 inclusive, use
 
 ```bash
 .venv/bin/python model-training/train.py \
   --checkpoint-start-epoch 30 \
-  --checkpoint-end-epoch 70 \
-  --output-dir model-training/runs/comparison_30_to_70
+  --checkpoint-end-epoch 40 \
+  --output-dir model-training/runs/comparison_30_to_40
 ```
 
-This saves 41 checkpoints per combination. The window controls saving while each experiment completes its full training budget.
+This saves 11 checkpoints per combination, giving 132 across all 12 combinations. The window controls saving while each experiment completes its full training budget.
 
 Each output directory must be new or empty. Omit `--output-dir` to create a new UTC-timestamped directory under `model-training/runs/`. The script rejects output inside the input dataset. View all flags with
 
@@ -114,85 +118,80 @@ Each original comparison has equal weight. There is no extra source-annotation n
 
 ## 5. Shared model architecture
 
-Both inputs pass independently through **the same encoder parameters**. Both latent vectors use **the same decoder parameters**, and all ordered pairs use **the same FC-Tail**. The implementation creates one encoder, one decoder, and one pair classifier.
+The current architecture is specified in `model_arch_1.md`. Both inputs pass independently through the same encoder parameters. Their sampled latent vectors use the same decoder parameters, and all ordered pairs use the same FC-Tail. [model_arch_1.md](model_arch_1.md).
 
-The encoder applies four `Conv2d` layers, each with a 4×4 kernel, stride 2, and padding 1:
+The revision retains the original **4×4 kernels as an implementation assumption** and uses stride **2** with padding **1**. For these settings, each encoder convolution halves the spatial dimensions, and each transposed convolution doubles them.
 
-| Layer | Channels | Output shape per playthrough |
-|---|---|---|
-| Input | 22 | 22 × 16 × 192 |
-| Conv 1 | 22 → 32 | 32 × 8 × 96 |
-| Conv 2 | 32 → 64 | 64 × 4 × 48 |
-| Conv 3 | 64 → 128 | 128 × 2 × 24 |
-| Conv 4 | 128 → 128 | 128 × 1 × 12 |
-| Flatten and hidden FC | 1,536 → 128 | 128 |
-| Separate mean and log-variance heads | 128 → 32 each | μ: 32; log_var: 32 |
+| Encoder layer | Channels or FC dimensions | Output shape per playthrough | Following operations |
+|---|---|---|---|
+| Input | 22 channels | 22 × 16 × 192 | — |
+| Conv 1 | 22 → 32, kernel 4×4, stride 2, padding 1 | 32 × 8 × 96 | LayerNorm((32, 8, 96)), ReLU |
+| Conv 2 | 32 → 64, kernel 4×4, stride 2, padding 1 | 64 × 4 × 48 | LayerNorm((64, 4, 48)), ReLU |
+| Conv 3 | 64 → 32, kernel 4×4, stride 2, padding 1 | 32 × 2 × 24 | LayerNorm((32, 2, 24)), ReLU |
+| Flatten | 32 × 2 × 24 → 1,536 | 1,536 | — |
+| Hidden FC | 1,536 → 128 | 128 | ReLU |
+| Mean head | 128 → 32 | μ of shape 32 | Linear output |
+| Log-variance head | 128 → 32 | log_var of shape 32 | Linear output |
 
-Every encoder convolution is followed by GroupNorm, then LeakyReLU with negative slope 0.2. The hidden FC is followed by the same activation. GroupNorm uses **8 groups**, a valid divisor of every normalized channel count; the architecture document leaves this group count open. There is no pooling.
-
-The diagonal Gaussian posterior is sampled by reparameterization:
+All three encoder convolutions use LayerNorm followed by ReLU. LayerNorm normalizes over the complete `(channel, height, width)` feature map independently for each playthrough, with `eps=1e-5` and learned elementwise scale and bias. The encoder hidden FC uses ReLU, and the Gaussian heads return affine outputs. The diagonal Gaussian posterior is sampled by reparameterization. [PyTorch LayerNorm documentation](https://docs.pytorch.org/docs/2.15/generated/torch.nn.LayerNorm.html).
 
 ```text
-z = μ + exp(0.5 × log_var) × ε,   ε ~ N(0, I)
+z = μ + exp(0.5 * log_var) * ε,   ε ~ N(0, I)
 ```
 
-Each playthrough has a 32-dimensional latent sample. Sampling is used in both training and reported loss/metric computation.
+Each playthrough has a 32-dimensional latent sample. Sampling is used in both optimization and reported measurements.
 
-The decoder projects `32 → 1,536`, reshapes to `(128, 1, 12)`, and applies four `ConvTranspose2d` layers, also with kernel 4×4, stride 2, and padding 1:
+| Decoder layer | Channels or FC dimensions | Output shape per playthrough | Following operations |
+|---|---|---|---|
+| Projection FC | 32 → 1,536 | 1,536 | ReLU |
+| Reshape | 1,536 → 32 × 2 × 24 | 32 × 2 × 24 | — |
+| Transposed conv 1 | 32 → 64, kernel 4×4, stride 2, padding 1 | 64 × 4 × 48 | LayerNorm((64, 4, 48)), ReLU |
+| Transposed conv 2 | 64 → 32, kernel 4×4, stride 2, padding 1 | 32 × 8 × 96 | LayerNorm((32, 8, 96)), ReLU |
+| Transposed conv 3 | 32 → 22, kernel 4×4, stride 2, padding 1 | 22 × 16 × 192 | Linear logits |
 
-```text
-128 × 1 × 12
-  → 128 × 2 × 24
-  →  64 × 4 × 48
-  →  32 × 8 × 96
-  →  22 × 16 × 192
-```
+The decoder projection uses ReLU before reshaping. Its first two transposed convolutions use LayerNorm over their complete per-playthrough feature maps, followed by ReLU. The final transposed convolution returns unrestricted logits for all 22 input bits. The reconstruction loss applies BCE-with-logits to these outputs.
 
-The first three transposed convolutions use GroupNorm with 8 groups followed by LeakyReLU(0.2). The final layer returns unrestricted logits, one per input bit. There is no final sigmoid inside the decoder and no unpooling.
-
-The FC-Tail concatenates samples **in the supplied input order**:
+The FC-Tail concatenates samples in the supplied input order.
 
 ```text
-[z_A; z_B]: 64
-  → Linear(64,64) → LeakyReLU(0.2) → Dropout(0.1)
-  → Linear(64,32) → LeakyReLU(0.2)
+[z_A; z_B] of size 64
+  → Linear(64,64) → ReLU → Dropout(0.2)
+  → Linear(64,32) → ReLU → Dropout(0.2)
   → Linear(32,1)
 ```
 
-The last scalar is a logit. Applying sigmoid gives `P(first playthrough preferred)`. Returning logits permits numerically stable BCE-with-logits loss, as allowed in the architecture specification. The network does not impose a scalar utility function or an exact complement relationship between its two input orders.
+The final scalar is an affine logit. Sigmoid gives `P(first playthrough preferred)` for probabilities and classification. Both tail hidden layers use ReLU and dropout with probability 0.2.
 
 ### Parameter count
 
-The implemented model has **1,138,199 parameters**, all trainable. Counting `sum(parameter.numel() for parameter in model.parameters())` gives the following breakdown. The shared encoder and decoder are each counted once, even though each processes both playthroughs in a pair.
+The implemented model has **566,327 parameters**, all trainable. Shared modules are counted once.
 
 | Component | Trainable parameters |
 |---|---:|
-| Shared encoder, including mean and log-variance heads | 643,296 |
-| Shared decoder | 488,630 |
+| Shared encoder, including mean and log-variance heads | 358,720 |
+| Shared decoder | 201,334 |
 | Pairwise FC-Tail | 6,273 |
-| **Total** | **1,138,199** |
+| **Total** | **566,327** |
 
-The layer counts include convolutional and fully connected weights and biases. Each GroupNorm contributes one learned scale and one learned shift per output channel, giving `2 × channels` parameters. Rows containing GroupNorm include these parameters in their totals.
+The layer counts include convolutional and fully connected weights and biases. LayerNorm contributes one learned scale and one learned shift per normalized feature-map element, giving `2 × C × H × W` parameters for each normalized shape.
 
 | Component | Layer | Parameters |
 |---|---|---:|
-| Encoder | Conv 22 → 32, 4×4, followed by GroupNorm | 11,360 |
-| Encoder | Conv 32 → 64, 4×4, followed by GroupNorm | 32,960 |
-| Encoder | Conv 64 → 128, 4×4, followed by GroupNorm | 131,456 |
-| Encoder | Conv 128 → 128, 4×4, followed by GroupNorm | 262,528 |
+| Encoder | Conv 22 → 32, 4×4, followed by LayerNorm((32, 8, 96)) | 60,448 |
+| Encoder | Conv 32 → 64, 4×4, followed by LayerNorm((64, 4, 48)) | 57,408 |
+| Encoder | Conv 64 → 32, 4×4, followed by LayerNorm((32, 2, 24)) | 35,872 |
 | Encoder | Hidden FC 1,536 → 128 | 196,736 |
 | Encoder | Mean head 128 → 32 | 4,128 |
 | Encoder | Log-variance head 128 → 32 | 4,128 |
 | Decoder | Projection FC 32 → 1,536 | 50,688 |
-| Decoder | Transposed conv 128 → 128, 4×4, followed by GroupNorm | 262,528 |
-| Decoder | Transposed conv 128 → 64, 4×4, followed by GroupNorm | 131,264 |
-| Decoder | Transposed conv 64 → 32, 4×4, followed by GroupNorm | 32,864 |
+| Decoder | Transposed conv 32 → 64, 4×4, followed by LayerNorm((64, 4, 48)) | 57,408 |
+| Decoder | Transposed conv 64 → 32, 4×4, followed by LayerNorm((32, 8, 96)) | 81,952 |
 | Decoder | Output transposed conv 32 → 22, 4×4 | 11,286 |
 | FC-Tail | FC 64 → 64 | 4,160 |
 | FC-Tail | FC 64 → 32 | 2,080 |
 | FC-Tail | FC 32 → 1 | 33 |
 
-Flattening, reshaping, concatenation, LeakyReLU, dropout, sigmoid, and latent sampling each contribute zero parameters.
+Flattening, reshaping, concatenation, ReLU, dropout, sigmoid, and latent sampling each contribute zero parameters.
 
 ## 6. Joint losses and their reductions
 
@@ -235,7 +234,7 @@ Each combination receives a freshly initialized model and Adam optimizer. Resett
 
 A single internal fitting/validation split is created from the selected `train_set` comparisons and reused across all experiments. The default `--validation-fraction 0.2` targets 20% of the original comparisons for validation. Group IDs are sorted and seeded-shuffled, then whole groups are assigned until the target is reached while retaining at least one group for fitting. With all 290 supplied comparisons and seed 42, this gives **232 fitting comparisons and 58 validation comparisons**. Both input orders are then generated inside their assigned portion.
 
-Each combination fits on those 232 comparisons for its entire **100-epoch** default budget. The fixed validation portion supports comparison of epochs and experiments. After all experiments finish, you choose the combination and epoch using the recorded measurements and curves. Every combination completes the requested epoch budget independently.
+Each combination fits on those 232 comparisons for its entire **50-epoch** default budget. The fixed validation portion supports comparison of epochs and experiments. After all experiments finish, you choose the combination and epoch using the recorded measurements and curves. Every combination completes the requested epoch budget independently.
 
 For a different subset or seed, indivisible group sizes can change the achieved validation fraction. If only one selected group is available, the fitting portion contains all selected comparisons and validation measurements are recorded as `null`.
 
@@ -244,9 +243,9 @@ The main controls are available near the top of `train.py` and through the CLI.
 | Control | Default | Meaning |
 |---|---:|---|
 | `NUM_TRAINING_SAMPLES` / `--num-training-samples` | `None` | Cap on original comparisons, preserving whole groups |
-| `EPOCHS` / `--epochs` | 100 | Full epoch budget for each of the 12 combinations |
-| `CHECKPOINT_START_EPOCH` / `--checkpoint-start-epoch` | 21 | First checkpoint epoch, inclusive |
-| `CHECKPOINT_END_EPOCH` / `--checkpoint-end-epoch` | `None` | Last checkpoint epoch, inclusive, resolved to `--epochs` by default |
+| `EPOCHS` / `--epochs` | 50 | Full epoch budget for each of the 12 combinations |
+| `CHECKPOINT_START_EPOCH` / `--checkpoint-start-epoch` | `None` | Optional first checkpoint epoch, inclusive, supplied together with the end epoch |
+| `CHECKPOINT_END_EPOCH` / `--checkpoint-end-epoch` | `None` | Optional last checkpoint epoch, inclusive, supplied together with the start epoch |
 | `--batch-size` | 16 | Ordered fitting examples per optimization batch |
 | `--validation-fraction` | 0.2 | Target fraction of selected comparisons for fixed validation |
 | `--seed` | 42 | Initialization, sample selection, split, and random-stream seed |
@@ -313,7 +312,7 @@ Each invocation creates one experiment root with the shared configuration and sp
 
 | File | Contents |
 |---|---|
-| `run_config.json` | Dataset and fingerprint, requested/actual sample counts, epoch budget, resolved checkpoint start/end epochs, seed, device, environment, architecture, and shared run settings |
+| `run_config.json` | Dataset and fingerprint, requested/actual sample counts, epoch budget, checkpoint start/end epochs or two `null` values when disabled, seed, device, environment, architecture, and shared run settings |
 | `channels.json` | Exact input channel codebook |
 | `selected_train_comparisons.json` | Selected manifest entries with participant, playthrough, and grouping provenance |
 | `split.json` | Fixed fitting and validation memberships shared by all combinations |
@@ -332,7 +331,7 @@ Each `combination_01/` through `combination_12/` directory contains its own outp
 | `train_predictions.csv` | Final-epoch ordered predictions for the fitting portion |
 | `validation_predictions.csv` | Final-epoch ordered validation predictions when validation is available |
 | `validation_curves.png` | A 3×2 figure for weighted total loss, reconstruction BCE, KL divergence, ranking BCE, overall accuracy, and normalized tile Hamming distance, each showing fitting and available validation values against epoch number |
-| `checkpoints/epoch_021.pt`, etc. | Model and optimizer state for each completed epoch within the inclusive checkpoint window |
+| `checkpoints/epoch_030.pt`, etc. | Optional model and optimizer state for each completed epoch within an explicitly configured inclusive checkpoint window |
 
 The JSON history and complete epoch CSV are each replaced atomically after every epoch's measurements. This makes completed epoch measurements available while the experiment continues. Prediction CSV files summarize the final epoch. The history retains measurements for earlier epochs.
 
@@ -340,15 +339,15 @@ The overall-accuracy and normalized-Hamming-distance panels use a vertical range
 
 The dataset SHA-256 fingerprint includes the codebook bytes and selected training-entry metadata, ranking bytes, and encoding bytes, with explicit boundaries between components. Its inputs are the selected training observations.
 
-Checkpoint saving uses the inclusive window defined by `--checkpoint-start-epoch` and `--checkpoint-end-epoch`. The defaults are **21** and **`None`**, with `None` resolved to the final training epoch specified by `--epochs`. The equivalent module constants are `CHECKPOINT_START_EPOCH` and `CHECKPOINT_END_EPOCH` near the top of `train.py`.
+Checkpoint saving is **disabled by default**. Both `CHECKPOINT_START_EPOCH` and `CHECKPOINT_END_EPOCH` near the top of `train.py` default to `None`. Enable saving by supplying `--checkpoint-start-epoch` and `--checkpoint-end-epoch` together, or by setting both module constants to integer epochs. Supplying only one bound raises an argument error.
 
-Both endpoints must be positive, and an explicitly supplied end epoch must be at least the start epoch. Endpoints can extend beyond the training budget. The actual checkpoint epochs are the intersection of the configured window with completed training epochs. A short run ending before the default start epoch is valid and produces zero checkpoints. The resolved start and end are saved in the run and combination configurations.
+The bounds are inclusive and must be positive, with the end epoch at least the start epoch. They can extend beyond the training budget. The actual checkpoint epochs are the intersection of the configured window with completed training epochs. The run and combination configurations record both supplied bounds, or two `null` values when saving is disabled. Default runs produce zero model checkpoint files at every training length.
 
-With the default 100 epochs, each combination produces checkpoints for **epochs 21–100 inclusive**, giving **80 per combination and 960 across all 12 combinations**. A checkpoint containing the 1,138,199-parameter model and Adam state is approximately **13.7 MB**. The complete default checkpoint collection therefore uses roughly **13 GB**, plus reports and plots.
+A checkpoint containing the 566,327-parameter float32 model and Adam moment states is approximately **6.8 MB**. The explicit 30–40 range in section 1 saves 11 per combination and 132 overall, using roughly **0.9 GB** for checkpoints, plus reports and plots, using decimal MB and GB.
 
-Each checkpoint contains `epoch`, `model_state_dict`, `optimizer_state_dict`, `config`, `channels`, `selected_instance_ids`, `fitting_instance_ids`, `validation_instance_ids`, `train_metrics`, and `validation_metrics`. The configuration and split memberships identify the experiment and data associated with that saved epoch.
+Each checkpoint contains `epoch`, `model_state_dict`, `optimizer_state_dict`, `config`, `channels`, `selected_instance_ids`, `fitting_instance_ids`, `validation_instance_ids`, `train_metrics`, and `validation_metrics`. The configuration and split memberships identify the experiment and data associated with that saved epoch. Architecture metadata identifies the normalization, channel counts, strides, and tensor shapes used by the saved model. Earlier two-convolution checkpoints and original four-convolution checkpoints require their corresponding model definitions for restoration. Check the full metadata together with the architecture label when choosing the matching definition.
 
-To inspect a checkpoint you have generated, choose its combination and epoch explicitly. This example loads combination 1 at epoch 21 from the full-run command in section 1.
+To inspect a checkpoint you have generated, choose its combination and epoch explicitly. This example loads combination 1 at epoch 30 from the explicit 30–40 range command in section 1.
 
 ```python
 from pathlib import Path
@@ -359,14 +358,30 @@ sys.path.insert(0, str(Path("model-training").resolve()))
 from model import PairwiseCNNVAE
 
 checkpoint = torch.load(
-    "model-training/runs/comparison_100_epochs/combination_01/checkpoints/epoch_021.pt",
+    "model-training/runs/comparison_30_to_40/combination_01/checkpoints/epoch_030.pt",
     map_location="cpu",
     weights_only=True,
 )
-assert checkpoint["epoch"] == 21
+assert checkpoint["epoch"] == 30
+assert checkpoint["config"]["architecture"]["architecture_version"] == "model_arch_1"
+assert checkpoint["config"]["architecture"]["normalization"] == "LayerNorm"
+assert checkpoint["config"]["architecture"]["layer_norm_axes"] == ["channel", "height", "width"]
+assert checkpoint["config"]["architecture"]["layer_norm_eps"] == 1e-5
+assert checkpoint["config"]["architecture"]["layer_norm_elementwise_affine"] is True
+assert checkpoint["config"]["architecture"]["encoder_layer_norm_shapes"] == [
+    [32, 8, 96], [64, 4, 48], [32, 2, 24]
+]
+assert checkpoint["config"]["architecture"]["decoder_layer_norm_shapes"] == [
+    [64, 4, 48], [32, 8, 96]
+]
+assert checkpoint["config"]["architecture"]["stride"] == [2, 2]
+assert checkpoint["config"]["architecture"]["encoder_channels"] == [22, 32, 64, 32]
+assert checkpoint["config"]["architecture"]["decoder_channels"] == [32, 64, 32, 22]
+assert checkpoint["config"]["architecture"]["encoded_shape"] == [32, 2, 24]
+assert checkpoint["config"]["architecture"]["flattened_features"] == 1536
 assert checkpoint["config"]["combination_id"] == "combination_01"
-assert checkpoint["config"]["checkpoint_start_epoch"] == 21
-assert checkpoint["config"]["checkpoint_end_epoch"] == 100
+assert checkpoint["config"]["checkpoint_start_epoch"] == 30
+assert checkpoint["config"]["checkpoint_end_epoch"] == 40
 assert checkpoint["config"]["hyperparameters"] == {
     "learning_rate": 0.001,
     "lambda_rec": 1.0,
@@ -384,7 +399,7 @@ print(checkpoint["train_metrics"])
 print(checkpoint["validation_metrics"])
 ```
 
-The assertions verify the saved epoch, checkpoint window, combination ID, and hyperparameters against the chosen grid row. `map_location="cpu"` maps the saved model and optimizer tensors to CPU during loading.
+The assertions verify the architecture version, normalization axes, channel counts, stride, encoded shape, flattened size, saved epoch, checkpoint window, combination ID, and hyperparameters against the chosen grid row. `map_location="cpu"` maps the saved model and optimizer tensors to CPU during loading.
 
 ## 10. Verification and existing artifacts
 
@@ -394,6 +409,6 @@ Run the behavioral checks from the repository root.
 .venv/bin/python -m unittest discover -s model-training/tests -v
 ```
 
-The two-epoch command in section 1 exercises all 12 independent experiments, per-epoch measurements, JSON/CSV export, and curves. The 21-epoch command additionally exercises the checkpoint boundary. Use a fresh output directory for each invocation.
+The two-epoch command in section 1 exercises all 12 independent experiments, per-epoch measurements, JSON/CSV export, and curves. The 21-epoch command additionally exercises an explicit single-epoch checkpoint range. Use a fresh output directory for each invocation.
 
 Existing directories under `model-training/runs/` contain artifacts from earlier training workflows. Their saved configurations and reports identify the procedure and metric schema used for those runs. The experiment layout, commands, and checkpoint policy above describe newly generated runs under the current workflow.

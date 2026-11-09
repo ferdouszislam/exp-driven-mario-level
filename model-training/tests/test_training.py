@@ -22,7 +22,7 @@ TRAINING_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TRAINING_DIR))
 
 from data import ComparisonDataset, INPUT_SHAPE, TILE_SYMBOLS, load_training_data
-from model import PairwiseCNNVAE
+from model import PairwiseCNNVAE, architecture_metadata
 import train as training
 from train import (
     Hyperparameters,
@@ -113,18 +113,70 @@ class TrainingTests(unittest.TestCase):
         finally:
             encoder_handle.remove()
             decoder_handle.remove()
-        self.assertEqual(encoder_calls, [(id(model.encoder_convs), (2, 128, 1, 12))] * 2)
+        self.assertEqual(encoder_calls, [(id(model.encoder_convs), (2, 32, 2, 24))] * 2)
         self.assertEqual(decoder_calls, [(id(model.decoder_convs), (2, *INPUT_SHAPE))] * 2)
+        self.assertEqual(tuple(model.encoder_convs[0](x).shape), (2, 32, 8, 96))
+        self.assertEqual(tuple(model.decoder_convs[0](torch.zeros(2, 32, 2, 24)).shape), (2, 64, 4, 48))
         for side in ("a", "b"):
             self.assertEqual(tuple(output[f"reconstruction_logits_{side}"].shape), (2, *INPUT_SHAPE))
             self.assertEqual(tuple(output[f"mu_{side}"].shape), (2, 32))
             self.assertEqual(tuple(output[f"log_var_{side}"].shape), (2, 32))
         self.assertEqual(tuple(output["rank_logits"].shape), (2,))
-        self.assertEqual(sum(p.numel() for p in model.parameters()), 1_138_199)
-        self.assertEqual(sum(isinstance(m, nn.Conv2d) for m in model.modules()), 4)
-        self.assertEqual(sum(isinstance(m, nn.ConvTranspose2d) for m in model.modules()), 4)
+        self.assertEqual(sum(p.numel() for p in model.parameters()), 566_327)
+        self.assertEqual(sum(isinstance(m, nn.Conv2d) for m in model.modules()), 3)
+        self.assertEqual(sum(isinstance(m, nn.ConvTranspose2d) for m in model.modules()), 3)
+        self.assertEqual([(m.in_channels, m.out_channels) for m in model.modules() if isinstance(m, nn.Conv2d)],
+                         [(22, 32), (32, 64), (64, 32)])
+        self.assertEqual([(m.in_channels, m.out_channels) for m in model.modules() if isinstance(m, nn.ConvTranspose2d)],
+                         [(32, 64), (64, 32), (32, 22)])
+        for module in model.modules():
+            if isinstance(module, (nn.Conv2d, nn.ConvTranspose2d)):
+                self.assertEqual(module.kernel_size, (4, 4))
+                self.assertEqual(module.stride, (2, 2))
+                self.assertEqual(module.padding, (1, 1))
+        self.assertIsInstance(model.encoder_convs[2], nn.ReLU)
+        self.assertIsInstance(model.encoder_convs[5], nn.ReLU)
+        self.assertIsInstance(model.encoder_convs[8], nn.ReLU)
+        self.assertIsInstance(model.decoder_convs[2], nn.ReLU)
+        self.assertIsInstance(model.decoder_convs[5], nn.ReLU)
+        self.assertFalse(any(isinstance(module, nn.LeakyReLU) for module in model.modules()))
+        self.assertEqual(model.encoder_hidden[1].in_features, 1_536)
+        self.assertIsInstance(model.encoder_hidden[2], nn.ReLU)
+        self.assertEqual(model.decoder_projection.out_features, 1_536)
+        self.assertIsInstance(model.decoder_activation, nn.ReLU)
+        self.assertEqual(
+            [type(module) for module in model.fc_tail],
+            [nn.Linear, nn.ReLU, nn.Dropout, nn.Linear, nn.ReLU, nn.Dropout, nn.Linear],
+        )
+        self.assertEqual([module.p for module in model.fc_tail if isinstance(module, nn.Dropout)],
+                         [0.2, 0.2])
+        metadata = architecture_metadata()
+        self.assertEqual(metadata["architecture_version"], "model_arch_1")
+        self.assertEqual(metadata["encoded_shape"], [32, 2, 24])
+        self.assertEqual(metadata["flattened_features"], 1_536)
+        self.assertEqual(metadata["stride"], [2, 2])
+        self.assertEqual(metadata["encoder_output_shapes"], [[32, 8, 96], [64, 4, 48], [32, 2, 24]])
+        self.assertEqual(metadata["decoder_output_shapes"], [[64, 4, 48], [32, 8, 96], [22, 16, 192]])
+        self.assertEqual(metadata["encoder_convolution_activation"], "ReLU")
+        self.assertEqual(metadata["decoder_convolution_activation"], "ReLU after first two transposed convolutions")
+        self.assertEqual(metadata["encoder_channels"], [22, 32, 64, 32])
+        self.assertEqual(metadata["decoder_channels"], [32, 64, 32, 22])
+        self.assertEqual(metadata["dropout_after_fc_layers"], [1, 2])
         self.assertFalse(any(isinstance(m, (nn.MaxPool2d, nn.MaxUnpool2d)) for m in model.modules()))
-        self.assertTrue(all(m.num_groups == 8 for m in model.modules() if isinstance(m, nn.GroupNorm)))
+        self.assertFalse(any(isinstance(m, nn.GroupNorm) for m in model.modules()))
+        normalization_shapes = [(32, 8, 96), (64, 4, 48), (32, 2, 24), (64, 4, 48), (32, 8, 96)]
+        normalization_layers = [m for m in model.modules() if isinstance(m, nn.LayerNorm)]
+        self.assertEqual([m.normalized_shape for m in normalization_layers], normalization_shapes)
+        for layer in normalization_layers:
+            self.assertTrue(layer.elementwise_affine)
+            self.assertEqual(layer.eps, 1e-5)
+            self.assertEqual(tuple(layer.weight.shape), layer.normalized_shape)
+            self.assertEqual(tuple(layer.bias.shape), layer.normalized_shape)
+        self.assertEqual(metadata["normalization"], "LayerNorm")
+        self.assertEqual(metadata["layer_norm_axes"], ["channel", "height", "width"])
+        self.assertEqual(metadata["encoder_layer_norm_shapes"], [[32, 8, 96], [64, 4, 48], [32, 2, 24]])
+        self.assertEqual(metadata["decoder_layer_norm_shapes"], [[64, 4, 48], [32, 8, 96]])
+        self.assertNotIn("group_norm_groups", metadata)
 
     def test_loss_matches_hand_calculated_bce_kl_and_weighting(self) -> None:
         x = torch.zeros(2, *INPUT_SHAPE)
@@ -348,31 +400,34 @@ class TrainingTests(unittest.TestCase):
         }
         self.assertEqual(len(training.HYPERPARAMETER_COMBINATIONS), 12)
         self.assertEqual(set(training.HYPERPARAMETER_COMBINATIONS), expected)
-        self.assertEqual(training.EPOCHS, 100)
-        self.assertEqual(training.CHECKPOINT_START_EPOCH, 21)
+        self.assertEqual(training.EPOCHS, 50)
+        self.assertIsNone(training.CHECKPOINT_START_EPOCH)
         self.assertIsNone(training.CHECKPOINT_END_EPOCH)
         defaults = training.parse_args([])
-        self.assertEqual(defaults.epochs, 100)
-        self.assertEqual((defaults.checkpoint_start_epoch, defaults.checkpoint_end_epoch), (21, 100))
+        self.assertEqual(defaults.epochs, 50)
+        self.assertEqual((defaults.checkpoint_start_epoch, defaults.checkpoint_end_epoch), (None, None))
         self.assertEqual(training.parse_args(["--epochs", "100"]).epochs, 100)
         self.assertFalse(hasattr(training.parse_args([]), "tuning_epochs"))
         with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as rejected:
             training.parse_args(["--tuning-epochs", "2"])
         self.assertEqual(rejected.exception.code, 2)
         valid_ranges = [
-            (["--epochs", "2"], (21, 2)),
+            (["--epochs", "2"], (None, None)),
             (["--epochs", "5", "--checkpoint-start-epoch", "2", "--checkpoint-end-epoch", "3"], (2, 3)),
             (["--epochs", "5", "--checkpoint-start-epoch", "2", "--checkpoint-end-epoch", "2"], (2, 2)),
             (["--epochs", "5", "--checkpoint-start-epoch", "10", "--checkpoint-end-epoch", "12"], (10, 12)),
-            (["--epochs", "5", "--checkpoint-start-epoch", "2"], (2, 5)),
         ]
         for arguments, expected_range in valid_ranges:
             with self.subTest(arguments=arguments):
                 parsed = training.parse_args(arguments)
                 self.assertEqual((parsed.checkpoint_start_epoch, parsed.checkpoint_end_epoch), expected_range)
         invalid_ranges = [
-            ["--checkpoint-start-epoch", "0"],
-            ["--checkpoint-end-epoch", "0"],
+            ["--checkpoint-start-epoch", "2"],
+            ["--checkpoint-end-epoch", "3"],
+            ["--checkpoint-start-epoch", "0", "--checkpoint-end-epoch", "3"],
+            ["--checkpoint-start-epoch", "2", "--checkpoint-end-epoch", "0"],
+            ["--checkpoint-start-epoch", "-1", "--checkpoint-end-epoch", "3"],
+            ["--checkpoint-start-epoch", "2", "--checkpoint-end-epoch", "-1"],
             ["--checkpoint-start-epoch", "3", "--checkpoint-end-epoch", "2"],
         ]
         for arguments in invalid_ranges:

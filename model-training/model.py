@@ -1,4 +1,4 @@
-"""Shared CNN-VAE and ordered-pair FC tail from initial_model_architecture.md."""
+"""Shared CNN-VAE and ordered-pair FC tail for model_arch_1."""
 
 from __future__ import annotations
 
@@ -8,7 +8,9 @@ from torch import Tensor, nn
 
 INPUT_SHAPE = (22, 16, 192)
 LATENT_DIM = 32
-GROUP_NORM_GROUPS = 8
+ARCHITECTURE_VERSION = "model_arch_1"
+ENCODED_SHAPE = (32, 2, 24)
+ENCODED_FEATURES = 1536
 
 
 class PairwiseCNNVAE(nn.Module):
@@ -22,43 +24,42 @@ class PairwiseCNNVAE(nn.Module):
 
     def __init__(self) -> None:
         super().__init__()
-        encoder_layers: list[nn.Module] = []
-        for in_channels, out_channels in ((22, 32), (32, 64), (64, 128), (128, 128)):
-            encoder_layers.extend(
-                [
-                    nn.Conv2d(in_channels, out_channels, kernel_size=4, stride=2, padding=1),
-                    nn.GroupNorm(GROUP_NORM_GROUPS, out_channels),
-                    nn.LeakyReLU(negative_slope=0.2),
-                ]
-            )
-        self.encoder_convs = nn.Sequential(*encoder_layers)
+        self.encoder_convs = nn.Sequential(
+            nn.Conv2d(22, 32, kernel_size=4, stride=2, padding=1),
+            nn.LayerNorm((32, 8, 96)),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1),
+            nn.LayerNorm((64, 4, 48)),
+            nn.ReLU(),
+            nn.Conv2d(64, 32, kernel_size=4, stride=2, padding=1),
+            nn.LayerNorm(ENCODED_SHAPE),
+            nn.ReLU(),
+        )
         self.encoder_hidden = nn.Sequential(
-            nn.Flatten(), nn.Linear(1536, 128), nn.LeakyReLU(negative_slope=0.2)
+            nn.Flatten(), nn.Linear(ENCODED_FEATURES, 128), nn.ReLU()
         )
         self.mu_head = nn.Linear(128, LATENT_DIM)
         self.log_var_head = nn.Linear(128, LATENT_DIM)
 
-        self.decoder_projection = nn.Linear(LATENT_DIM, 1536)
-        decoder_layers: list[nn.Module] = []
-        for in_channels, out_channels in ((128, 128), (128, 64), (64, 32)):
-            decoder_layers.extend(
-                [
-                    nn.ConvTranspose2d(
-                        in_channels, out_channels, kernel_size=4, stride=2, padding=1
-                    ),
-                    nn.GroupNorm(GROUP_NORM_GROUPS, out_channels),
-                    nn.LeakyReLU(negative_slope=0.2),
-                ]
-            )
-        decoder_layers.append(nn.ConvTranspose2d(32, 22, kernel_size=4, stride=2, padding=1))
-        self.decoder_convs = nn.Sequential(*decoder_layers)
+        self.decoder_projection = nn.Linear(LATENT_DIM, ENCODED_FEATURES)
+        self.decoder_activation = nn.ReLU()
+        self.decoder_convs = nn.Sequential(
+            nn.ConvTranspose2d(32, 64, kernel_size=4, stride=2, padding=1),
+            nn.LayerNorm((64, 4, 48)),
+            nn.ReLU(),
+            nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),
+            nn.LayerNorm((32, 8, 96)),
+            nn.ReLU(),
+            nn.ConvTranspose2d(32, 22, kernel_size=4, stride=2, padding=1),
+        )
 
         self.fc_tail = nn.Sequential(
             nn.Linear(2 * LATENT_DIM, 64),
-            nn.LeakyReLU(negative_slope=0.2),
-            nn.Dropout(p=0.1),
+            nn.ReLU(),
+            nn.Dropout(p=0.2),
             nn.Linear(64, 32),
-            nn.LeakyReLU(negative_slope=0.2),
+            nn.ReLU(),
+            nn.Dropout(p=0.2),
             nn.Linear(32, 1),
         )
 
@@ -76,7 +77,7 @@ class PairwiseCNNVAE(nn.Module):
 
     def decode(self, z: Tensor) -> Tensor:
         """Return 22-channel reconstruction logits from a latent batch."""
-        projected = self.decoder_projection(z).reshape(-1, 128, 1, 12)
+        projected = self.decoder_activation(self.decoder_projection(z)).reshape(-1, *ENCODED_SHAPE)
         return self.decoder_convs(projected)
 
     def preference_logits(self, z_a: Tensor, z_b: Tensor) -> Tensor:
@@ -106,14 +107,35 @@ def architecture_metadata() -> dict[str, object]:
     """Return the fixed architecture choices to save beside a checkpoint."""
     return {
         "model_class": "PairwiseCNNVAE",
+        "architecture_version": ARCHITECTURE_VERSION,
         "input_shape": list(INPUT_SHAPE),
         "latent_dim": LATENT_DIM,
-        "group_norm_groups": GROUP_NORM_GROUPS,
-        "negative_slope": 0.2,
-        "dropout": 0.1,
-        "encoder_channels": [22, 32, 64, 128, 128],
-        "encoder_hidden": [1536, 128],
-        "decoder_channels": [128, 128, 64, 32, 22],
+        "normalization": "LayerNorm",
+        "layer_norm_axes": ["channel", "height", "width"],
+        "layer_norm_eps": 1e-5,
+        "layer_norm_elementwise_affine": True,
+        "encoder_layer_norm_shapes": [[32, 8, 96], [64, 4, 48], list(ENCODED_SHAPE)],
+        "decoder_layer_norm_shapes": [[64, 4, 48], [32, 8, 96]],
+        "kernel_size": [4, 4],
+        "stride": [2, 2],
+        "padding": [1, 1],
+        "encoder_channels": [22, 32, 64, 32],
+        "encoder_output_shapes": [[32, 8, 96], [64, 4, 48], list(ENCODED_SHAPE)],
+        "encoded_shape": list(ENCODED_SHAPE),
+        "flattened_features": ENCODED_FEATURES,
+        "encoder_hidden": [ENCODED_FEATURES, 128],
+        "encoder_convolution_activation": "ReLU",
+        "encoder_hidden_activation": "ReLU",
+        "gaussian_parameter_head_activation": "linear",
+        "decoder_projection": [LATENT_DIM, ENCODED_FEATURES],
+        "decoder_projection_activation": "ReLU",
+        "decoder_channels": [32, 64, 32, 22],
+        "decoder_output_shapes": [[64, 4, 48], [32, 8, 96], list(INPUT_SHAPE)],
+        "decoder_convolution_activation": "ReLU after first two transposed convolutions",
+        "layer_norm_placement": "after all three encoder convolutions and first two decoder convolutions",
         "fc_tail_sizes": [64, 64, 32, 1],
+        "fc_tail_hidden_activation": "ReLU",
+        "dropout": 0.2,
+        "dropout_after_fc_layers": [1, 2],
         "outputs": "reconstruction and preference logits",
     }

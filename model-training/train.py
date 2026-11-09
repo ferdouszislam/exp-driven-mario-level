@@ -27,9 +27,9 @@ from plotting import plot_loss_curves
 # Counts original comparison folders BEFORE generating both input orders.
 # Whole comparison groups are retained, so the actual count can be below this cap.
 NUM_TRAINING_SAMPLES: int | None = None
-EPOCHS = 100
-# Inclusive checkpoint bounds. None uses the final training epoch.
-CHECKPOINT_START_EPOCH = 21
+EPOCHS = 50
+# Set both inclusive checkpoint bounds to enable model saving.
+CHECKPOINT_START_EPOCH: int | None = None
 CHECKPOINT_END_EPOCH: int | None = None
 BATCH_SIZE = 16
 SEED = 42
@@ -345,7 +345,8 @@ def run_combination(data, fitting: list[dict], validation: list[dict],
                           f"accuracy={metrics['accuracy']:.4f} "
                           f"F1={metrics['f1_score']:.4f} "
                           f"Hamming={metrics['normalized_hamming_distance']:.6f}", flush=True)
-            if args.checkpoint_start_epoch <= epoch <= args.checkpoint_end_epoch:
+            if (args.checkpoint_start_epoch is not None
+                    and args.checkpoint_start_epoch <= epoch <= args.checkpoint_end_epoch):
                 checkpoint = checkpoints / f"epoch_{epoch:03d}.pt"
                 save_epoch_checkpoint(checkpoint, model, optimizer, config, data,
                                       fitting, validation, row)
@@ -392,16 +393,19 @@ def write_report(output: Path, config: dict, experiments: list[dict]) -> None:
             f"{len(experiment['checkpoint_files'])} | [Curves]({directory}/validation_curves.png) |"
         )
     first_checkpoint_epoch = config["checkpoint_start_epoch"]
-    last_checkpoint_epoch = min(config["epochs"], config["checkpoint_end_epoch"])
-    if first_checkpoint_epoch <= last_checkpoint_epoch:
-        checkpoint_summary = (
-            f"Checkpoints cover epochs {first_checkpoint_epoch}–{last_checkpoint_epoch}, inclusive."
-        )
+    if first_checkpoint_epoch is None:
+        checkpoint_summary = "Checkpoint saving was disabled for this run."
     else:
-        checkpoint_summary = (
-            f"Checkpoint saving begins at epoch {first_checkpoint_epoch}, "
-            f"beyond this run's {config['epochs']}-epoch budget."
-        )
+        last_checkpoint_epoch = min(config["epochs"], config["checkpoint_end_epoch"])
+        if first_checkpoint_epoch <= last_checkpoint_epoch:
+            checkpoint_summary = (
+                f"Checkpoints cover epochs {first_checkpoint_epoch}–{last_checkpoint_epoch}, inclusive."
+            )
+        else:
+            checkpoint_summary = (
+                f"Checkpoint saving begins at epoch {first_checkpoint_epoch}, "
+                f"beyond this run's {config['epochs']}-epoch budget."
+            )
     lines += ["", "Each graph contains six panels for total loss, reconstruction BCE, KL divergence,",
               "ranking BCE, ranking accuracy, and normalized tile Hamming distance.",
               "The panels show fitting and validation curves against num_epochs.",
@@ -423,9 +427,9 @@ def parse_args(argv=None):
     parser.add_argument("--epochs", type=int, default=EPOCHS,
                         help="Complete training duration for every one of the twelve configurations")
     parser.add_argument("--checkpoint-start-epoch", type=int, default=CHECKPOINT_START_EPOCH,
-                        help="First epoch to save, inclusive (default 21)")
+                        help="First epoch to save, inclusive; specify with --checkpoint-end-epoch")
     parser.add_argument("--checkpoint-end-epoch", type=int, default=CHECKPOINT_END_EPOCH,
-                        help="Last epoch to save, inclusive (default final training epoch)")
+                        help="Last epoch to save, inclusive; omit both bounds to disable checkpoints")
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE,
                         help="Ordered examples per optimization batch")
     parser.add_argument("--validation-fraction", type=float, default=0.2)
@@ -435,16 +439,17 @@ def parse_args(argv=None):
     parser.add_argument("--output-dir", type=Path,
                         help="New or empty comparison directory, default a timestamped run")
     args = parser.parse_args(argv)
-    for name in ("epochs", "batch_size", "cpu_threads", "checkpoint_start_epoch"):
+    for name in ("epochs", "batch_size", "cpu_threads"):
         if getattr(args, name) < 1:
             parser.error(f"--{name.replace('_', '-')} must be positive")
-    if args.checkpoint_end_epoch is not None:
-        if args.checkpoint_end_epoch < 1:
-            parser.error("--checkpoint-end-epoch must be positive")
+    if (args.checkpoint_start_epoch is None) != (args.checkpoint_end_epoch is None):
+        parser.error("Specify both --checkpoint-start-epoch and --checkpoint-end-epoch to save checkpoints")
+    if args.checkpoint_start_epoch is not None:
+        for name in ("checkpoint_start_epoch", "checkpoint_end_epoch"):
+            if getattr(args, name) < 1:
+                parser.error(f"--{name.replace('_', '-')} must be positive")
         if args.checkpoint_end_epoch < args.checkpoint_start_epoch:
             parser.error("--checkpoint-end-epoch must be at least --checkpoint-start-epoch")
-    else:
-        args.checkpoint_end_epoch = args.epochs
     if args.num_training_samples is not None and args.num_training_samples < 1:
         parser.error("--num-training-samples must be positive")
     if not 0 < args.validation_fraction < 1:

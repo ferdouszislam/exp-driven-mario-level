@@ -210,3 +210,5 @@ pyrightconfig.json
 
 # Ignore saved model checkpoints
 checkpoints/
+
+runs/
