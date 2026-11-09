@@ -186,6 +186,7 @@ def evaluate_training_pairs(model: PairwiseCNNVAE, data, entries: list[dict],
     totals = {name: 0.0 for name in (
         "total_loss", "reconstruction_bce", "kl_divergence", "ranking_bce")}
     targets, predictions, rows = [], [], []
+    tile_mismatches, total_tiles = 0, 0
     offset = 0
     for x_a, x_b, target in loader:
         x_a, x_b, target = x_a.to(device), x_b.to(device), target.to(device)
@@ -201,6 +202,14 @@ def evaluate_training_pairs(model: PairwiseCNNVAE, data, entries: list[dict],
             if not torch.isfinite(value):
                 raise FloatingPointError(f"Non-finite reporting loss: {name}.")
             totals[name] += value.item() * n
+        for original, reconstruction in (
+            (x_a, output["reconstruction_logits_a"]),
+            (x_b, output["reconstruction_logits_b"]),
+        ):
+            input_tiles = original[:, :21].argmax(dim=1)
+            decoded_tiles = reconstruction[:, :21].argmax(dim=1)
+            tile_mismatches += (input_tiles != decoded_tiles).sum().item()
+            total_tiles += input_tiles.numel()
         forward_probs = torch.sigmoid(output["rank_logits"]).cpu().tolist()
         reverse_probs = torch.sigmoid(reverse_logits).cpu().tolist()
         for index, (p_forward, p_reverse) in enumerate(zip(forward_probs, reverse_probs, strict=True)):
@@ -217,6 +226,7 @@ def evaluate_training_pairs(model: PairwiseCNNVAE, data, entries: list[dict],
                              "probability_first_preferred": probability, "prediction": predicted})
         offset += n
     metrics = {name: value / len(entries) for name, value in totals.items()}
+    metrics["normalized_hamming_distance"] = tile_mismatches / total_tiles
     metrics.update(classification_metrics(targets, predictions))
     metrics.update({"comparisons": len(entries), "reporting_seed": seed,
                     "latent_policy": "one sampled latent per playthrough occurrence; reused in both orders",
@@ -265,7 +275,7 @@ def flatten_epoch_metrics(row: dict) -> dict:
         flat[f"optimization_{name}"] = row["optimization"][name]
     for portion in ("train", "validation"):
         metrics = row[portion]
-        for name in (*LOSS_NAMES, "accuracy", "f1_score"):
+        for name in (*LOSS_NAMES, "accuracy", "f1_score", "normalized_hamming_distance"):
             flat[f"{portion}_{name}"] = metrics[name] if metrics is not None else None
     return flat
 
@@ -333,7 +343,8 @@ def run_combination(data, fitting: list[dict], validation: list[dict],
                           f"KL={metrics['kl_divergence']:.6f} "
                           f"rank={metrics['ranking_bce']:.6f} "
                           f"accuracy={metrics['accuracy']:.4f} "
-                          f"F1={metrics['f1_score']:.4f}", flush=True)
+                          f"F1={metrics['f1_score']:.4f} "
+                          f"Hamming={metrics['normalized_hamming_distance']:.6f}", flush=True)
             if args.checkpoint_start_epoch <= epoch <= args.checkpoint_end_epoch:
                 checkpoint = checkpoints / f"epoch_{epoch:03d}.pt"
                 save_epoch_checkpoint(checkpoint, model, optimizer, config, data,
@@ -341,7 +352,7 @@ def run_combination(data, fitting: list[dict], validation: list[dict],
                 saved_checkpoints.append(checkpoint.relative_to(output).as_posix())
     finally:
         if history:
-            plot_loss_curves(history, asdict(hp), output / "loss_curves.png", combination_id)
+            plot_loss_curves(history, asdict(hp), output / "validation_curves.png", combination_id)
     write_json(output / "train_metrics.json", train_metrics)
     write_json(output / "validation_metrics.json", validation_metrics)
     write_csv(output / "train_predictions.csv", train_predictions)
@@ -356,7 +367,7 @@ def run_combination(data, fitting: list[dict], validation: list[dict],
         "last_train_metrics": train_metrics,
         "last_validation_metrics": validation_metrics,
         "checkpoint_files": saved_checkpoints,
-        "loss_graph": f"{output.name}/loss_curves.png",
+        "loss_graph": f"{output.name}/validation_curves.png",
     }
 
 
@@ -366,8 +377,8 @@ def write_report(output: Path, config: dict, experiments: list[dict]) -> None:
              f"The fixed group split contains {config['fitting_comparisons']} fitting comparisons "
              f"and {config['validation_comparisons']} validation comparisons.",
              "Training metrics refer to the fitting portion. Both portions come from train_set.",
-             "Choose a configuration and epoch from its loss curves and per-epoch metrics.",
-             "", "| Configuration | Learning rate | Rec weight | KL weight | Rank weight | Epochs | Final train accuracy | Final validation accuracy | Checkpoints | Loss graph |",
+             "Choose a configuration and epoch from its curves and per-epoch metrics.",
+             "", "| Configuration | Learning rate | Rec weight | KL weight | Rank weight | Epochs | Final train accuracy | Final validation accuracy | Checkpoints | Validation curves |",
              "|---|---:|---:|---:|---:|---:|---:|---:|---:|---|"]
     for experiment in experiments:
         hp = experiment["hyperparameters"]
@@ -378,7 +389,7 @@ def write_report(output: Path, config: dict, experiments: list[dict]) -> None:
             f"| {experiment['combination_id']} | {hp['learning_rate']} | {hp['lambda_rec']} | "
             f"{hp['lambda_kl']} | {hp['lambda_rank']} | {experiment['completed_epochs']} | "
             f"{experiment['last_train_metrics']['accuracy']:.6f} | {validation_accuracy} | "
-            f"{len(experiment['checkpoint_files'])} | [Curves]({directory}/loss_curves.png) |"
+            f"{len(experiment['checkpoint_files'])} | [Curves]({directory}/validation_curves.png) |"
         )
     first_checkpoint_epoch = config["checkpoint_start_epoch"]
     last_checkpoint_epoch = min(config["epochs"], config["checkpoint_end_epoch"])
@@ -391,10 +402,13 @@ def write_report(output: Path, config: dict, experiments: list[dict]) -> None:
             f"Checkpoint saving begins at epoch {first_checkpoint_epoch}, "
             f"beyond this run's {config['epochs']}-epoch budget."
         )
-    lines += ["", "Each graph contains total loss, reconstruction BCE, KL divergence, and ranking BCE panels.",
+    lines += ["", "Each graph contains six panels for total loss, reconstruction BCE, KL divergence,",
+              "ranking BCE, ranking accuracy, and normalized tile Hamming distance.",
               "The panels show fitting and validation curves against num_epochs.",
               "Each configuration's train_history.json and epoch_metrics.csv record every epoch's losses,",
-              "overall accuracy and binary F1.",
+              "overall accuracy, binary F1, and normalized tile Hamming distance.",
+              "Hamming distance compares each input tile grid with its own decoder reconstruction,",
+              "using the highest-logit geometry tile at each position and averaging over both inputs.",
               "", checkpoint_summary,
               "Each checkpoint filename identifies its saved epoch, such as epoch_021.pt for epoch 21."]
     (output / "REPORT.md").write_text("\n".join(lines) + "\n", encoding="utf-8")

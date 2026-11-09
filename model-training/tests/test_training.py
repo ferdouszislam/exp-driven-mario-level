@@ -209,16 +209,71 @@ class TrainingTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             classification_metrics([], [])
         losses = {name: 0.25 for name in training.LOSS_NAMES}
-        measured = {**losses, **classification_metrics([0, 1], [0, 1])}
+        measured = {**losses, **classification_metrics([0, 1], [0, 1]),
+                    "normalized_hamming_distance": 0.25}
         row = {"epoch": 1, "seconds": 0.1, "optimization": losses,
                "train": measured, "validation": measured}
         expected_fields = {"epoch", "seconds"}
         expected_fields.update(f"optimization_{name}" for name in training.LOSS_NAMES)
         for portion in ("train", "validation"):
             expected_fields.update(
-                f"{portion}_{name}" for name in (*training.LOSS_NAMES, "accuracy", "f1_score")
+                f"{portion}_{name}" for name in (
+                    *training.LOSS_NAMES, "accuracy", "f1_score", "normalized_hamming_distance"
+                )
             )
         self.assertEqual(set(training.flatten_epoch_metrics(row)), expected_fields)
+
+    def test_normalized_hamming_counts_tile_positions_across_uneven_batches(self) -> None:
+        data = load_training_data(self.root, None, 42)
+        model = PairwiseCNNVAE()
+        hp = Hyperparameters(1e-3, 1.0, 0.001, 1.0)
+        cases = (("all_match", 0.0), ("four_mismatches", 4 / (2 * 4 * 16 * 192)),
+                 ("all_different", 1.0))
+        for scenario, expected_distance in cases:
+            with self.subTest(scenario=scenario):
+                batch_index = 0
+
+                def controlled_output(x_a, x_b):
+                    nonlocal batch_index
+                    predicted_tile = 0 if scenario == "all_different" else 2
+                    reconstruction_a = torch.full_like(x_a, -10.0)
+                    reconstruction_b = torch.full_like(x_b, -10.0)
+                    for reconstruction in (reconstruction_a, reconstruction_b):
+                        reconstruction[:, predicted_tile] = 10.0
+                        # The path logit dominates every tile logit. Geometry
+                        # comparison must still select among channels 0..20.
+                        reconstruction[:, 21] = 1000.0
+                    if scenario == "four_mismatches":
+                        if batch_index == 0:
+                            reconstruction_a[0, 0, 0, 0] = 20.0
+                            reconstruction_b[2, 1, 1, 2] = 20.0
+                        else:
+                            reconstruction_a[0, 0, 2, 3] = 20.0
+                            reconstruction_b[0, 1, 3, 4] = 20.0
+                    batch_index += 1
+                    latent = torch.zeros(x_a.shape[0], 32)
+                    return {
+                        "reconstruction_logits_a": reconstruction_a,
+                        "reconstruction_logits_b": reconstruction_b,
+                        "mu_a": latent,
+                        "mu_b": latent,
+                        "log_var_a": latent,
+                        "log_var_b": latent,
+                        "z_a": latent,
+                        "z_b": latent,
+                        "rank_logits": torch.zeros(x_a.shape[0]),
+                    }
+
+                with patch.object(model, "forward", side_effect=controlled_output) as forward, \
+                        patch.object(model, "preference_logits",
+                                     side_effect=lambda z_a, z_b: torch.zeros(z_a.shape[0])):
+                    metrics, _ = evaluate_training_pairs(
+                        model, data, data.entries, hp, 3, torch.device("cpu"), 123
+                    )
+                self.assertEqual(forward.call_count, 2)
+                self.assertAlmostEqual(metrics["normalized_hamming_distance"], expected_distance, places=12)
+                self.assertGreaterEqual(metrics["normalized_hamming_distance"], 0.0)
+                self.assertLessEqual(metrics["normalized_hamming_distance"], 1.0)
 
     def test_grouped_cap_and_validation_keep_reused_playthroughs_together(self) -> None:
         data = load_training_data(self.root, 3, 42)

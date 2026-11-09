@@ -2,7 +2,7 @@
 
 This pipeline implements the joint training stage of the project proposal using the specified layer dimensions. It trains one shared CNN-VAE and a fully connected classifier on two concatenated latent samples. The classifier predicts whether the first playthrough is preferred to the second. [Project proposal](player-exp-pairwise-cnn-vae-pcgml-proposal.pdf), [architecture specification](initial_model_architecture.md).
 
-The current workflow trains **12 independent hyperparameter combinations for 100 epochs each**. Every epoch records fitting and validation measurements, and each combination produces loss curves. You choose a combination and epoch from those records. Each experiment starts with a fresh model and uses the same grouped split drawn from the supplied training portion. The modules cover data loading, the model, experiment execution, and plotting. [data.py](data.py), [model.py](model.py), [train.py](train.py), [plotting.py](plotting.py).
+The current workflow trains **12 independent hyperparameter combinations for 100 epochs each**. Every epoch records fitting and validation measurements, and each combination produces curves for losses, overall accuracy, and normalized tile Hamming distance. You choose a combination and epoch from those records. Each experiment starts with a fresh model and uses the same grouped split drawn from the supplied training portion. The modules cover data loading, the model, experiment execution, and plotting. [data.py](data.py), [model.py](model.py), [train.py](train.py), [plotting.py](plotting.py).
 
 ## 1. Setup and commands
 
@@ -13,7 +13,7 @@ python3 -m venv .venv
 .venv/bin/python -m pip install -r model-training/requirements.txt
 ```
 
-The installed environment was checked with Python **3.14.7**, PyTorch **2.15.0**, NumPy **2.3.4**, and Matplotlib **3.11.2**. Matplotlib generates the saved loss curves.
+The installed environment was checked with Python **3.14.7**, PyTorch **2.15.0**, NumPy **2.3.4**, and Matplotlib **3.11.2**. Matplotlib generates each combination's saved `validation_curves.png`.
 
 For a small end-to-end run with four original comparisons and two epochs per combination, use
 
@@ -271,6 +271,7 @@ Every epoch prints fitting and validation values to the console and writes them 
 - Weighted total loss, reconstruction BCE, KL divergence, and ranking BCE.
 - Overall ordered-pair accuracy.
 - Binary F1-score for positive class 1.
+- Normalized tile Hamming distance between input and reconstructed geometry.
 
 Classification uses `sigmoid(logit) >= 0.5` to predict class 1 and assigns class 0 below that threshold. Class 1 means the first playthrough is preferred. Class 0 means the second playthrough is preferred. Both input orders contribute to the measurements. The confusion matrix has true-label rows and predicted-label columns ordered `[0, 1]`.
 
@@ -286,6 +287,22 @@ f1_score = 2 × TP / (2 × TP + FP + FN)
 
 Binary F1 uses `f1_score` and `f1_positive_label=1`. Its value is 0 when the denominator is zero. Saved `class_support` and `confusion_matrix` diagnostics provide the underlying label and prediction counts.
 
+Normalized Hamming distance measures reconstruction differences at the **tile level**. For each playthrough occurrence, the input tile ID is the argmax of its one-hot geometry channels 0–20. The reconstructed tile ID is the argmax of the corresponding decoder logits over those same 21 channels. The decoder reconstruction comes from the same current sampled latent used for the epoch's other measurements. Channel 21 records path occupancy and is excluded from this geometry comparison. Reconstruction BCE continues to use all 22 channels as defined in section 6.
+
+Each playthrough contributes all **16 × 192 = 3,072 tile positions**. For a measured portion containing `N` original comparisons, the normalized distance aggregates both playthroughs in every comparison.
+
+```text
+input_tile_i[r,c] = argmax(input_i[0:21,r,c])
+reconstructed_tile_i[r,c] = argmax(reconstruction_logits_i[0:21,r,c])
+
+normalized_hamming_distance =
+    sum over 2*N playthrough occurrences and all tile positions
+        of 1[input_tile_i[r,c] != reconstructed_tile_i[r,c]]
+    / (2 * N * 16 * 192)
+```
+
+The saved `normalized_hamming_distance` is a floating-point value from 0 to 1. Zero means every reconstructed tile matches its input tile, and 1 means every position differs. Each occurrence of a reused playthrough contributes to the aggregate. The metric is measured separately on fitting and validation portions after every epoch, appears as `Hamming` in console output, and is included in epoch history, CSV measurements, final metrics, and checkpoint metrics.
+
 The optimization loss averaged during an epoch can differ from that epoch's fitting measurement because optimization uses changing weights, active dropout, and fresh posterior draws. The fitting measurement uses the fixed model at the end of the epoch.
 
 Python, NumPy, PyTorch, accelerator RNGs, and fitting-data shuffling are seeded. cuDNN benchmarking is disabled and its deterministic option is enabled when available. Numerical results can vary across devices, PyTorch releases, or batch sizes. The run records its environment and reporting convention. [PyTorch reproducibility guidance](https://docs.pytorch.org/docs/2.15/notes/randomness.html).
@@ -300,8 +317,8 @@ Each invocation creates one experiment root with the shared configuration and sp
 | `channels.json` | Exact input channel codebook |
 | `selected_train_comparisons.json` | Selected manifest entries with participant, playthrough, and grouping provenance |
 | `split.json` | Fixed fitting and validation memberships shared by all combinations |
-| `experiments.json` | The 12 combinations, their `pending`, `running`, `completed`, or `failed` status, and completed experiment summaries |
-| `REPORT.md` | Human-readable run settings and links to experiment outputs after all combinations finish |
+| `experiments.json` | The 12 combinations, their `pending`, `running`, `completed`, or `failed` status, and completed experiment summaries, with `loss_graph` linking to each combination's `validation_curves.png` |
+| `REPORT.md` | Human-readable run settings and links to each combination's six-panel fitting/validation curves after all combinations finish |
 
 Each `combination_01/` through `combination_12/` directory contains its own outputs.
 
@@ -309,15 +326,17 @@ Each `combination_01/` through `combination_12/` directory contains its own outp
 |---|---|
 | `config.json` | This combination's hyperparameters and experiment settings |
 | `train_history.json` | One row per epoch containing `epoch`, optimization losses, full `train` metrics, `validation` metrics or `null`, and duration in seconds |
-| `epoch_metrics.csv` | Flattened per-epoch losses, overall accuracy, and binary F1 using `optimization_`, `train_`, and `validation_` column prefixes, plus duration |
-| `train_metrics.json` | Complete fitting metrics at the final epoch |
-| `validation_metrics.json` | Complete validation metrics at the final epoch, or JSON `null` for a single-group run |
+| `epoch_metrics.csv` | Optimization losses with the `optimization_` prefix and post-epoch losses, overall accuracy, binary F1, and `normalized_hamming_distance` with `train_` and `validation_` prefixes, plus duration |
+| `train_metrics.json` | Complete fitting metrics at the final epoch, including normalized tile Hamming distance |
+| `validation_metrics.json` | Complete validation metrics at the final epoch, including normalized tile Hamming distance, or JSON `null` for a single-group run |
 | `train_predictions.csv` | Final-epoch ordered predictions for the fitting portion |
 | `validation_predictions.csv` | Final-epoch ordered validation predictions when validation is available |
-| `loss_curves.png` | A 2×2 figure for weighted total loss, reconstruction BCE, KL divergence, and ranking BCE, each showing fitting and validation values against epoch number |
+| `validation_curves.png` | A 3×2 figure for weighted total loss, reconstruction BCE, KL divergence, ranking BCE, overall accuracy, and normalized tile Hamming distance, each showing fitting and available validation values against epoch number |
 | `checkpoints/epoch_021.pt`, etc. | Model and optimizer state for each completed epoch within the inclusive checkpoint window |
 
 The JSON history and complete epoch CSV are each replaced atomically after every epoch's measurements. This makes completed epoch measurements available while the experiment continues. Prediction CSV files summarize the final epoch. The history retains measurements for earlier epochs.
+
+The overall-accuracy and normalized-Hamming-distance panels use a vertical range of 0–1. Higher accuracy indicates more correct preference predictions. Lower normalized Hamming distance indicates closer tile reconstruction. The filename `validation_curves.png` applies to newly generated outputs. Existing run directories retain their recorded artifacts.
 
 The dataset SHA-256 fingerprint includes the codebook bytes and selected training-entry metadata, ranking bytes, and encoding bytes, with explicit boundaries between components. Its inputs are the selected training observations.
 
