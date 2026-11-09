@@ -2,7 +2,7 @@
 
 This pipeline implements the joint training stage of the project proposal using the specified layer dimensions. It trains one shared CNN-VAE and a fully connected classifier on two concatenated latent samples. The classifier predicts whether the first playthrough is preferred to the second. [Project proposal](player-exp-pairwise-cnn-vae-pcgml-proposal.pdf), [current architecture specification](model_arch_1.md).
 
-The current workflow trains **12 independent hyperparameter combinations for 50 epochs each**. Every epoch records fitting and validation measurements, and each combination produces curves for losses, overall accuracy, and normalized tile Hamming distance. You choose a combination and epoch from those records. Each experiment starts with a fresh model and uses the same grouped split drawn from the supplied training portion. Checkpoint saving is enabled by supplying both epoch-range bounds. The modules cover data loading, the model, experiment execution, and plotting. [data.py](data.py), [model.py](model.py), [train.py](train.py), [plotting.py](plotting.py).
+The current workflow trains **16 independent hyperparameter combinations for 50 epochs each**. Every epoch records fitting and validation measurements, and each combination produces curves for losses, overall accuracy, and normalized tile Hamming distance. You choose a combination and epoch from those records. Each experiment starts with a fresh model and uses the same grouped split drawn from the supplied training portion. Checkpoint saving is enabled by supplying both epoch-range bounds. The modules cover data loading, the model, experiment execution, and plotting. [data.py](data.py), [model.py](model.py), [train.py](train.py), [plotting.py](plotting.py).
 
 ## 1. Setup and commands
 
@@ -24,7 +24,7 @@ For a small end-to-end run with four original comparisons and two epochs per com
   --output-dir model-training/runs/comparison_smoke
 ```
 
-For all 12 combinations using the complete supplied training portion and the 50-epoch default, use
+For all 16 combinations using the complete supplied training portion and the 50-epoch default, use
 
 ```bash
 .venv/bin/python model-training/train.py \
@@ -55,7 +55,7 @@ To train for the default 50 epochs and save epochs 30 through 40 inclusive, use
   --output-dir model-training/runs/comparison_30_to_40
 ```
 
-This saves 11 checkpoints per combination, giving 132 across all 12 combinations. The window controls saving while each experiment completes its full training budget.
+This saves 11 checkpoints per combination, giving 176 across all 16 combinations. The window controls saving while each experiment completes its full training budget.
 
 Each output directory must be new or empty. Omit `--output-dir` to create a new UTC-timestamped directory under `model-training/runs/`. The script rejects output inside the input dataset. View all flags with
 
@@ -101,7 +101,7 @@ NUM_TRAINING_SAMPLES: int | None = None
 
 Selection preserves entire `split_group_id` groups. It sorts group IDs, shuffles them with `random.Random(seed)`, and greedily includes each whole group if it fits within the cap. Selected entries are then sorted by instance ID. The actual selected count can therefore fall below the requested maximum; it never exceeds the cap. A cap that cannot fit any complete group fails explicitly. The current training portion has 148 groups: 77 single-comparison groups and 71 three-comparison groups.
 
-This rule keeps all pairs from the same ranking and all other linked observations together. The same grouping also controls the fixed fitting/validation split shared by all 12 combinations. `run_config.json` records requested and actual comparison counts, and `selected_train_comparisons.json` records the complete selected entries.
+This rule keeps all pairs from the same ranking and all other linked observations together. The same grouping also controls the fixed fitting/validation split shared by all 16 combinations. `run_config.json` records requested and actual comparison counts, and `selected_train_comparisons.json` records the complete selected entries.
 
 ## 4. Ordered inputs and targets
 
@@ -213,22 +213,26 @@ PyTorch documents the fused loss and its mean reduction in [BCEWithLogitsLoss](h
 
 ## 7. Independent experiments and the fixed split
 
-The experiment grid combines two Adam learning rates, two KL weights, and three reconstruction/ranking weight pairs. Each invocation runs all **12 combinations**, ordered first by learning rate, then KL weight, then reconstruction/ranking pair.
+The experiment grid combines two Adam learning rates, two KL weights, and four reconstruction/ranking weight pairs. Each invocation runs all **16 combinations**, ordered first by learning rate, then KL weight, then reconstruction/ranking pair.
 
 | Directory | Adam learning rate | λ_rec | λ_KL | λ_rank |
 |---|---:|---:|---:|---:|
-| `combination_01` | 0.001 | 1 | 0.001 | 1 |
-| `combination_02` | 0.001 | 2 | 0.001 | 1 |
-| `combination_03` | 0.001 | 1 | 0.001 | 2 |
-| `combination_04` | 0.001 | 1 | 0.01 | 1 |
-| `combination_05` | 0.001 | 2 | 0.01 | 1 |
-| `combination_06` | 0.001 | 1 | 0.01 | 2 |
-| `combination_07` | 0.0003 | 1 | 0.001 | 1 |
-| `combination_08` | 0.0003 | 2 | 0.001 | 1 |
-| `combination_09` | 0.0003 | 1 | 0.001 | 2 |
-| `combination_10` | 0.0003 | 1 | 0.01 | 1 |
-| `combination_11` | 0.0003 | 2 | 0.01 | 1 |
-| `combination_12` | 0.0003 | 1 | 0.01 | 2 |
+| `combination_01` | 0.0001 | 0.5 | 0.001 | 0.5 |
+| `combination_02` | 0.0001 | 1 | 0.001 | 0.5 |
+| `combination_03` | 0.0001 | 0.5 | 0.001 | 1 |
+| `combination_04` | 0.0001 | 1 | 0.001 | 1 |
+| `combination_05` | 0.0001 | 0.5 | 0.0001 | 0.5 |
+| `combination_06` | 0.0001 | 1 | 0.0001 | 0.5 |
+| `combination_07` | 0.0001 | 0.5 | 0.0001 | 1 |
+| `combination_08` | 0.0001 | 1 | 0.0001 | 1 |
+| `combination_09` | 0.00001 | 0.5 | 0.001 | 0.5 |
+| `combination_10` | 0.00001 | 1 | 0.001 | 0.5 |
+| `combination_11` | 0.00001 | 0.5 | 0.001 | 1 |
+| `combination_12` | 0.00001 | 1 | 0.001 | 1 |
+| `combination_13` | 0.00001 | 0.5 | 0.0001 | 0.5 |
+| `combination_14` | 0.00001 | 1 | 0.0001 | 0.5 |
+| `combination_15` | 0.00001 | 0.5 | 0.0001 | 1 |
+| `combination_16` | 0.00001 | 1 | 0.0001 | 1 |
 
 Each combination receives a freshly initialized model and Adam optimizer. Resetting the configured seed, 42 by default, before each experiment gives the same initial model weights and fitting-data order across combinations. Adam uses its PyTorch defaults apart from the specified learning rate. The combination keeps its own learning rate and loss weights throughout its epoch budget.
 
@@ -243,7 +247,7 @@ The main controls are available near the top of `train.py` and through the CLI.
 | Control | Default | Meaning |
 |---|---:|---|
 | `NUM_TRAINING_SAMPLES` / `--num-training-samples` | `None` | Cap on original comparisons, preserving whole groups |
-| `EPOCHS` / `--epochs` | 50 | Full epoch budget for each of the 12 combinations |
+| `EPOCHS` / `--epochs` | 50 | Full epoch budget for each of the 16 combinations |
 | `CHECKPOINT_START_EPOCH` / `--checkpoint-start-epoch` | `None` | Optional first checkpoint epoch, inclusive, supplied together with the end epoch |
 | `CHECKPOINT_END_EPOCH` / `--checkpoint-end-epoch` | `None` | Optional last checkpoint epoch, inclusive, supplied together with the start epoch |
 | `--batch-size` | 16 | Ordered fitting examples per optimization batch |
@@ -251,7 +255,7 @@ The main controls are available near the top of `train.py` and through the CLI.
 | `--seed` | 42 | Initialization, sample selection, split, and random-stream seed |
 | `--device` | `auto` | CUDA when available, otherwise MPS when available, otherwise CPU |
 | `--cpu-threads` | 4 | PyTorch CPU thread count |
-| `--output-dir` | New timestamped directory | Root directory for all 12 experiments |
+| `--output-dir` | New timestamped directory | Root directory for all 16 experiments |
 
 `--dataset` can select a compatible preprocessed root. The default dataset path is resolved relative to the script. An explicitly requested unavailable accelerator raises an error.
 
@@ -316,10 +320,10 @@ Each invocation creates one experiment root with the shared configuration and sp
 | `channels.json` | Exact input channel codebook |
 | `selected_train_comparisons.json` | Selected manifest entries with participant, playthrough, and grouping provenance |
 | `split.json` | Fixed fitting and validation memberships shared by all combinations |
-| `experiments.json` | The 12 combinations, their `pending`, `running`, `completed`, or `failed` status, and completed experiment summaries, with `loss_graph` linking to each combination's `validation_curves.png` |
+| `experiments.json` | The 16 combinations, their `pending`, `running`, `completed`, or `failed` status, and completed experiment summaries, with `loss_graph` linking to each combination's `validation_curves.png` |
 | `REPORT.md` | Human-readable run settings and links to each combination's six-panel fitting/validation curves after all combinations finish |
 
-Each `combination_01/` through `combination_12/` directory contains its own outputs.
+Each `combination_01/` through `combination_16/` directory contains its own outputs.
 
 | File | Contents |
 |---|---|
@@ -343,7 +347,7 @@ Checkpoint saving is **disabled by default**. Both `CHECKPOINT_START_EPOCH` and 
 
 The bounds are inclusive and must be positive, with the end epoch at least the start epoch. They can extend beyond the training budget. The actual checkpoint epochs are the intersection of the configured window with completed training epochs. The run and combination configurations record both supplied bounds, or two `null` values when saving is disabled. Default runs produce zero model checkpoint files at every training length.
 
-A checkpoint containing the 566,327-parameter float32 model and Adam moment states is approximately **6.8 MB**. The explicit 30–40 range in section 1 saves 11 per combination and 132 overall, using roughly **0.9 GB** for checkpoints, plus reports and plots, using decimal MB and GB.
+A checkpoint containing the 566,327-parameter float32 model and Adam moment states is approximately **6.8 MB**. The explicit 30–40 range in section 1 saves 11 per combination and 176 overall, using roughly **1.2 GB** for checkpoints, plus reports and plots, using decimal MB and GB.
 
 Each checkpoint contains `epoch`, `model_state_dict`, `optimizer_state_dict`, `config`, `channels`, `selected_instance_ids`, `fitting_instance_ids`, `validation_instance_ids`, `train_metrics`, and `validation_metrics`. The configuration and split memberships identify the experiment and data associated with that saved epoch. Architecture metadata identifies the normalization, channel counts, strides, and tensor shapes used by the saved model. Earlier two-convolution checkpoints and original four-convolution checkpoints require their corresponding model definitions for restoration. Check the full metadata together with the architecture label when choosing the matching definition.
 
@@ -383,10 +387,10 @@ assert checkpoint["config"]["combination_id"] == "combination_01"
 assert checkpoint["config"]["checkpoint_start_epoch"] == 30
 assert checkpoint["config"]["checkpoint_end_epoch"] == 40
 assert checkpoint["config"]["hyperparameters"] == {
-    "learning_rate": 0.001,
-    "lambda_rec": 1.0,
+    "learning_rate": 0.0001,
+    "lambda_rec": 0.5,
     "lambda_kl": 0.001,
-    "lambda_rank": 1.0,
+    "lambda_rank": 0.5,
 }
 print(checkpoint["config"])
 print(checkpoint["fitting_instance_ids"])
@@ -409,6 +413,6 @@ Run the behavioral checks from the repository root.
 .venv/bin/python -m unittest discover -s model-training/tests -v
 ```
 
-The two-epoch command in section 1 exercises all 12 independent experiments, per-epoch measurements, JSON/CSV export, and curves. The 21-epoch command additionally exercises an explicit single-epoch checkpoint range. Use a fresh output directory for each invocation.
+The two-epoch command in section 1 exercises all 16 independent experiments, per-epoch measurements, JSON/CSV export, and curves. The 21-epoch command additionally exercises an explicit single-epoch checkpoint range. Use a fresh output directory for each invocation.
 
 Existing directories under `model-training/runs/` contain artifacts from earlier training workflows. Their saved configurations and reports identify the procedure and metric schema used for those runs. The experiment layout, commands, and checkpoint policy above describe newly generated runs under the current workflow.

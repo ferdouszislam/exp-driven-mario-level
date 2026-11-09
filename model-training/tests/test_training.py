@@ -391,15 +391,16 @@ class TrainingTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Ranking"):
             load_training_data(self.root, None, 42)
 
-    def test_twelve_configuration_grid_and_epoch_cli_defaults(self) -> None:
-        expected = {
+    def test_sixteen_configuration_grid_and_epoch_cli_defaults(self) -> None:
+        expected = tuple(
             Hyperparameters(learning_rate, reconstruction, kl, ranking)
-            for learning_rate in (1e-3, 3e-4)
-            for kl in (1e-3, 1e-2)
-            for reconstruction, ranking in ((1.0, 1.0), (2.0, 1.0), (1.0, 2.0))
-        }
-        self.assertEqual(len(training.HYPERPARAMETER_COMBINATIONS), 12)
-        self.assertEqual(set(training.HYPERPARAMETER_COMBINATIONS), expected)
+            for learning_rate in (1e-4, 1e-5)
+            for kl in (1e-3, 1e-4)
+            for reconstruction, ranking in ((0.5, 0.5), (1.0, 0.5), (0.5, 1.0), (1.0, 1.0))
+        )
+        self.assertEqual(len(training.HYPERPARAMETER_COMBINATIONS), 16)
+        self.assertEqual(len(set(training.HYPERPARAMETER_COMBINATIONS)), 16)
+        self.assertEqual(training.HYPERPARAMETER_COMBINATIONS, expected)
         self.assertEqual(training.EPOCHS, 50)
         self.assertIsNone(training.CHECKPOINT_START_EPOCH)
         self.assertIsNone(training.CHECKPOINT_END_EPOCH)

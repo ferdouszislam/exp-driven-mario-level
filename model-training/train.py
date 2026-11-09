@@ -1,4 +1,4 @@
-"""Compare twelve fixed CNN-VAE training configurations over complete runs."""
+"""Compare sixteen fixed CNN-VAE training configurations over complete runs."""
 
 from __future__ import annotations
 
@@ -48,9 +48,9 @@ class Hyperparameters:
 # Each configuration gets the complete epoch budget and its own fresh model.
 HYPERPARAMETER_COMBINATIONS = tuple(
     Hyperparameters(learning_rate, lambda_rec, lambda_kl, lambda_rank)
-    for learning_rate in (1e-3, 3e-4)
-    for lambda_kl in (1e-3, 1e-2)
-    for lambda_rec, lambda_rank in ((1.0, 1.0), (2.0, 1.0), (1.0, 2.0))
+    for learning_rate in (1e-4, 1e-5)
+    for lambda_kl in (1e-3, 1e-4)
+    for lambda_rec, lambda_rank in ((0.5, 0.5), (1.0, 0.5), (0.5, 1.0), (1.0, 1.0))
 )
 LOSS_NAMES = ("total_loss", "reconstruction_bce", "kl_divergence", "ranking_bce")
 
@@ -425,7 +425,7 @@ def parse_args(argv=None):
     parser.add_argument("--num-training-samples", type=int, default=NUM_TRAINING_SAMPLES,
                         help="Cap on original comparisons, keeping whole groups; default all")
     parser.add_argument("--epochs", type=int, default=EPOCHS,
-                        help="Complete training duration for every one of the twelve configurations")
+                        help="Complete training duration for every one of the sixteen configurations")
     parser.add_argument("--checkpoint-start-epoch", type=int, default=CHECKPOINT_START_EPOCH,
                         help="First epoch to save, inclusive; specify with --checkpoint-end-epoch")
     parser.add_argument("--checkpoint-end-epoch", type=int, default=CHECKPOINT_END_EPOCH,
@@ -473,7 +473,7 @@ def main(argv=None) -> None:
     output.mkdir(parents=True, exist_ok=True)
     config = {
         "created_utc": datetime.now(timezone.utc).isoformat(),
-        "workflow": "twelve independent fixed-configuration runs, user selects configuration and epoch",
+        "workflow": "sixteen independent fixed-configuration runs, user selects configuration and epoch",
         "dataset": str(args.dataset.resolve()), "dataset_fingerprint": data.dataset_fingerprint,
         "requested_sample_cap": args.num_training_samples,
         "available_comparisons": data.available_comparisons,
