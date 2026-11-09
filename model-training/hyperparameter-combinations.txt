@@ -1,9 +1,25 @@
-# Edit the comma-separated values below. Use a dot for decimal values.
-# Training runs every combination (currently 5 x 1 x 2 x 2 = 20 runs).
-# Each run uses a fresh model and the full --epochs budget.
-# Blank lines and # comments are allowed. Learning rates must be positive;
-# loss weights may be zero or positive.
-learning_rate: 1e-4, 1e-5, 5e-5, 1e-6, 5e-6
-lambda_kl: 0.001
-lambda_rec: 0.01, 1
-lambda_rank: 0.01, 1
+# One complete combination per line, in this column order:
+# learning_rate, lambda_rec, lambda_kl, lambda_rank
+# Only the listed rows are trained, in file order.
+# Each row uses a fresh model and the full --epochs budget.
+# Blank lines and # comments are allowed; use a dot for decimal values.
+1e-4, 1e-2, 1e-3, 1e-2
+1e-4, 1e-2, 1e-3, 1
+1e-4, 1, 1e-3, 1e-2
+1e-4, 1, 1e-3, 1
+1e-5, 1e-2, 1e-3, 1e-2
+1e-5, 1e-2, 1e-3, 1
+1e-5, 1, 1e-3, 1e-2
+1e-5, 1, 1e-3, 1
+5e-5, 1e-2, 1e-3, 1e-2
+5e-5, 1e-2, 1e-3, 1
+5e-5, 1, 1e-3, 1e-2
+5e-5, 1, 1e-3, 1
+1e-6, 1e-2, 1e-3, 1e-2
+1e-6, 1e-2, 1e-3, 1
+1e-6, 1, 1e-3, 1e-2
+1e-6, 1, 1e-3, 1
+5e-6, 1e-2, 1e-3, 1e-2
+5e-6, 1e-2, 1e-3, 1
+5e-6, 1, 1e-3, 1e-2
+5e-6, 1, 1e-3, 1

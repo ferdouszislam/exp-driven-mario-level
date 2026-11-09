@@ -2,7 +2,7 @@
 
 This pipeline implements the joint training stage of the project proposal with architecture **`model_arch_2`**: a shared four-stage CNN-VAE with LayerNorm and ReLU, plus a fully connected classifier on two concatenated latent samples. The classifier predicts whether the first playthrough is preferred to the second. [Project proposal](player-exp-pairwise-cnn-vae-pcgml-proposal.pdf), [current architecture specification](model_arch_2.md).
 
-The workflow reads its grid from [hyperparameter-combinations.txt](hyperparameter-combinations.txt), currently **20 independent combinations for 50 epochs each**. Every epoch records fitting and validation measurements, and each combination produces curves for losses, overall accuracy, and normalized tile Hamming distance. You choose a combination and epoch from those records. Each experiment starts with a fresh model and uses the same saved `train_set` and `validation_set` assignments. Supplying both checkpoint-range bounds enables model saving and an input/reconstruction preview for each saved model, using five randomly selected validation levels. The modules cover [data loading](data.py), [the model](model.py), [experiment execution](train.py), [curves](plotting.py), and [checkpoint previews](reconstruction_previews.py).
+The workflow reads explicit training rows from [hyperparameter-combinations.txt](hyperparameter-combinations.txt), currently **20 independent combinations for 50 epochs each**. Each data row specifies one complete run, and only the listed rows are trained. Every epoch records fitting and validation measurements, and each combination produces curves for losses, overall accuracy, and normalized tile Hamming distance. You choose a combination and epoch from those records. Each experiment starts with a fresh model and uses the same saved `train_set` and `validation_set` assignments. Supplying both checkpoint-range bounds enables model saving and an input/reconstruction preview for each saved model, using five randomly selected validation levels. The modules cover [data loading](data.py), [the model](model.py), [experiment execution](train.py), [curves](plotting.py), and [checkpoint previews](reconstruction_previews.py).
 
 ## 1. Setup and commands
 
@@ -19,10 +19,8 @@ For a small end-to-end run, create a separate one-combination file and train wit
 
 ```bash
 cat > /tmp/mario-smoke-hyperparameters.txt <<'EOF'
-learning_rate: 1e-4
-lambda_kl: 0.001
-lambda_rec: 1
-lambda_rank: 0.01
+# learning_rate, lambda_rec, lambda_kl, lambda_rank
+1e-4, 1, 1e-3, 1e-2
 EOF
 
 .venv/bin/python model-training/train.py \
@@ -229,22 +227,22 @@ The loss implementation uses `torch.nn.functional.binary_cross_entropy_with_logi
 
 ## 7. Independent experiments and the fixed split
 
-The experiment grid is read at startup from [hyperparameter-combinations.txt](hyperparameter-combinations.txt). Edit its comma-separated values to choose the training runs:
+The training rows are read at startup from [hyperparameter-combinations.txt](hyperparameter-combinations.txt). Each row supplies exactly four comma-separated numeric values in this order: **learning rate, reconstruction weight, KL weight, ranking weight**. For example, this file specifies exactly three runs:
 
 ```text
-learning_rate: 1e-4, 1e-5, 5e-5, 1e-6, 5e-6
-lambda_kl: 0.001
-lambda_rec: 1, 3
-lambda_rank: 0.01, 1
+# learning_rate, lambda_rec, lambda_kl, lambda_rank
+1e-4, 0.01, 0.001, 0.01
+1e-4, 0.01, 0.001, 1
+1e-4, 1, 0.001, 0.01
 ```
 
-These are the values currently saved in the file. The parser expands the Cartesian product, giving **5 × 1 × 2 × 2 = 20 combinations**. Ordering follows learning rate, KL weight, reconstruction weight, then ranking weight, preserving value order within each list. For the file above, `combination_01` uses `(learning_rate=1e-4, lambda_rec=1, lambda_kl=0.001, lambda_rank=0.01)`, and `combination_20` uses `(5e-6, 3, 0.001, 1)`.
+Add, edit, or remove complete rows to choose the runs. Training preserves the file's data-row order: the first row becomes `combination_01`, the second becomes `combination_02`, and so on. Comments and blank lines do not count as runs. The supplied file currently contains **20 explicit rows**, starting with `(learning_rate=1e-4, lambda_rec=0.01, lambda_kl=0.001, lambda_rank=0.01)` and ending with `(5e-6, 1, 0.001, 1)`.
 
-Each output folder is named `learning_rate_lambda_rec_lambda_kl_lambda_rank`, in that order. Values between zero and one use scientific notation without zero-padded exponents; whole numbers omit `.0`. For example, `(1e-4, 1, 1e-3, 1)` produces `1e-4_1_1e-3_1/`. The first and last folders for the current file are `1e-4_1_1e-3_1e-2/` and `5e-6_3_1e-3_1/`. Number formatting preserves the configured float precision so distinct parameter values retain distinct folder names. The stable `combination_01` through `combination_20` values remain experiment identifiers in metadata, reports, and console messages; `experiments.json` records each identifier's actual `directory`.
+Each output folder is named `learning_rate_lambda_rec_lambda_kl_lambda_rank`, in that order. Values between zero and one use scientific notation without zero-padded exponents; whole numbers omit `.0`. For example, `(1e-4, 1, 1e-3, 1)` produces `1e-4_1_1e-3_1/`. The first and last folders for the current file are `1e-4_1e-2_1e-3_1e-2/` and `5e-6_1_1e-3_1/`. Number formatting preserves the configured float precision so distinct parameter values retain distinct folder names. The stable `combination_01` through `combination_20` values remain experiment identifiers in metadata, reports, and console messages; `experiments.json` records each identifier's actual `directory`.
 
-Use a dot for decimals, such as `0.01`. Blank lines and `#` comments are allowed. All four parameter names are required exactly once. Learning rates must be finite and positive; loss weights must be finite and non-negative. Duplicate values, unknown parameters, missing parameters, and invalid numbers fail before loading the dataset or creating a run directory.
+Use a dot for decimals, such as `0.01`. The commented header documents the required column order. Blank lines, full-line `#` comments, and inline `#` comments are allowed. Learning rates must be finite and positive; loss weights must be finite and non-negative. Empty files, rows with other than four numeric values, duplicate complete rows, and invalid numbers fail before loading the dataset or creating a run directory. Individual parameter values may occur in multiple different rows.
 
-`--hyperparameters-file path/to/grid.txt` selects another file for one invocation. The default file is resolved beside `train.py`, independently of the working directory. The source file path and the complete expanded combinations are saved in `run_config.json`; each combination's selected values are also saved in `config.json` and `experiments.json`. Editing the text file changes subsequent invocations.
+`--hyperparameters-file path/to/combinations.txt` selects another file for one invocation. The default file is resolved beside `train.py`, independently of the working directory. The source file path and the listed combinations, in file order, are saved in `run_config.json`; each combination's selected values are also saved in `config.json` and `experiments.json`. Editing the text file changes subsequent invocations.
 
 Each combination receives a freshly initialized model and Adam optimizer. Resetting the configured seed, 42 by default, before each experiment gives the same initial model weights and fitting-data order across combinations. Adam uses its PyTorch defaults apart from the specified learning rate. The combination keeps its own learning rate and loss weights throughout its epoch budget.
 
@@ -258,7 +256,7 @@ The main controls are available near the top of `train.py` and through the CLI.
 
 | Control | Default | Meaning |
 |---|---:|---|
-| `DEFAULT_HYPERPARAMETERS` / `--hyperparameters-file` | `hyperparameter-combinations.txt` beside `train.py` | Parameter lists whose complete Cartesian product is trained |
+| `DEFAULT_HYPERPARAMETERS` / `--hyperparameters-file` | `hyperparameter-combinations.txt` beside `train.py` | One explicit row of four parameter values per training run |
 | `NUM_TRAINING_SAMPLES` / `--num-training-samples` | `None` | Cap on original comparisons, preserving whole groups |
 | `EPOCHS` / `--epochs` | 50 | Full epoch budget for every combination in the selected file |
 | `CHECKPOINT_START_EPOCH` / `--checkpoint-start-epoch` | `None` | Optional first checkpoint epoch, inclusive, supplied together with the end epoch |
@@ -329,7 +327,7 @@ Each invocation creates one experiment root with the shared configuration and sp
 
 | File | Contents |
 |---|---|
-| `run_config.json` | Dataset and fingerprint, requested/actual sample counts, source hyperparameter path and expanded combinations, epoch budget, checkpoint bounds, seeds, selected preview inputs, device, environment, architecture, and shared run settings |
+| `run_config.json` | Dataset and fingerprint, requested/actual sample counts, source hyperparameter path and listed combinations in file order, epoch budget, checkpoint bounds, seeds, selected preview inputs, device, environment, architecture, and shared run settings |
 | `channels.json` | Exact input channel codebook |
 | `selected_train_comparisons.json` | Selected manifest entries with participant, playthrough, and grouping provenance |
 | `selected_validation_comparisons.json` | Saved validation manifest entries when `validation_set` is present |
@@ -337,7 +335,7 @@ Each invocation creates one experiment root with the shared configuration and sp
 | `experiments.json` | All combinations, their `pending`, `running`, `completed`, or `failed` status, and completed summaries with curve and checkpoint-preview paths |
 | `REPORT.md` | Human-readable run settings, links to each combination's six-panel fitting/validation curves, and an embedded input/reconstruction sheet for each saved checkpoint after all combinations finish |
 
-Each parameter-named directory, such as `1e-4_1_1e-3_1e-2/`, contains its own outputs. Its folder name records the learning rate, reconstruction weight, KL weight, and ranking weight; the number of directories follows the configured grid.
+Each parameter-named directory, such as `1e-4_1e-2_1e-3_1e-2/`, contains its own outputs. Its folder name records the learning rate, reconstruction weight, KL weight, and ranking weight; the number of directories follows the listed rows.
 
 | File | Contents |
 |---|---|
@@ -363,7 +361,7 @@ Checkpoint saving is **disabled by default**. Both `CHECKPOINT_START_EPOCH` and 
 
 The bounds are inclusive and must be positive, with the end epoch at least the start epoch. They can extend beyond the training budget. The actual checkpoint epochs are the intersection of the configured window with completed training epochs. The run and combination configurations record both supplied bounds, or two `null` values when saving is disabled. Default runs produce zero model checkpoint files at every training length.
 
-A checkpoint containing the 1,312,151-parameter float32 model and Adam moment states is approximately **15.8 MB**; the two-epoch smoke check produced 15,806,509-byte checkpoint files. The explicit 30–40 range in section 1 saves 11 per combination and 220 overall for the current grid, using roughly **3.5 GB** for checkpoints, plus reconstruction images, arrays, reports, and plots. These are decimal MB and GB; serialized size can vary with configuration metadata and library versions.
+A checkpoint containing the 1,312,151-parameter float32 model and Adam moment states is approximately **15.8 MB**; the two-epoch smoke check produced 15,806,509-byte checkpoint files. The explicit 30–40 range in section 1 saves 11 per combination and 220 overall for the current 20-row file, using roughly **3.5 GB** for checkpoints, plus reconstruction images, arrays, reports, and plots. These are decimal MB and GB; serialized size can vary with configuration metadata and library versions.
 
 Each checkpoint contains `epoch`, `model_state_dict`, `optimizer_state_dict`, `config`, `channels`, `selected_instance_ids`, `fitting_instance_ids`, `validation_instance_ids`, `train_metrics`, and `validation_metrics`. The configuration and split memberships identify the experiment and data associated with that saved epoch. Architecture metadata identifies `model_arch_2`, LayerNorm shapes, channel counts, strides, activations, and dropout. Earlier architecture checkpoints require their corresponding model definitions for restoration. Check the full metadata together with the architecture label when choosing the matching definition.
 
@@ -395,7 +393,7 @@ Each individual PNG preserves the complete 192-column level. `comparison.png` st
 
 The console prints each completed comparison-sheet path. `checkpoint_previews.json` makes the available sheets discoverable while training continues, and the run's final `REPORT.md` embeds a sheet for every saved model. Preview directories are created only for epochs whose checkpoints are saved. If validation is unavailable, each saved epoch gets a `samples.json` explaining the skip and no PNGs. When checkpoint saving is disabled, no checkpoint previews are produced.
 
-To inspect a checkpoint you have generated, choose its parameter folder and epoch explicitly. This example loads logical experiment `combination_01` from `1e-4_1_1e-3_1e-2/` at epoch 30 from the explicit 30–40 range command in section 1.
+To inspect a checkpoint you have generated, choose its parameter folder and epoch explicitly. This example loads logical experiment `combination_01` from `1e-4_1e-2_1e-3_1e-2/` at epoch 30 from the explicit 30–40 range command in section 1.
 
 ```python
 from pathlib import Path
@@ -406,7 +404,7 @@ sys.path.insert(0, str(Path("model-training").resolve()))
 from model import PairwiseCNNVAE
 
 checkpoint = torch.load(
-    "model-training/runs/comparison_30_to_40/1e-4_1_1e-3_1e-2/checkpoints/epoch_030.pt",
+    "model-training/runs/comparison_30_to_40/1e-4_1e-2_1e-3_1e-2/checkpoints/epoch_030.pt",
     map_location="cpu",
     weights_only=True,
 )
@@ -436,7 +434,7 @@ assert checkpoint["config"]["checkpoint_start_epoch"] == 30
 assert checkpoint["config"]["checkpoint_end_epoch"] == 40
 assert checkpoint["config"]["hyperparameters"] == {
     "learning_rate": 0.0001,
-    "lambda_rec": 1.0,
+    "lambda_rec": 0.01,
     "lambda_kl": 0.001,
     "lambda_rank": 0.01,
 }
@@ -451,7 +449,7 @@ print(checkpoint["train_metrics"])
 print(checkpoint["validation_metrics"])
 ```
 
-The assertions verify the architecture version, normalization axes, channel counts, stride, encoded shape, flattened size, activations, dropout, saved epoch, checkpoint window, combination ID, and hyperparameters against the current first grid row. If you edit the hyperparameter file, adjust the example's expected values to match that run's saved configuration. `map_location="cpu"` maps the saved model and optimizer tensors to CPU during loading.
+The assertions verify the architecture version, normalization axes, channel counts, stride, encoded shape, flattened size, activations, dropout, saved epoch, checkpoint window, combination ID, and hyperparameters against the current first data row. If you edit the hyperparameter file, adjust the example's expected values to match that run's saved configuration. `map_location="cpu"` maps the saved model and optimizer tensors to CPU during loading.
 
 ## 10. Verification and existing artifacts
 
@@ -466,7 +464,7 @@ PYTHONPATH=datasets/fun-study-dataset-analysis \
   -p test_encoding_to_level_image.py -v
 ```
 
-Verification for `model_arch_2` passed **23 training/preview tests and 7 existing renderer tests**. A real-data smoke run trained one combination for two epochs with one original fitting comparison, evaluated all 58 saved validation comparisons, and saved two checkpoints. Both checkpoints reloaded strictly with the `model_arch_2` metadata and produced previews for the same five validation levels. The integration tests also compare training histories with and without preview generation to verify that rendering preserves the training random streams. This check does not constitute a complete 20-combination, 50-epoch training run.
+The training/preview tests cover explicit-row parsing and ordering, parameter-named output folders, checkpoint serialization, reconstruction rendering, and preservation of training random streams. The separate renderer tests cover the existing tile and path image conversion. A previous real-data smoke run trained `model_arch_2` for one combination and two epochs with one original fitting comparison, evaluated all 58 saved validation comparisons, and saved two checkpoints. Both checkpoints reloaded strictly and produced previews for the same five validation levels. This check does not constitute a complete 20-combination, 50-epoch training run.
 
 The two-epoch command in section 1 provides a reproducible one-combination check of per-epoch measurements, JSON/CSV export, curves, checkpoints, and reconstruction previews. Use a fresh output directory for each invocation.
 

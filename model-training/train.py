@@ -71,42 +71,34 @@ def hyperparameter_directory_name(hp: Hyperparameters) -> str:
 
 
 def load_hyperparameter_combinations(path: Path) -> tuple[Hyperparameters, ...]:
-    """Expand comma-separated parameter values into every possible combination."""
-    names = ("learning_rate", "lambda_kl", "lambda_rec", "lambda_rank")
-    values = {}
+    """Read explicit learning-rate, reconstruction, KL, ranking rows in file order."""
+    names = ("learning_rate", "lambda_rec", "lambda_kl", "lambda_rank")
+    combinations = []
+    seen = set()
     for line_number, raw_line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         line = raw_line.split("#", 1)[0].strip()
         if not line:
             continue
-        name, separator, raw_values = line.partition(":")
-        name = name.strip()
         location = f"{path}:{line_number}"
-        if not separator or name not in names:
-            raise ValueError(f"{location}: Expected a parameter name followed by ':'; use {', '.join(names)}.")
-        if name in values:
-            raise ValueError(f"{location}: Duplicate parameter {name}.")
+        columns = line.split(",")
+        if len(columns) != len(names):
+            raise ValueError(f"{location}: Expected four comma-separated values: {', '.join(names)}.")
         try:
-            parsed = tuple(float(value.strip()) for value in raw_values.split(","))
+            values = tuple(float(value.strip()) for value in columns)
         except ValueError as error:
-            raise ValueError(f"{location}: {name} needs comma-separated numeric values.") from error
-        if any(not math.isfinite(value) or value < 0 or (name == "learning_rate" and value == 0)
-               for value in parsed):
-            requirement = "positive" if name == "learning_rate" else "non-negative"
-            raise ValueError(f"{location}: {name} values must be finite and {requirement}.")
-        if len(set(parsed)) != len(parsed):
-            raise ValueError(f"{location}: Duplicate values for {name}.")
-        values[name] = parsed
-    missing = [name for name in names if name not in values]
-    if missing:
-        raise ValueError(f"{path}: Missing parameters: {', '.join(missing)}.")
-    # Each combination gets the complete epoch budget and its own fresh model.
-    return tuple(
-        Hyperparameters(learning_rate, lambda_rec, lambda_kl, lambda_rank)
-        for learning_rate in values["learning_rate"]
-        for lambda_kl in values["lambda_kl"]
-        for lambda_rec in values["lambda_rec"]
-        for lambda_rank in values["lambda_rank"]
-    )
+            raise ValueError(f"{location}: Each combination needs four numeric values: {', '.join(names)}.") from error
+        for name, value in zip(names, values, strict=True):
+            if not math.isfinite(value) or value < 0 or (name == "learning_rate" and value == 0):
+                requirement = "positive" if name == "learning_rate" else "non-negative"
+                raise ValueError(f"{location}: {name} must be finite and {requirement}.")
+        hp = Hyperparameters(*values)
+        if hp in seen:
+            raise ValueError(f"{location}: Duplicate hyperparameter combination.")
+        seen.add(hp)
+        combinations.append(hp)
+    if not combinations:
+        raise ValueError(f"{path}: Specify at least one hyperparameter combination.")
+    return tuple(combinations)
 
 
 def seed_everything(seed: int) -> None:
@@ -520,7 +512,7 @@ def parse_args(argv=None):
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET,
                         help="Preprocessed root containing train_set, channels.json and manifest.json")
     parser.add_argument("--hyperparameters-file", type=Path, default=DEFAULT_HYPERPARAMETERS,
-                        help="Parameter values to combine; default hyperparameter-combinations.txt beside train.py")
+                        help="Explicit learning_rate, lambda_rec, lambda_kl, lambda_rank rows; default hyperparameter-combinations.txt beside train.py")
     parser.add_argument("--num-training-samples", type=int, default=NUM_TRAINING_SAMPLES,
                         help="Cap on original comparisons, keeping whole groups; default all")
     parser.add_argument("--epochs", type=int, default=EPOCHS,

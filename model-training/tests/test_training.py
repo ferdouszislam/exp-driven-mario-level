@@ -458,10 +458,12 @@ class TrainingTests(unittest.TestCase):
         output = Path(output_temporary.name) / "run"
         hyperparameters_file = self.root / "custom-hyperparameters.txt"
         hyperparameters_file.write_text(
-            "learning_rate: 5e-5, 1e-6\nlambda_kl: 0.001\nlambda_rec: 0.01\nlambda_rank: 1\n",
+            "# learning_rate, lambda_rec, lambda_kl, lambda_rank\n"
+            "5e-5, 0.01, 0.001, 1\n1e-6, 3, 0.0001, 0.2\n",
             encoding="utf-8",
         )
-        expected_combinations = [Hyperparameters(lr, 0.01, 0.001, 1) for lr in (5e-5, 1e-6)]
+        expected_combinations = [Hyperparameters(5e-5, 0.01, 0.001, 1),
+                                 Hyperparameters(1e-6, 3, 0.0001, 0.2)]
         with patch.object(training, "split_training_groups", side_effect=AssertionError("Unexpected second split")), \
                 patch.object(training, "run_combination", return_value={"status": "completed"}) as run, \
                 patch.object(training, "write_report"):
@@ -474,7 +476,7 @@ class TrainingTests(unittest.TestCase):
         self.assertEqual([call.args[7] for call in run.call_args_list],
                          ["combination_01", "combination_02"])
         self.assertEqual([call.args[6] for call in run.call_args_list],
-                         [output.resolve() / "5e-5_1e-2_1e-3_1", output.resolve() / "1e-6_1e-2_1e-3_1"])
+                         [output.resolve() / "5e-5_1e-2_1e-3_1", output.resolve() / "1e-6_3_1e-4_2e-1"])
         self.assertTrue(all(call.args[1] == run.call_args.args[1] for call in run.call_args_list))
         self.assertEqual(len(run.call_args.args[1]), 1)
         self.assertEqual(run.call_args.args[2], [expected_validation])
@@ -509,7 +511,7 @@ class TrainingTests(unittest.TestCase):
         expected_validation = self._save_validation_entry()
         hyperparameters_file = self.root / "preview-hyperparameters.txt"
         hyperparameters_file.write_text(
-            "learning_rate: 1e-4\nlambda_kl: 0.001\nlambda_rec: 0.01\nlambda_rank: 1\n",
+            "1e-4, 0.01, 0.001, 1\n",
             encoding="utf-8",
         )
         with tempfile.TemporaryDirectory() as temporary:
@@ -597,23 +599,21 @@ class TrainingTests(unittest.TestCase):
             self.assertEqual(tuple(float(value) for value in name.split("_")),
                              (hp.learning_rate, hp.lambda_rec, hp.lambda_kl, hp.lambda_rank))
 
-    def test_hyperparameter_grid_and_epoch_cli_defaults(self) -> None:
-        hyperparameters_file = self.root / "twenty-combinations.txt"
+    def test_explicit_hyperparameter_rows_and_epoch_cli_defaults(self) -> None:
+        hyperparameters_file = self.root / "three-combinations.txt"
         hyperparameters_file.write_text(
-            "learning_rate: 1e-4, 1e-5, 5e-5, 1e-6, 5e-6\n"
-            "lambda_kl: 0.001\nlambda_rec: 0.01, 1\nlambda_rank: 0.01, 1\n",
+            "1e-6, 3, 0.0001, 0.2\n"
+            "5e-5, 0.01, 0.001, 1\n"
+            "1e-6, 0, 0, 0.01\n",
             encoding="utf-8",
         )
-        expected = tuple(
-            Hyperparameters(learning_rate, reconstruction, kl, ranking)
-            for learning_rate in (1e-4, 1e-5, 5e-5, 1e-6, 5e-6)
-            for kl in (0.001,)
-            for reconstruction in (0.01, 1)
-            for ranking in (0.01, 1)
+        expected = (
+            Hyperparameters(1e-6, 3, 0.0001, 0.2),
+            Hyperparameters(5e-5, 0.01, 0.001, 1),
+            Hyperparameters(1e-6, 0, 0, 0.01),
         )
         combinations = training.load_hyperparameter_combinations(hyperparameters_file)
-        self.assertEqual(len(combinations), 20)
-        self.assertEqual(len(set(combinations)), 20)
+        self.assertEqual(len(combinations), 3)
         self.assertEqual(combinations, expected)
         self.assertEqual(training.EPOCHS, 50)
         self.assertIsNone(training.CHECKPOINT_START_EPOCH)
@@ -655,27 +655,35 @@ class TrainingTests(unittest.TestCase):
     def test_custom_hyperparameter_file_accepts_comments_and_zero_loss_weights(self) -> None:
         path = self.root / "hyperparameters.txt"
         path.write_text(
-            "# Editable grid\n\n lambda_rank: 0, 1 # ranking ablation\n"
-            "lambda_rec: 0.01\nlambda_kl: 0\nlearning_rate: 5e-6, 1e-4\n",
+            "# learning_rate, lambda_rec, lambda_kl, lambda_rank\n\n"
+            " 5e-6, 0.01, 0, 0 # ranking and KL ablation\n"
+            "1e-4, 0, 0.001, 1 # reconstruction ablation\n"
+            "5e-6, 0.01, 0, 1\n",
             encoding="utf-8",
         )
-        expected = tuple(Hyperparameters(lr, 0.01, 0, rank)
-                         for lr in (5e-6, 1e-4) for rank in (0, 1))
+        expected = (Hyperparameters(5e-6, 0.01, 0, 0),
+                    Hyperparameters(1e-4, 0, 0.001, 1),
+                    Hyperparameters(5e-6, 0.01, 0, 1))
         self.assertEqual(training.load_hyperparameter_combinations(path), expected)
         self.assertEqual(training.parse_args(["--hyperparameters-file", str(path)]).hyperparameters_file, path)
 
     def test_invalid_hyperparameter_files_fail_before_loading_data_or_creating_output(self) -> None:
-        valid = "learning_rate: 1e-4\nlambda_kl: 0.001\nlambda_rec: 0.01\nlambda_rank: 1\n"
-        invalid = (
-            "", valid.replace("lambda_kl: 0.001\n", ""),
-            valid.replace("lambda_rank", "lamda_rank"),
-            valid.replace("learning_rate: 1e-4", "learning_rate = 1e-4"),
-            valid + "lambda_rec: 1\n",
-            *(valid.replace("learning_rate: 1e-4", f"learning_rate: {value}")
-              for value in ("0", "-1e-4", "nan", "inf", "1e-4,", "1e-4, 0.0001", "")),
-            *(valid.replace("lambda_rec: 0.01", f"lambda_rec: {value}")
-              for value in ("-0.01", "nan", "inf", "text", "")),
-        )
+        valid = "1e-4, 0.01, 0.001, 1\n"
+        invalid = [
+            "", "# No combinations\n\n", "1e-4, 0.01, 0.001\n",
+            "1e-4, 0.01, 0.001, 1, 2\n", "1e-4 0.01 0.001 1\n",
+            "learning_rate, lambda_rec, lambda_kl, lambda_rank\n",
+            "learning_rate: 1e-4\nlambda_kl: 0.001\nlambda_rec: 0.01\nlambda_rank: 1\n",
+            valid + valid,
+            valid + "0.0001, 0.010, 1e-3, 1.0\n",
+        ]
+        for index in range(4):
+            values = ["1e-4", "0.01", "0.001", "1"]
+            for invalid_value in ("-0.01", "nan", "inf", "text", ""):
+                changed = values.copy()
+                changed[index] = invalid_value
+                invalid.append(", ".join(changed) + "\n")
+        invalid.append("0, 0.01, 0.001, 1\n")
         path = self.root / "invalid-hyperparameters.txt"
         output = self.root / "should-not-exist"
         for content in invalid:
