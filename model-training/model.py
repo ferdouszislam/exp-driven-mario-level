@@ -1,4 +1,4 @@
-"""Shared CNN-VAE and ordered-pair FC tail for model_arch_2."""
+"""Shared CNN-VAE and ordered-pair FC tail from initial_model_architecture.md."""
 
 from __future__ import annotations
 
@@ -8,9 +8,12 @@ from torch import Tensor, nn
 
 INPUT_SHAPE = (22, 16, 192)
 LATENT_DIM = 32
-ARCHITECTURE_VERSION = "model_arch_2"
+ARCHITECTURE_VERSION = "initial_model_architecture"
 ENCODED_SHAPE = (128, 1, 12)
 ENCODED_FEATURES = 1536
+GROUP_NORM_GROUPS = 8
+LEAKY_RELU_NEGATIVE_SLOPE = 0.2
+FC_TAIL_DROPOUT = 0.1
 
 
 class PairwiseCNNVAE(nn.Module):
@@ -26,20 +29,21 @@ class PairwiseCNNVAE(nn.Module):
         super().__init__()
         self.encoder_convs = nn.Sequential(
             nn.Conv2d(22, 32, kernel_size=4, stride=2, padding=1),
-            nn.LayerNorm((32, 8, 96)),
-            nn.ReLU(),
+            nn.GroupNorm(GROUP_NORM_GROUPS, 32),
+            nn.LeakyReLU(LEAKY_RELU_NEGATIVE_SLOPE),
             nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1),
-            nn.LayerNorm((64, 4, 48)),
-            nn.ReLU(),
+            nn.GroupNorm(GROUP_NORM_GROUPS, 64),
+            nn.LeakyReLU(LEAKY_RELU_NEGATIVE_SLOPE),
             nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1),
-            nn.LayerNorm((128, 2, 24)),
-            nn.ReLU(),
+            nn.GroupNorm(GROUP_NORM_GROUPS, 128),
+            nn.LeakyReLU(LEAKY_RELU_NEGATIVE_SLOPE),
             nn.Conv2d(128, 128, kernel_size=4, stride=2, padding=1),
-            nn.LayerNorm(ENCODED_SHAPE),
-            nn.ReLU(),
+            nn.GroupNorm(GROUP_NORM_GROUPS, 128),
+            nn.LeakyReLU(LEAKY_RELU_NEGATIVE_SLOPE),
         )
         self.encoder_hidden = nn.Sequential(
-            nn.Flatten(), nn.Linear(ENCODED_FEATURES, 128), nn.ReLU()
+            nn.Flatten(), nn.Linear(ENCODED_FEATURES, 128),
+            nn.LeakyReLU(LEAKY_RELU_NEGATIVE_SLOPE),
         )
         self.mu_head = nn.Linear(128, LATENT_DIM)
         self.log_var_head = nn.Linear(128, LATENT_DIM)
@@ -47,23 +51,23 @@ class PairwiseCNNVAE(nn.Module):
         self.decoder_projection = nn.Linear(LATENT_DIM, ENCODED_FEATURES)
         self.decoder_convs = nn.Sequential(
             nn.ConvTranspose2d(128, 128, kernel_size=4, stride=2, padding=1),
-            nn.LayerNorm((128, 2, 24)),
-            nn.ReLU(),
+            nn.GroupNorm(GROUP_NORM_GROUPS, 128),
+            nn.LeakyReLU(LEAKY_RELU_NEGATIVE_SLOPE),
             nn.ConvTranspose2d(128, 64, kernel_size=4, stride=2, padding=1),
-            nn.LayerNorm((64, 4, 48)),
-            nn.ReLU(),
+            nn.GroupNorm(GROUP_NORM_GROUPS, 64),
+            nn.LeakyReLU(LEAKY_RELU_NEGATIVE_SLOPE),
             nn.ConvTranspose2d(64, 32, kernel_size=4, stride=2, padding=1),
-            nn.LayerNorm((32, 8, 96)),
-            nn.ReLU(),
+            nn.GroupNorm(GROUP_NORM_GROUPS, 32),
+            nn.LeakyReLU(LEAKY_RELU_NEGATIVE_SLOPE),
             nn.ConvTranspose2d(32, 22, kernel_size=4, stride=2, padding=1),
         )
 
         self.fc_tail = nn.Sequential(
             nn.Linear(2 * LATENT_DIM, 64),
-            nn.ReLU(),
-            nn.Dropout(p=0.2),
+            nn.LeakyReLU(LEAKY_RELU_NEGATIVE_SLOPE),
+            nn.Dropout(p=FC_TAIL_DROPOUT),
             nn.Linear(64, 32),
-            nn.ReLU(),
+            nn.LeakyReLU(LEAKY_RELU_NEGATIVE_SLOPE),
             nn.Linear(32, 1),
         )
 
@@ -114,12 +118,12 @@ def architecture_metadata() -> dict[str, object]:
         "architecture_version": ARCHITECTURE_VERSION,
         "input_shape": list(INPUT_SHAPE),
         "latent_dim": LATENT_DIM,
-        "normalization": "LayerNorm",
-        "layer_norm_axes": ["channel", "height", "width"],
-        "layer_norm_eps": 1e-5,
-        "layer_norm_elementwise_affine": True,
-        "encoder_layer_norm_shapes": [[32, 8, 96], [64, 4, 48], [128, 2, 24], list(ENCODED_SHAPE)],
-        "decoder_layer_norm_shapes": [[128, 2, 24], [64, 4, 48], [32, 8, 96]],
+        "normalization": "GroupNorm",
+        "group_norm_groups": GROUP_NORM_GROUPS,
+        "group_norm_eps": 1e-5,
+        "group_norm_affine": True,
+        "encoder_group_norm_channels": [32, 64, 128, 128],
+        "decoder_group_norm_channels": [128, 64, 32],
         "kernel_size": [4, 4],
         "stride": [2, 2],
         "padding": [1, 1],
@@ -128,18 +132,19 @@ def architecture_metadata() -> dict[str, object]:
         "encoded_shape": list(ENCODED_SHAPE),
         "flattened_features": ENCODED_FEATURES,
         "encoder_hidden": [ENCODED_FEATURES, 128],
-        "encoder_convolution_activation": "ReLU",
-        "encoder_hidden_activation": "ReLU",
+        "encoder_convolution_activation": "LeakyReLU",
+        "encoder_hidden_activation": "LeakyReLU",
+        "leaky_relu_negative_slope": LEAKY_RELU_NEGATIVE_SLOPE,
         "gaussian_parameter_head_activation": "linear",
         "decoder_projection": [LATENT_DIM, ENCODED_FEATURES],
         "decoder_projection_activation": "linear",
         "decoder_channels": [128, 128, 64, 32, 22],
         "decoder_output_shapes": [[128, 2, 24], [64, 4, 48], [32, 8, 96], list(INPUT_SHAPE)],
-        "decoder_convolution_activation": "ReLU after first three transposed convolutions",
-        "layer_norm_placement": "after all four encoder convolutions and first three decoder convolutions",
+        "decoder_convolution_activation": "LeakyReLU after first three transposed convolutions",
+        "group_norm_placement": "after all four encoder convolutions and first three decoder convolutions",
         "fc_tail_sizes": [64, 64, 32, 1],
-        "fc_tail_hidden_activation": "ReLU",
-        "dropout": 0.2,
+        "fc_tail_hidden_activation": "LeakyReLU",
+        "dropout": FC_TAIL_DROPOUT,
         "dropout_after_fc_layers": [1],
         "outputs": "reconstruction and preference logits",
     }

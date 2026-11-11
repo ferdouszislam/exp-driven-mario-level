@@ -1,6 +1,6 @@
 # CNN-VAE and pairwise fun-ranking training
 
-This pipeline implements the joint training stage of the project proposal with architecture **`model_arch_2`**: a shared four-stage CNN-VAE with LayerNorm and ReLU, plus a fully connected classifier on two concatenated latent samples. The classifier predicts whether the first playthrough is preferred to the second. [Project proposal](player-exp-pairwise-cnn-vae-pcgml-proposal.pdf), [current architecture specification](model_arch_2.md).
+This pipeline implements the joint training stage of the project proposal with architecture **`initial_model_architecture`**: a shared four-stage CNN-VAE with GroupNorm and LeakyReLU, plus a fully connected classifier on two concatenated latent samples. The classifier predicts whether the first playthrough is preferred to the second. [Project proposal](player-exp-pairwise-cnn-vae-pcgml-proposal.pdf), [current architecture specification](initial_model_architecture.md).
 
 The workflow reads explicit training rows from [hyperparameter-combinations.txt](hyperparameter-combinations.txt), currently **20 independent combinations for 50 epochs each**. Each data row specifies one complete run, and only the listed rows are trained. Every epoch records fitting and validation measurements, and each combination produces curves for losses, overall accuracy, and normalized tile Hamming distance. You choose a combination and epoch from those records. Each experiment starts with a fresh model and uses the same saved `train_set` and `validation_set` assignments. Supplying both checkpoint-range bounds enables model saving and an input/reconstruction preview for each saved model, using five randomly selected validation levels. The modules cover [data loading](data.py), [the model](model.py), [experiment execution](train.py), [curves](plotting.py), and [checkpoint previews](reconstruction_previews.py).
 
@@ -29,10 +29,10 @@ EOF
   --epochs 2 \
   --checkpoint-start-epoch 1 \
   --checkpoint-end-epoch 2 \
-  --output-dir model-training/runs/model_arch_2_smoke
+  --output-dir model-training/runs/initial_architecture_smoke
 ```
 
-Open `model-training/runs/model_arch_2_smoke/REPORT.md` after the run to see its curves and both checkpoint comparison sheets. The temporary file leaves the main hyperparameter file unchanged.
+Open `model-training/runs/initial_architecture_smoke/REPORT.md` after the run to see its curves and both checkpoint comparison sheets. The temporary file leaves the main hyperparameter file unchanged.
 
 For all combinations in the main file, currently 20, using the complete supplied training portion and the 50-epoch default, use
 
@@ -128,23 +128,23 @@ Each original comparison has equal weight. There is no extra source-annotation n
 
 ## 5. Shared model architecture
 
-The current architecture is **`model_arch_2`**, specified in [model_arch_2.md](model_arch_2.md) and implemented in [model.py](model.py). It retains four encoder convolutions and four decoder transposed convolutions. LayerNorm and ReLU follow every encoder convolution and the first three decoder convolutions. The FC-Tail uses ReLU and one dropout layer with probability **0.2** after its first hidden FC layer.
+The current architecture is **`initial_model_architecture`**, specified in [initial_model_architecture.md](initial_model_architecture.md) and implemented in [model.py](model.py). It has four encoder convolutions and four decoder transposed convolutions. GroupNorm and LeakyReLU with negative slope **0.2** follow every encoder convolution and the first three decoder convolutions. The encoder hidden FC and both FC-Tail hidden layers also use LeakyReLU(0.2). The FC-Tail has one dropout layer with probability **0.1** after its first hidden FC layer. The specification leaves the GroupNorm group count open; the implementation uses **8 groups** in every normalized layer, which divides all normalized channel counts.
 
 Both inputs pass independently through the same encoder parameters. Their sampled latent vectors use the same decoder parameters, and all ordered pairs use the same FC-Tail. All convolutions use **4×4 kernels**, stride **2**, and padding **1**. Each encoder convolution halves the spatial dimensions, and each transposed convolution doubles them.
 
 | Encoder layer | Channels or FC dimensions | Output shape per playthrough | Following operations |
 |---|---|---|---|
 | Input | 22 channels | 22 × 16 × 192 | — |
-| Conv 1 | 22 → 32, kernel 4×4, stride 2, padding 1 | 32 × 8 × 96 | LayerNorm((32, 8, 96)), ReLU |
-| Conv 2 | 32 → 64, kernel 4×4, stride 2, padding 1 | 64 × 4 × 48 | LayerNorm((64, 4, 48)), ReLU |
-| Conv 3 | 64 → 128, kernel 4×4, stride 2, padding 1 | 128 × 2 × 24 | LayerNorm((128, 2, 24)), ReLU |
-| Conv 4 | 128 → 128, kernel 4×4, stride 2, padding 1 | 128 × 1 × 12 | LayerNorm((128, 1, 12)), ReLU |
+| Conv 1 | 22 → 32, kernel 4×4, stride 2, padding 1 | 32 × 8 × 96 | GroupNorm(8, 32), LeakyReLU(0.2) |
+| Conv 2 | 32 → 64, kernel 4×4, stride 2, padding 1 | 64 × 4 × 48 | GroupNorm(8, 64), LeakyReLU(0.2) |
+| Conv 3 | 64 → 128, kernel 4×4, stride 2, padding 1 | 128 × 2 × 24 | GroupNorm(8, 128), LeakyReLU(0.2) |
+| Conv 4 | 128 → 128, kernel 4×4, stride 2, padding 1 | 128 × 1 × 12 | GroupNorm(8, 128), LeakyReLU(0.2) |
 | Flatten | 128 × 1 × 12 → 1,536 | 1,536 | — |
-| Hidden FC | 1,536 → 128 | 128 | ReLU |
+| Hidden FC | 1,536 → 128 | 128 | LeakyReLU(0.2) |
 | Mean head | 128 → 32 | μ of shape 32 | Linear output |
 | Log-variance head | 128 → 32 | log_var of shape 32 | Linear output |
 
-LayerNorm normalizes over the complete `(channel, height, width)` feature map independently for each playthrough, with `eps=1e-5` and learned elementwise scale and bias. The encoder hidden FC uses ReLU, and the Gaussian heads return affine outputs. The diagonal Gaussian posterior is sampled by reparameterization:
+GroupNorm divides channels into 8 groups and normalizes each group over its channels and spatial positions independently for each playthrough, with `eps=1e-5` and learned per-channel scale and bias. The encoder hidden FC uses LeakyReLU(0.2), and the Gaussian heads return affine outputs. The diagonal Gaussian posterior is sampled by reparameterization:
 
 ```text
 z = μ + exp(0.5 * log_var) * ε,   ε ~ N(0, I)
@@ -156,56 +156,56 @@ Each playthrough has a 32-dimensional latent sample. Sampling is used in optimiz
 |---|---|---|---|
 | Projection FC | 32 → 1,536 | 1,536 | Linear output |
 | Reshape | 1,536 → 128 × 1 × 12 | 128 × 1 × 12 | — |
-| Transposed conv 1 | 128 → 128, kernel 4×4, stride 2, padding 1 | 128 × 2 × 24 | LayerNorm((128, 2, 24)), ReLU |
-| Transposed conv 2 | 128 → 64, kernel 4×4, stride 2, padding 1 | 64 × 4 × 48 | LayerNorm((64, 4, 48)), ReLU |
-| Transposed conv 3 | 64 → 32, kernel 4×4, stride 2, padding 1 | 32 × 8 × 96 | LayerNorm((32, 8, 96)), ReLU |
+| Transposed conv 1 | 128 → 128, kernel 4×4, stride 2, padding 1 | 128 × 2 × 24 | GroupNorm(8, 128), LeakyReLU(0.2) |
+| Transposed conv 2 | 128 → 64, kernel 4×4, stride 2, padding 1 | 64 × 4 × 48 | GroupNorm(8, 64), LeakyReLU(0.2) |
+| Transposed conv 3 | 64 → 32, kernel 4×4, stride 2, padding 1 | 32 × 8 × 96 | GroupNorm(8, 32), LeakyReLU(0.2) |
 | Transposed conv 4 | 32 → 22, kernel 4×4, stride 2, padding 1 | 22 × 16 × 192 | Linear logits |
 
-The decoder projection remains linear before reshaping. Its first three transposed convolutions use LayerNorm over their complete per-playthrough feature maps, followed by ReLU. The final transposed convolution returns unrestricted logits for all 22 input bits. The reconstruction loss applies BCE-with-logits to these outputs.
+The decoder projection remains linear before reshaping. Its first three transposed convolutions use GroupNorm with 8 groups, followed by LeakyReLU(0.2). The final transposed convolution returns unrestricted logits for all 22 input bits. The reconstruction loss applies BCE-with-logits to these outputs.
 
 The FC-Tail concatenates samples in the supplied input order:
 
 ```text
 [z_A; z_B] of size 64
-  → Linear(64,64) → ReLU → Dropout(0.2)
-  → Linear(64,32) → ReLU
+  → Linear(64,64) → LeakyReLU(0.2) → Dropout(0.1)
+  → Linear(64,32) → LeakyReLU(0.2)
   → Linear(32,1)
 ```
 
-The final scalar is an affine logit. Sigmoid gives `P(first playthrough preferred)` for probabilities and classification. Both tail hidden layers use ReLU; dropout follows only the first hidden layer. It is active during optimization and disabled during evaluation. There is no max pooling or unpooling.
+The final scalar is an affine logit. Sigmoid gives `P(first playthrough preferred)` for probabilities and classification. Both tail hidden layers use LeakyReLU(0.2); dropout follows only the first hidden layer. It is active during optimization and disabled during evaluation. There is no max pooling or unpooling.
 
 ### Parameter count
 
-The implemented model has **1,312,151 parameters**, all trainable. Shared modules are counted once.
+The implemented model has **1,138,199 parameters**, all trainable. Shared modules are counted once.
 
 | Component | Trainable parameters |
 |---|---:|
-| Shared encoder, including mean and log-variance heads | 731,680 |
-| Shared decoder | 574,198 |
+| Shared encoder, including mean and log-variance heads | 643,296 |
+| Shared decoder | 488,630 |
 | Pairwise FC-Tail | 6,273 |
-| **Total** | **1,312,151** |
+| **Total** | **1,138,199** |
 
-The layer counts include convolutional and fully connected weights and biases. LayerNorm contributes one learned scale and one learned shift per normalized feature-map element, giving `2 × C × H × W` parameters for each normalized shape.
+The layer counts include convolutional and fully connected weights and biases. GroupNorm contributes one learned scale and one learned shift per channel, giving `2 × C` parameters for each normalized layer.
 
 | Component | Layer | Parameters |
 |---|---|---:|
-| Encoder | Conv 22 → 32, 4×4, followed by LayerNorm((32, 8, 96)) | 60,448 |
-| Encoder | Conv 32 → 64, 4×4, followed by LayerNorm((64, 4, 48)) | 57,408 |
-| Encoder | Conv 64 → 128, 4×4, followed by LayerNorm((128, 2, 24)) | 143,488 |
-| Encoder | Conv 128 → 128, 4×4, followed by LayerNorm((128, 1, 12)) | 265,344 |
+| Encoder | Conv 22 → 32, 4×4, followed by GroupNorm(8, 32) | 11,360 |
+| Encoder | Conv 32 → 64, 4×4, followed by GroupNorm(8, 64) | 32,960 |
+| Encoder | Conv 64 → 128, 4×4, followed by GroupNorm(8, 128) | 131,456 |
+| Encoder | Conv 128 → 128, 4×4, followed by GroupNorm(8, 128) | 262,528 |
 | Encoder | Hidden FC 1,536 → 128 | 196,736 |
 | Encoder | Mean head 128 → 32 | 4,128 |
 | Encoder | Log-variance head 128 → 32 | 4,128 |
 | Decoder | Projection FC 32 → 1,536 | 50,688 |
-| Decoder | Transposed conv 128 → 128, 4×4, followed by LayerNorm((128, 2, 24)) | 274,560 |
-| Decoder | Transposed conv 128 → 64, 4×4, followed by LayerNorm((64, 4, 48)) | 155,712 |
-| Decoder | Transposed conv 64 → 32, 4×4, followed by LayerNorm((32, 8, 96)) | 81,952 |
+| Decoder | Transposed conv 128 → 128, 4×4, followed by GroupNorm(8, 128) | 262,528 |
+| Decoder | Transposed conv 128 → 64, 4×4, followed by GroupNorm(8, 64) | 131,264 |
+| Decoder | Transposed conv 64 → 32, 4×4, followed by GroupNorm(8, 32) | 32,864 |
 | Decoder | Output transposed conv 32 → 22, 4×4 | 11,286 |
 | FC-Tail | FC 64 → 64 | 4,160 |
 | FC-Tail | FC 64 → 32 | 2,080 |
 | FC-Tail | FC 32 → 1 | 33 |
 
-Flattening, reshaping, concatenation, ReLU, dropout, sigmoid, and latent sampling each contribute zero parameters.
+Flattening, reshaping, concatenation, LeakyReLU, dropout, sigmoid, and latent sampling each contribute zero parameters.
 
 ## 6. Joint losses and their reductions
 
@@ -361,9 +361,9 @@ Checkpoint saving is **disabled by default**. Both `CHECKPOINT_START_EPOCH` and 
 
 The bounds are inclusive and must be positive, with the end epoch at least the start epoch. They can extend beyond the training budget. The actual checkpoint epochs are the intersection of the configured window with completed training epochs. The run and combination configurations record both supplied bounds, or two `null` values when saving is disabled. Default runs produce zero model checkpoint files at every training length.
 
-A checkpoint containing the 1,312,151-parameter float32 model and Adam moment states is approximately **15.8 MB**; the two-epoch smoke check produced 15,806,509-byte checkpoint files. The explicit 30–40 range in section 1 saves 11 per combination and 220 overall for the current 20-row file, using roughly **3.5 GB** for checkpoints, plus reconstruction images, arrays, reports, and plots. These are decimal MB and GB; serialized size can vary with configuration metadata and library versions.
+The 1,138,199-parameter float32 model and two Adam moment tensors require approximately **13.7 MB** of tensor storage per checkpoint, before serialization and configuration overhead. The explicit 30–40 range in section 1 saves 11 per combination and 220 overall for the current 20-row file, using roughly **3.0 GB** for checkpoint tensors, plus serialization overhead, reconstruction images, arrays, reports, and plots. These are decimal MB and GB; serialized size can vary with configuration metadata and library versions.
 
-Each checkpoint contains `epoch`, `model_state_dict`, `optimizer_state_dict`, `config`, `channels`, `selected_instance_ids`, `fitting_instance_ids`, `validation_instance_ids`, `train_metrics`, and `validation_metrics`. The configuration and split memberships identify the experiment and data associated with that saved epoch. Architecture metadata identifies `model_arch_2`, LayerNorm shapes, channel counts, strides, activations, and dropout. Earlier architecture checkpoints require their corresponding model definitions for restoration. Check the full metadata together with the architecture label when choosing the matching definition.
+Each checkpoint contains `epoch`, `model_state_dict`, `optimizer_state_dict`, `config`, `channels`, `selected_instance_ids`, `fitting_instance_ids`, `validation_instance_ids`, `train_metrics`, and `validation_metrics`. The configuration and split memberships identify the experiment and data associated with that saved epoch. Architecture metadata identifies `initial_model_architecture`, the GroupNorm group count, channel counts, strides, LeakyReLU slope, and dropout. Earlier architecture checkpoints require their corresponding model definitions for restoration. Check the full metadata together with the architecture label when choosing the matching definition.
 
 ### Validation reconstruction previews for every saved model
 
@@ -409,25 +409,20 @@ checkpoint = torch.load(
     weights_only=True,
 )
 assert checkpoint["epoch"] == 30
-assert checkpoint["config"]["architecture"]["architecture_version"] == "model_arch_2"
-assert checkpoint["config"]["architecture"]["normalization"] == "LayerNorm"
-assert checkpoint["config"]["architecture"]["layer_norm_axes"] == ["channel", "height", "width"]
-assert checkpoint["config"]["architecture"]["layer_norm_eps"] == 1e-5
-assert checkpoint["config"]["architecture"]["layer_norm_elementwise_affine"] is True
-assert checkpoint["config"]["architecture"]["encoder_layer_norm_shapes"] == [
-    [32, 8, 96], [64, 4, 48], [128, 2, 24], [128, 1, 12]
-]
-assert checkpoint["config"]["architecture"]["decoder_layer_norm_shapes"] == [
-    [128, 2, 24], [64, 4, 48], [32, 8, 96]
-]
+assert checkpoint["config"]["architecture"]["architecture_version"] == "initial_model_architecture"
+assert checkpoint["config"]["architecture"]["normalization"] == "GroupNorm"
+assert checkpoint["config"]["architecture"]["group_norm_groups"] == 8
+assert checkpoint["config"]["architecture"]["group_norm_eps"] == 1e-5
+assert checkpoint["config"]["architecture"]["group_norm_affine"] is True
 assert checkpoint["config"]["architecture"]["stride"] == [2, 2]
 assert checkpoint["config"]["architecture"]["encoder_channels"] == [22, 32, 64, 128, 128]
 assert checkpoint["config"]["architecture"]["decoder_channels"] == [128, 128, 64, 32, 22]
 assert checkpoint["config"]["architecture"]["encoded_shape"] == [128, 1, 12]
 assert checkpoint["config"]["architecture"]["flattened_features"] == 1536
-assert checkpoint["config"]["architecture"]["encoder_convolution_activation"] == "ReLU"
+assert checkpoint["config"]["architecture"]["encoder_convolution_activation"] == "LeakyReLU"
+assert checkpoint["config"]["architecture"]["leaky_relu_negative_slope"] == 0.2
 assert checkpoint["config"]["architecture"]["decoder_projection_activation"] == "linear"
-assert checkpoint["config"]["architecture"]["dropout"] == 0.2
+assert checkpoint["config"]["architecture"]["dropout"] == 0.1
 assert checkpoint["config"]["architecture"]["dropout_after_fc_layers"] == [1]
 assert checkpoint["config"]["combination_id"] == "combination_01"
 assert checkpoint["config"]["checkpoint_start_epoch"] == 30
@@ -449,7 +444,7 @@ print(checkpoint["train_metrics"])
 print(checkpoint["validation_metrics"])
 ```
 
-The assertions verify the architecture version, normalization axes, channel counts, stride, encoded shape, flattened size, activations, dropout, saved epoch, checkpoint window, combination ID, and hyperparameters against the current first data row. If you edit the hyperparameter file, adjust the example's expected values to match that run's saved configuration. `map_location="cpu"` maps the saved model and optimizer tensors to CPU during loading.
+The assertions verify the architecture version, normalization settings, channel counts, stride, encoded shape, flattened size, activations, dropout, saved epoch, checkpoint window, combination ID, and hyperparameters against the current first data row. If you edit the hyperparameter file, adjust the example's expected values to match that run's saved configuration. `map_location="cpu"` maps the saved model and optimizer tensors to CPU during loading.
 
 ## 10. Verification and existing artifacts
 
@@ -464,7 +459,7 @@ PYTHONPATH=datasets/fun-study-dataset-analysis \
   -p test_encoding_to_level_image.py -v
 ```
 
-The training/preview tests cover explicit-row parsing and ordering, parameter-named output folders, checkpoint serialization, reconstruction rendering, and preservation of training random streams. The separate renderer tests cover the existing tile and path image conversion. A previous real-data smoke run trained `model_arch_2` for one combination and two epochs with one original fitting comparison, evaluated all 58 saved validation comparisons, and saved two checkpoints. Both checkpoints reloaded strictly and produced previews for the same five validation levels. This check does not constitute a complete 20-combination, 50-epoch training run.
+All 36 training, analysis, and preview tests pass for `initial_model_architecture`. They cover architecture dimensions and shared weights, normalization and activations, loss gradients, explicit-row parsing and ordering, parameter-named output folders, checkpoint serialization, reconstruction rendering, and preservation of training random streams. The separate renderer tests cover the existing tile and path image conversion. A real-data smoke run trained the current architecture for one combination and one epoch with one original fitting comparison, evaluated all 58 saved validation comparisons, and saved a checkpoint with previews for five validation levels. Its architecture metadata matched the model, and its weights reloaded strictly. This verifies the training and checkpoint workflow with a small fitting subset.
 
 The two-epoch command in section 1 provides a reproducible one-combination check of per-epoch measurements, JSON/CSV export, curves, checkpoints, and reconstruction previews. Use a fresh output directory for each invocation.
 

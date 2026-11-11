@@ -165,7 +165,7 @@ class TrainingTests(unittest.TestCase):
             projected = model.decoder_projection(output[f"z_{side}"]).reshape(2, 128, 1, 12)
             torch.testing.assert_close(decoder_input, projected)
         self.assertEqual(tuple(output["rank_logits"].shape), (2,))
-        self.assertEqual(sum(p.numel() for p in model.parameters()), 1_312_151)
+        self.assertEqual(sum(p.numel() for p in model.parameters()), 1_138_199)
         self.assertEqual([(m.in_channels, m.out_channels) for m in encoder_layers],
                          [(22, 32), (32, 64), (64, 128), (128, 128)])
         self.assertEqual([(m.in_channels, m.out_channels) for m in decoder_layers],
@@ -176,53 +176,65 @@ class TrainingTests(unittest.TestCase):
                 self.assertEqual(module.stride, (2, 2))
                 self.assertEqual(module.padding, (1, 1))
         self.assertEqual([type(m) for m in model.encoder_convs],
-                         [nn.Conv2d, nn.LayerNorm, nn.ReLU] * 4)
+                         [nn.Conv2d, nn.GroupNorm, nn.LeakyReLU] * 4)
         self.assertEqual([type(m) for m in model.decoder_convs],
-                         [nn.ConvTranspose2d, nn.LayerNorm, nn.ReLU] * 3 + [nn.ConvTranspose2d])
+                         [nn.ConvTranspose2d, nn.GroupNorm, nn.LeakyReLU] * 3 + [nn.ConvTranspose2d])
         self.assertEqual(model.encoder_hidden[1].in_features, 1_536)
-        self.assertIsInstance(model.encoder_hidden[2], nn.ReLU)
+        self.assertEqual(model.encoder_hidden[1].out_features, 128)
+        self.assertIsInstance(model.encoder_hidden[2], nn.LeakyReLU)
+        self.assertEqual(model.decoder_projection.in_features, 32)
         self.assertEqual(model.decoder_projection.out_features, 1_536)
         self.assertIsInstance(model.decoder_projection, nn.Linear)
         self.assertEqual(
             [type(module) for module in model.fc_tail],
-            [nn.Linear, nn.ReLU, nn.Dropout, nn.Linear, nn.ReLU, nn.Linear],
+            [nn.Linear, nn.LeakyReLU, nn.Dropout, nn.Linear, nn.LeakyReLU, nn.Linear],
+        )
+        self.assertEqual(
+            [(m.in_features, m.out_features) for m in model.fc_tail if isinstance(m, nn.Linear)],
+            [(64, 64), (64, 32), (32, 1)],
         )
         self.assertEqual([module.p for module in model.fc_tail if isinstance(module, nn.Dropout)],
-                         [0.2])
+                         [0.1])
         metadata = architecture_metadata()
-        self.assertEqual(metadata["architecture_version"], "model_arch_2")
+        self.assertEqual(metadata["architecture_version"], "initial_model_architecture")
         self.assertEqual(metadata["encoded_shape"], [128, 1, 12])
         self.assertEqual(metadata["flattened_features"], 1_536)
         self.assertEqual(metadata["stride"], [2, 2])
         self.assertEqual(metadata["encoder_output_shapes"], [list(shape) for shape in encoder_shapes])
         self.assertEqual(metadata["decoder_output_shapes"], [list(shape) for shape in decoder_shapes])
-        self.assertEqual(metadata["encoder_convolution_activation"], "ReLU")
-        self.assertEqual(metadata["encoder_hidden_activation"], "ReLU")
-        self.assertEqual(metadata["decoder_convolution_activation"], "ReLU after first three transposed convolutions")
+        self.assertEqual(metadata["encoder_convolution_activation"], "LeakyReLU")
+        self.assertEqual(metadata["encoder_hidden_activation"], "LeakyReLU")
+        self.assertEqual(metadata["decoder_convolution_activation"], "LeakyReLU after first three transposed convolutions")
         self.assertEqual(metadata["decoder_projection_activation"], "linear")
         self.assertEqual(metadata["encoder_channels"], [22, 32, 64, 128, 128])
         self.assertEqual(metadata["decoder_channels"], [128, 128, 64, 32, 22])
         self.assertEqual(metadata["dropout_after_fc_layers"], [1])
-        self.assertEqual(metadata["fc_tail_hidden_activation"], "ReLU")
-        self.assertEqual(metadata["dropout"], 0.2)
-        self.assertFalse(any(isinstance(m, (nn.MaxPool2d, nn.MaxUnpool2d, nn.GroupNorm, nn.LeakyReLU, nn.Sigmoid))
+        self.assertEqual(metadata["fc_tail_hidden_activation"], "LeakyReLU")
+        self.assertEqual(metadata["dropout"], 0.1)
+        self.assertFalse(any(isinstance(m, (nn.MaxPool2d, nn.MaxUnpool2d, nn.LayerNorm, nn.ReLU, nn.Sigmoid))
                              for m in model.modules()))
-        normalization_layers = [m for m in model.modules() if isinstance(m, nn.LayerNorm)]
-        normalization_shapes = encoder_shapes + decoder_shapes[:-1]
-        self.assertEqual([m.normalized_shape for m in normalization_layers], normalization_shapes)
+        activations = [m for m in model.modules() if isinstance(m, nn.LeakyReLU)]
+        self.assertEqual(len(activations), 10)
+        self.assertTrue(all(m.negative_slope == 0.2 for m in activations))
+        normalization_layers = [m for m in model.modules() if isinstance(m, nn.GroupNorm)]
+        normalization_channels = [shape[0] for shape in encoder_shapes + decoder_shapes[:-1]]
+        self.assertEqual([m.num_channels for m in normalization_layers], normalization_channels)
         for layer in normalization_layers:
-            self.assertTrue(layer.elementwise_affine)
+            self.assertEqual(layer.num_groups, 8)
+            self.assertTrue(layer.affine)
             self.assertEqual(layer.eps, 1e-5)
-            self.assertEqual(tuple(layer.weight.shape), layer.normalized_shape)
-            self.assertEqual(tuple(layer.bias.shape), layer.normalized_shape)
-        self.assertEqual(metadata["normalization"], "LayerNorm")
-        self.assertEqual(metadata["layer_norm_axes"], ["channel", "height", "width"])
-        self.assertEqual(metadata["layer_norm_eps"], 1e-5)
-        self.assertTrue(metadata["layer_norm_elementwise_affine"])
-        self.assertEqual(metadata["encoder_layer_norm_shapes"], [list(shape) for shape in encoder_shapes])
-        self.assertEqual(metadata["decoder_layer_norm_shapes"], [list(shape) for shape in decoder_shapes[:-1]])
-        self.assertNotIn("group_norm_groups", metadata)
-        self.assertNotIn("leaky_relu_negative_slope", metadata)
+            self.assertEqual(tuple(layer.weight.shape), (layer.num_channels,))
+            self.assertEqual(tuple(layer.bias.shape), (layer.num_channels,))
+        self.assertEqual(metadata["normalization"], "GroupNorm")
+        self.assertEqual(metadata["group_norm_groups"], 8)
+        self.assertEqual(metadata["group_norm_eps"], 1e-5)
+        self.assertTrue(metadata["group_norm_affine"])
+        self.assertEqual(metadata["encoder_group_norm_channels"], [32, 64, 128, 128])
+        self.assertEqual(metadata["decoder_group_norm_channels"], [128, 64, 32])
+        self.assertEqual(metadata["group_norm_placement"],
+                         "after all four encoder convolutions and first three decoder convolutions")
+        self.assertEqual(metadata["leaky_relu_negative_slope"], 0.2)
+        self.assertFalse(any(key.startswith("layer_norm") or "layer_norm_shapes" in key for key in metadata))
 
     def test_loss_matches_hand_calculated_bce_kl_and_weighting(self) -> None:
         x = torch.zeros(2, *INPUT_SHAPE)
@@ -542,9 +554,9 @@ class TrainingTests(unittest.TestCase):
                 self.assertEqual(checkpoint["epoch"], preview["epoch"])
                 self.assertEqual(checkpoint["config"]["combination_id"], "combination_01")
                 architecture = checkpoint["config"]["architecture"]
-                self.assertEqual(architecture["architecture_version"], "model_arch_2")
-                self.assertEqual(architecture["normalization"], "LayerNorm")
-                self.assertEqual(architecture["dropout"], 0.2)
+                self.assertEqual(architecture["architecture_version"], "initial_model_architecture")
+                self.assertEqual(architecture["normalization"], "GroupNorm")
+                self.assertEqual(architecture["dropout"], 0.1)
                 self.assertEqual(architecture["dropout_after_fc_layers"], [1])
                 manifest = json.loads((combination / preview["samples_file"]).read_text(encoding="utf-8"))
                 self.assertEqual({sample["level_id"] for sample in manifest["samples"]}, expected_levels)
