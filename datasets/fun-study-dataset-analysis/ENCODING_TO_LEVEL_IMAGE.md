@@ -14,6 +14,16 @@ Run from this project directory, using the shared root `.venv` described in [`PR
 
 The single project [requirements.txt](requirements.txt) pins `numpy==2.3.4` and `Pillow==12.0.0`. Preprocessing and rendering use the same environment; reuse the existing `.venv`.
 
+Render both levels in every comparison folder across `train_set/`, `validation_set/`, and `test_set/`. Run this command from the repository root using its existing `.venv`:
+
+```bash
+.venv/bin/python datasets/fun-study-dataset-analysis/encoding_to_level_image.py dataset
+```
+
+The default dataset is resolved relative to the renderer. From its directory, an explicit dataset path can be supplied with `encoding_to_level_image.py dataset --dataset preprocessed_dataset`; the command also accepts `--assets DIR` and `--scale N`.
+
+Each `<level>.npy` receives a sibling `<level>.png`, rendered with black X path markers. At the default `--scale 1`, each image is 3072×256 pixels. The supplied export has **726 PNG previews**: 464 in `train_set/`, 116 in `validation_set/`, and 146 in `test_set/`. Every comparison folder has two previews, including repeated appearances of a playthrough in different comparisons. The seven core data files, manifest, and core dataset digest retain their roles; previews are optional derived files.
+
 Recreate the six examples:
 
 ```bash
@@ -25,7 +35,7 @@ Recreate the six examples:
 
 `--count 3` selects **three from each split**, not three overall. Selection uses one `random.Random(42)` stream, sampling training first and test second. Within each split, candidates are unique `playthrough_key` values in sorted order. When the same playthrough occurs in several comparison folders, the lexicographically first instance supplies its encoding. Repeated appearances therefore do not give that playthrough extra sampling weight.
 
-Keep rendered images outside `preprocessed_dataset/` so its seven-file comparison folders and verification inventory remain intact.
+The `examples` command keeps its sample collection outside `preprocessed_dataset/`. Use the `dataset` command above for PNG previews beside every encoded level.
 
 Render one saved encoding:
 
@@ -65,7 +75,7 @@ A supplied `(22, 16, 192)` level renders at **3072×256 pixels** with `scale=1`;
 
 ## Reuse from Python
 
-The public functions return Pillow RGB images, so they can be used directly in a model's generation or evaluation code:
+The rendering functions return Pillow RGB images, so they can be used directly in a model's generation or evaluation code. The batch function returns PNG counts per split:
 
 | Function | Purpose |
 |---|---|
@@ -73,6 +83,7 @@ The public functions return Pillow RGB images, so they can be used directly in a
 | `level_to_image(tile_grid, path_mask=None, *, assets_dir=DEFAULT_ASSETS, scale=1)` | Render an already decoded tile grid, with an optional path overlay |
 | `encoding_to_image(encoding, *, channels_path=DEFAULT_CHANNELS, assets_dir=DEFAULT_ASSETS, show_path=True, scale=1)` | Decode and render an in-memory 21- or 22-channel array |
 | `render_encoding_file(input_path, output_path, **options)` | Load a `.npy` encoding, render it, save a PNG, and return the image |
+| `render_dataset(dataset=DEFAULT_DATASET, *, assets_dir=DEFAULT_ASSETS, scale=1)` | Save a sibling PNG for every encoding in all three splits and return a dictionary of PNG counts per split |
 
 For an in-memory prediction that already satisfies the binary encoding rules:
 

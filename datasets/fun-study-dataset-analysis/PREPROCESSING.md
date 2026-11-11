@@ -90,9 +90,9 @@ Exclusion applies to an annotation row, not a global map blacklist. The excluded
 
 The repeated Experiment II ranking is retained. It is an additional source row that reuses the same three human paths, so the 273 derived pairs are not 273 independent submissions. Source grouping and reused playthrough identities are retained in the global metadata.
 
-## Directory structure and the seven files
+## Directory structure and the seven core files
 
-The output has **232 comparison folders in `train_set/`, 58 in `validation_set/`, and 73 in `test_set/`** for the supplied data and default settings. Each comparison retains its seven-file structure:
+The output has **232 comparison folders in `train_set/`, 58 in `validation_set/`, and 73 in `test_set/`** for the supplied data and default settings. Each comparison contains seven core data files and can include two derived PNG previews:
 
 ```text
 preprocessed_dataset/
@@ -106,24 +106,26 @@ preprocessed_dataset/
       <preferred_level>.tiles.txt
       <preferred_level>.path.txt
       <preferred_level>.npy
+      <preferred_level>.png  (optional preview)
       <other_level>.tiles.txt
       <other_level>.path.txt
       <other_level>.npy
+      <other_level>.png      (optional preview)
       ranking.txt
     ...
   validation_set/
     <instance_id>/
-      ...the same seven files...
+      ...the same seven core files and optional previews...
     ...
   test_set/
     <instance_id>/
-      ...the same seven files...
+      ...the same seven core files and optional previews...
     ...
 ```
 
 Instance IDs retain names such as `exp1_0001__lvl89_over_lvl134` and `exp2_0001_pair1__Runner-16_over_Killer-29`. Their assigned split is recorded in the manifest; do not infer it from the instance name.
 
-Each instance contains exactly **seven files**. The five global metadata files remain at the root. In each folder:
+Each instance contains **seven core data files**, plus two PNGs after preview generation. The five global metadata files remain at the root. In each folder:
 
 | File | Contents |
 |---|---|
@@ -131,6 +133,15 @@ Each instance contains exactly **seven files**. The five global metadata files r
 | `<level>.path.txt` | 16 rows of 192 characters: `P` for a visited path-marker cell and `x` otherwise |
 | `<level>.npy` | A `uint8` multi-hot array with shape `(22, 16, 192)` |
 | `ranking.txt` | Two concrete level IDs, one per line, preferred first |
+| `<level>.png` | Optional 3072×256 preview of the corresponding encoding, including black X path markers at the default scale |
+
+Generate the previews using the [existing renderer](ENCODING_TO_LEVEL_IMAGE.md). From the repository root, run:
+
+```bash
+.venv/bin/python datasets/fun-study-dataset-analysis/encoding_to_level_image.py dataset
+```
+
+This adds **726 PNGs**: 464 in `train_set/`, 116 in `validation_set/`, and 146 in `test_set/`. The original data files and split assignments are preserved.
 
 For `exp1_0001__lvl89_over_lvl134`, `ranking.txt` contains:
 
@@ -239,9 +250,9 @@ The five root JSON files describe the export:
 | `excluded_comparisons.json` | Original Experiment I rows excluded because their label was `E` or `N` |
 | `source_hashes.json` | Source-file hashes used to check provenance and reruns |
 
-Verification checks the expected folder/file inventory and reconstructs the expected content from source. It compares tile and path text, preference order, and loaded NumPy arrays, including their shape, dtype, binary values, and tile/path consistency. It also checks global metadata and source hashes. `--verify-only` requires an existing export and performs no generation.
+Verification checks the expected core folder/file inventory and reconstructs the expected content from source. It compares tile and path text, preference order, and loaded NumPy arrays, including their shape, dtype, binary values, and tile/path consistency. It also checks global metadata and source hashes. Optional PNG counterparts of expected `.npy` files are allowed alongside the core files; unrelated extra files are rejected. PNGs are excluded from the core dataset digest. Their rendered pixels can be validated separately against a fresh render of each encoding; `--verify-only` checks the core data and permits these preview files. It requires an existing export and performs no generation.
 
-The script reports `created_and_verified` after a new export, `migrated_and_verified` after moving a checked flat export, or `verified_existing` after a matching rerun or verification. It also reports the train/test counts, seed, file count, and dataset SHA-256. This export contains **2,546 files**: `363 × 7` instance files plus five root metadata files. The recorded script hash and NumPy version are part of the expected metadata, so changing either can make a previous export fail exact verification even when the intended preprocessing policy is unchanged.
+The script reports `created_and_verified` after a new export, `migrated_and_verified` after moving a checked flat export, or `verified_existing` after a matching rerun or verification. It also reports the train/test counts, seed, core file count, and core dataset SHA-256. This export contains **2,546 core files**: `363 × 7` instance files plus five root metadata files. With all 726 PNG previews, the directory contains **3,272 files**. The recorded script hash and NumPy version are part of the expected metadata, so changing either can make a previous export fail exact verification even when the intended preprocessing policy is unchanged.
 
 For this export, a fresh generation into another directory produced byte-identical contents across all 2,546 files. Rerunning against that existing output validated it without changing file modification times. A deliberately altered ranking file in a temporary copy was rejected by verification and left untouched. Independently reconstructed source comparisons, masks, and tensors also matched every generated instance.
 

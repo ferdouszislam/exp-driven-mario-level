@@ -488,18 +488,21 @@ def build_output(source: Path, split_seed: int = 42, validation_fraction: float 
 
 
 def verify_output(output: Path, expected: dict[str, bytes]) -> str:
-    """Compare the entire output tree to a fresh reconstruction from the sources."""
+    """Verify source-derived files, allowing optional sibling PNG previews."""
     if not output.is_dir() or output.is_symlink():
         raise ValueError(f"Expected a regular output directory: {output}")
     paths = list(output.rglob("*"))
     if any(path.is_symlink() for path in paths):
         raise ValueError("Output contains a symlink")
     actual_files = {path.relative_to(output).as_posix() for path in paths if path.is_file()}
+    optional_images = {str(Path(name).with_suffix(".png")) for name in expected if name.endswith(".npy")}
+    actual_data_files = actual_files - optional_images
     expected_dirs = {parent.as_posix() for name in expected for parent in Path(name).parents
                      if parent != Path(".")}
     actual_dirs = {path.relative_to(output).as_posix() for path in paths if path.is_dir()}
-    if actual_files != set(expected) or actual_dirs != expected_dirs:
-        missing, extra = sorted(set(expected) - actual_files), sorted(actual_files - set(expected))
+    if actual_data_files != set(expected) or actual_dirs != expected_dirs:
+        missing = sorted(set(expected) - actual_data_files)
+        extra = sorted(actual_data_files - set(expected))
         raise ValueError(f"Output tree differs; missing={missing[:5]}, extra={extra[:5]}; "
                          f"unexpected/missing directories={sorted(actual_dirs ^ expected_dirs)[:5]}")
     digest = hashlib.sha256()

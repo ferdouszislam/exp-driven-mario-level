@@ -184,6 +184,23 @@ def render_encoding_file(input_path: str | Path, output_path: str | Path, **opti
     return image
 
 
+def render_dataset(dataset: str | Path = DEFAULT_DATASET, *,
+                   assets_dir: str | Path = DEFAULT_ASSETS, scale: int = 1) -> dict[str, int]:
+    """Save a sibling PNG for every encoded level in the dataset's three splits."""
+    dataset = Path(dataset).resolve()
+    channels = dataset / "channels.json"
+    counts = {}
+    for split in ("train_set", "validation_set", "test_set"):
+        sources = sorted((dataset / split).glob("*/*.npy"))
+        for source in sources:
+            render_encoding_file(source, source.with_suffix(".png"), channels_path=channels,
+                                 assets_dir=assets_dir, scale=scale)
+        counts[split] = len(sources)
+    if not any(counts.values()):
+        raise ValueError(f"No level encodings found in dataset splits: {dataset}")
+    return counts
+
+
 def render_examples(dataset: str | Path = DEFAULT_DATASET, *,
                     output_dir: str | Path = PROJECT_ROOT / "encoding_level_images",
                     count: int = 3, seed: int = 42, assets_dir: str | Path = DEFAULT_ASSETS,
@@ -261,7 +278,9 @@ def main() -> None:
     examples.add_argument("--output-dir", type=Path, default=PROJECT_ROOT / "encoding_level_images")
     examples.add_argument("--count", type=int, default=3)
     examples.add_argument("--seed", type=int, default=42)
-    for command in (render, examples):
+    dataset = commands.add_parser("dataset", help="Render every level beside its .npy in all splits")
+    dataset.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
+    for command in (render, examples, dataset):
         command.add_argument("--assets", type=Path, default=DEFAULT_ASSETS)
         command.add_argument("--scale", type=int, default=1)
     args = parser.parse_args()
@@ -270,6 +289,10 @@ def main() -> None:
             image = render_encoding_file(args.input, args.output, channels_path=args.channels,
                                          assets_dir=args.assets, show_path=not args.no_path, scale=args.scale)
             print(json.dumps({"output": str(args.output), "image_size": image.size}))
+        elif args.command == "dataset":
+            counts = render_dataset(args.dataset, assets_dir=args.assets, scale=args.scale)
+            print(json.dumps({"dataset": str(args.dataset), "images": sum(counts.values()),
+                              "images_per_split": counts}, indent=2))
         else:
             record = render_examples(args.dataset, output_dir=args.output_dir, count=args.count,
                                      seed=args.seed, assets_dir=args.assets, scale=args.scale)
