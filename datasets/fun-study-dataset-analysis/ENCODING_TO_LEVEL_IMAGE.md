@@ -6,13 +6,13 @@ The examples below show **three samples from `train_set` and three from `test_se
 
 ## Install and reproduce
 
-Run from this project directory, using the shared root `.venv` described in [`PREPROCESSING.md`](PREPROCESSING.md):
+Use the shared root `.venv` described in [`PREPROCESSING.md`](PREPROCESSING.md). From `datasets/fun-study-dataset-analysis/`, install dependencies with:
 
 ```bash
-.venv/bin/python -m pip install -r requirements.txt
+../../.venv/bin/python -m pip install -r requirements.txt
 ```
 
-The single project [requirements.txt](requirements.txt) pins `numpy==2.3.4` and `Pillow==12.0.0`. Preprocessing and rendering use the same environment; reuse the existing `.venv`.
+The preprocessing [requirements.txt](requirements.txt) pins `numpy==2.3.4` and `Pillow==12.0.0`. Preprocessing and rendering use the same environment; reuse the existing `.venv`.
 
 Render both levels in every comparison folder across `train_set/`, `validation_set/`, and `test_set/`. Run this command from the repository root using its existing `.venv`:
 
@@ -22,12 +22,12 @@ Render both levels in every comparison folder across `train_set/`, `validation_s
 
 The default dataset is resolved relative to the renderer. From its directory, an explicit dataset path can be supplied with `encoding_to_level_image.py dataset --dataset preprocessed_dataset`; the command also accepts `--assets DIR` and `--scale N`.
 
-Each `<level>.npy` receives a sibling `<level>.png`, rendered with black X path markers. At the default `--scale 1`, each image is 3072×256 pixels. The supplied export has **726 PNG previews**: 464 in `train_set/`, 116 in `validation_set/`, and 146 in `test_set/`. Every comparison folder has two previews, including repeated appearances of a playthrough in different comparisons. The seven core data files, manifest, and core dataset digest retain their roles; previews are optional derived files.
+Each `<level>.npy` receives a sibling `<level>.png`, rendered with black X path markers. At the default `--scale 1`, each image is 2816×256 pixels. The supplied export has **726 PNG previews**: 464 in `train_set/`, 116 in `validation_set/`, and 146 in `test_set/`. Every comparison folder has two previews, including repeated appearances of a playthrough in different comparisons. The seven core data files, manifest, and core dataset digest retain their roles; previews are optional derived files.
 
-Recreate the six examples:
+Recreate the six examples from `datasets/fun-study-dataset-analysis/`:
 
 ```bash
-.venv/bin/python encoding_to_level_image.py examples \
+../../.venv/bin/python encoding_to_level_image.py examples \
   --dataset preprocessed_dataset \
   --output-dir encoding_level_images \
   --count 3 --seed 42 --scale 1
@@ -37,10 +37,10 @@ Recreate the six examples:
 
 The `examples` command keeps its sample collection outside `preprocessed_dataset/`. Use the `dataset` command above for PNG previews beside every encoded level.
 
-Render one saved encoding:
+Render one saved encoding from that same directory:
 
 ```bash
-.venv/bin/python encoding_to_level_image.py render \
+../../.venv/bin/python encoding_to_level_image.py render \
   preprocessed_dataset/train_set/exp1_0045__lvl195_over_lvl104/lvl195.npy \
   lvl195-with-path.png
 ```
@@ -48,7 +48,7 @@ Render one saved encoding:
 Use `--no-path` to omit the X overlay or `--scale 2` for a larger image:
 
 ```bash
-.venv/bin/python encoding_to_level_image.py render \
+../../.venv/bin/python encoding_to_level_image.py render \
   preprocessed_dataset/train_set/exp1_0045__lvl195_over_lvl104/lvl195.npy \
   lvl195-tiles-only.png --no-path --scale 2
 ```
@@ -71,7 +71,7 @@ Tiles are 16×16 pixels. Literal `#` and `X` use their respective sprites; `|` u
 
 After all tiles and larger objects are drawn, the renderer places a black X inside every visited cell. At native resolution its stroke is two pixels wide with a three-pixel inset from the cell boundary. It then applies integer nearest-neighbor scaling, preserving the pixel art and overlay alignment. The X marks path occupancy, without drawing lines between cells or reconstructing trajectory order.
 
-A supplied `(22, 16, 192)` level renders at **3072×256 pixels** with `scale=1`; at `scale=2` it becomes 6144×512. The complete 192-column stored grid is rendered, including the starting segment. Some original repository preview PNGs are only 2816 pixels wide; their narrower width should not be used to crop the encoding.
+A supplied `(22, 16, 176)` level renders at **2816×256 pixels** with `scale=1`; at `scale=2` it becomes 5632×512. The renderer displays all 176 columns in the encoding. Preprocessing already removes source columns 0–15 from both tiles and paths, so rendering applies no additional crop. Source column 16 is the leftmost exported column. Raw `.lvl` grids remain 192 columns wide.
 
 ## Reuse from Python
 
@@ -136,57 +136,57 @@ tiles_only_image = encoding_to_image(array, show_path=False)
 
 ## Three training examples
 
-Each embedded image links to its full-resolution PNG. All six supplied arrays have shape `(22, 16, 192)` and all example images use `scale=1` with the path overlay enabled. “Visited cells” counts the active path bits, not the number of recorded position samples.
+Each embedded image links to its full-resolution PNG. All six supplied arrays have shape `(22, 16, 176)` and all example images use `scale=1` with the path overlay enabled. “Visited cells” counts the active path bits, not the number of recorded position samples.
 
-### Training 1: Killer-74
+### Training 1: lvl12
 
-Participant: `e8fa1eee-54e3-49af-bd53-33de244a87be`. Visited cells: **455**.
+Participant: `33253213-2bfe-40e3-8131-2e175da84c1c`. Visited cells: **316**.
 
-Source array: [`Killer-74.npy`](preprocessed_dataset/train_set/exp2_0077_pair1__Runner-31_over_Killer-74/Killer-74.npy).
+Source array: [`lvl12.npy`](preprocessed_dataset/train_set/exp1_0007__lvl12_over_lvl172/lvl12.npy).
 
-[![Training sample 1: Killer-74 with black X path markers](encoding_level_images/train_set/01_Killer-74_e8fa1eee.png)](encoding_level_images/train_set/01_Killer-74_e8fa1eee.png)
+[![Training sample 1: lvl12 with black X path markers](encoding_level_images/train_set/01_lvl12_33253213.png)](encoding_level_images/train_set/01_lvl12_33253213.png)
 
-### Training 2: lvl195
+### Training 2: Collector-42
 
-Participant: `2a8b8b1b-a314-4c4d-9721-8b94797932fb`. Visited cells: **474**.
-
-Source array: [`lvl195.npy`](preprocessed_dataset/train_set/exp1_0045__lvl195_over_lvl104/lvl195.npy).
-
-[![Training sample 2: lvl195 with black X path markers](encoding_level_images/train_set/02_lvl195_2a8b8b1b.png)](encoding_level_images/train_set/02_lvl195_2a8b8b1b.png)
-
-### Training 3: Collector-42
-
-Participant: `0cbaa3ae-5376-4d7f-8053-7daba92be456`. Visited cells: **263**.
+Participant: `0cbaa3ae-5376-4d7f-8053-7daba92be456`. Visited cells: **244**.
 
 Source array: [`Collector-42.npy`](preprocessed_dataset/train_set/exp2_0001_pair2__Runner-16_over_Collector-42/Collector-42.npy).
 
-[![Training sample 3: Collector-42 with black X path markers](encoding_level_images/train_set/03_Collector-42_0cbaa3ae.png)](encoding_level_images/train_set/03_Collector-42_0cbaa3ae.png)
+[![Training sample 2: Collector-42 with black X path markers](encoding_level_images/train_set/02_Collector-42_0cbaa3ae.png)](encoding_level_images/train_set/02_Collector-42_0cbaa3ae.png)
+
+### Training 3: Collector-47
+
+Participant: `90237211-82c9-4695-9a59-8d975f6bef3a`. Visited cells: **552**.
+
+Source array: [`Collector-47.npy`](preprocessed_dataset/train_set/exp2_0011_pair1__Collector-47_over_Killer-62/Collector-47.npy).
+
+[![Training sample 3: Collector-47 with black X path markers](encoding_level_images/train_set/03_Collector-47_90237211.png)](encoding_level_images/train_set/03_Collector-47_90237211.png)
 
 ## Three test examples
 
-### Test 1: Killer-94
+### Test 1: Runner-57
 
-Participant: `70d6994c-b6d4-4e92-9d50-e1c25931d401`. Visited cells: **336**.
-
-Source array: [`Killer-94.npy`](preprocessed_dataset/test_set/exp2_0007_pair1__Collector-66_over_Killer-94/Killer-94.npy).
-
-[![Test sample 1: Killer-94 with black X path markers](encoding_level_images/test_set/01_Killer-94_70d6994c.png)](encoding_level_images/test_set/01_Killer-94_70d6994c.png)
-
-### Test 2: Runner-57
-
-Participant: `6d710075-57ba-4545-bc65-e2a274f9f92b`. Visited cells: **336**.
+Participant: `6d710075-57ba-4545-bc65-e2a274f9f92b`. Visited cells: **319**.
 
 Source array: [`Runner-57.npy`](preprocessed_dataset/test_set/exp2_0082_pair2__Killer-95_over_Runner-57/Runner-57.npy).
 
-[![Test sample 2: Runner-57 with black X path markers](encoding_level_images/test_set/02_Runner-57_6d710075.png)](encoding_level_images/test_set/02_Runner-57_6d710075.png)
+[![Test sample 1: Runner-57 with black X path markers](encoding_level_images/test_set/01_Runner-57_6d710075.png)](encoding_level_images/test_set/01_Runner-57_6d710075.png)
 
-### Test 3: lvl40
+### Test 2: lvl40
 
-Participant: `56f050c3-595e-40c7-a656-21076e66917f`. Visited cells: **446**.
+Participant: `56f050c3-595e-40c7-a656-21076e66917f`. Visited cells: **420**.
 
 Source array: [`lvl40.npy`](preprocessed_dataset/test_set/exp1_0124__lvl28_over_lvl40/lvl40.npy).
 
-[![Test sample 3: lvl40 with black X path markers](encoding_level_images/test_set/03_lvl40_56f050c3.png)](encoding_level_images/test_set/03_lvl40_56f050c3.png)
+[![Test sample 2: lvl40 with black X path markers](encoding_level_images/test_set/02_lvl40_56f050c3.png)](encoding_level_images/test_set/02_lvl40_56f050c3.png)
+
+### Test 3: lvl95
+
+Participant: `1f832b78-6dd1-4b19-b30b-51960d91b031`. Visited cells: **349**.
+
+Source array: [`lvl95.npy`](preprocessed_dataset/test_set/exp1_0069__lvl130_over_lvl95/lvl95.npy).
+
+[![Test sample 3: lvl95 with black X path markers](encoding_level_images/test_set/03_lvl95_1f832b78.png)](encoding_level_images/test_set/03_lvl95_1f832b78.png)
 
 ## Traceability and interpretation
 
@@ -197,7 +197,7 @@ A black X shows that the supplied path mask visited that cell. It does not show 
 ## Verify the reusable functions
 
 ```bash
-.venv/bin/python -m unittest discover -s tests -v
+../../.venv/bin/python -m unittest discover -s tests -v
 ```
 
-The seven tests cover exact one-hot/multi-hot decoding, black X markers above sprites, unchanged unvisited cells, optional path hiding, nearest-neighbor scaling, literal stalks, unequal pipe-column heights, invalid encodings, and PNG saving without replacing the input array. The six displayed samples were also checked against their source tile/path text: all **2,310 visited cells** have X markers and all unvisited cells match the corresponding tile-only render.
+The seven tests cover exact one-hot/multi-hot decoding, black X markers above sprites, unchanged unvisited cells, optional path hiding, nearest-neighbor scaling, literal stalks, unequal pipe-column heights, invalid encodings, and PNG saving without replacing the input array. The six displayed cropped samples contain **2,200 visited cells** in total. The renderer overlays an X at each active path bit; its tests check that unvisited cells retain their tile-only rendering.

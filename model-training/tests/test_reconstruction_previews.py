@@ -148,12 +148,12 @@ class ReconstructionPreviewTests(unittest.TestCase):
             images = []
             for field in ("input_image", "generated_image"):
                 with Image.open(output / saved[field]) as image:
-                    self.assertEqual(image.size, (3072, 256))
+                    self.assertEqual(image.size, (2816, 256))
                     self.assertEqual(image.format, "PNG")
                     images.append(np.asarray(image).copy())
             self.assertFalse(np.array_equal(images[0], images[1]))
         with Image.open(output / manifest["comparison_image"]) as comparison:
-            self.assertGreaterEqual(comparison.width, 3072)
+            self.assertGreaterEqual(comparison.width, 2816)
             self.assertGreaterEqual(comparison.height, 5 * 2 * 256)
 
     def test_rendering_failure_restores_training_mode(self):

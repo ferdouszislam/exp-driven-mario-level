@@ -6,11 +6,13 @@ import torch
 from torch import Tensor, nn
 
 
-INPUT_SHAPE = (22, 16, 192)
+SOURCE_WIDTH = 192
+DROPPED_LEADING_COLUMNS = 16
+INPUT_SHAPE = (22, 16, SOURCE_WIDTH - DROPPED_LEADING_COLUMNS)
 LATENT_DIM = 32
-ARCHITECTURE_VERSION = "initial_model_architecture"
-ENCODED_SHAPE = (128, 1, 12)
-ENCODED_FEATURES = 1536
+ARCHITECTURE_VERSION = "initial_model_architecture_crop16"
+ENCODED_SHAPE = (128, 1, 11)
+ENCODED_FEATURES = 1408
 GROUP_NORM_GROUPS = 8
 LEAKY_RELU_NEGATIVE_SLOPE = 0.2
 FC_TAIL_DROPOUT = 0.1
@@ -117,6 +119,8 @@ def architecture_metadata() -> dict[str, object]:
         "model_class": "PairwiseCNNVAE",
         "architecture_version": ARCHITECTURE_VERSION,
         "input_shape": list(INPUT_SHAPE),
+        "source_width": SOURCE_WIDTH,
+        "dropped_leading_columns": DROPPED_LEADING_COLUMNS,
         "latent_dim": LATENT_DIM,
         "normalization": "GroupNorm",
         "group_norm_groups": GROUP_NORM_GROUPS,
@@ -128,7 +132,7 @@ def architecture_metadata() -> dict[str, object]:
         "stride": [2, 2],
         "padding": [1, 1],
         "encoder_channels": [22, 32, 64, 128, 128],
-        "encoder_output_shapes": [[32, 8, 96], [64, 4, 48], [128, 2, 24], list(ENCODED_SHAPE)],
+        "encoder_output_shapes": [[32, 8, 88], [64, 4, 44], [128, 2, 22], list(ENCODED_SHAPE)],
         "encoded_shape": list(ENCODED_SHAPE),
         "flattened_features": ENCODED_FEATURES,
         "encoder_hidden": [ENCODED_FEATURES, 128],
@@ -139,7 +143,7 @@ def architecture_metadata() -> dict[str, object]:
         "decoder_projection": [LATENT_DIM, ENCODED_FEATURES],
         "decoder_projection_activation": "linear",
         "decoder_channels": [128, 128, 64, 32, 22],
-        "decoder_output_shapes": [[128, 2, 24], [64, 4, 48], [32, 8, 96], list(INPUT_SHAPE)],
+        "decoder_output_shapes": [[128, 2, 22], [64, 4, 44], [32, 8, 88], list(INPUT_SHAPE)],
         "decoder_convolution_activation": "LeakyReLU after first three transposed convolutions",
         "group_norm_placement": "after all four encoder convolutions and first three decoder convolutions",
         "fc_tail_sizes": [64, 64, 32, 1],

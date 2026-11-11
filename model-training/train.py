@@ -441,7 +441,12 @@ def run_combination(data, fitting: list[dict], validation: list[dict],
 
 
 def write_report(output: Path, config: dict, experiments: list[dict]) -> None:
+    architecture = config["architecture"]
     lines = ["# Hyperparameter comparison", "",
+             f"Architecture: `{architecture['architecture_version']}`; "
+             f"input shape: `{tuple(architecture['input_shape'])}` (channel, row, column).",
+             f"Preprocessing drops the first {architecture['dropped_leading_columns']} columns "
+             f"of each {architecture['source_width']}-column source level and its path mask.",
              f"Each configuration trains for {config['epochs']} epochs.",
              f"The fixed group split contains {config['fitting_comparisons']} fitting comparisons "
              f"and {config['validation_comparisons']} validation comparisons.",

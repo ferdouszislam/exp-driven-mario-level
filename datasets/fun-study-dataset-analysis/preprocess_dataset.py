@@ -14,6 +14,7 @@ import math
 from pathlib import Path
 import random
 import re
+import shutil
 import tempfile
 from typing import Any
 import uuid
@@ -23,7 +24,14 @@ import numpy as np
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 DEFAULT_SOURCE = PROJECT_ROOT / "Mario-Fun-Study/exp_data/survey_data/formal"
-HEIGHT, WIDTH = 16, 192
+SOURCE_WIDTH = 192
+DROP_LEFT_COLUMNS = 16
+HEIGHT, WIDTH = 16, SOURCE_WIDTH - DROP_LEFT_COLUMNS
+MAP_CROP = {
+    "source_shape": [HEIGHT, SOURCE_WIDTH],
+    "dropped_left_columns": DROP_LEFT_COLUMNS,
+    "retained_source_columns": [DROP_LEFT_COLUMNS, SOURCE_WIDTH],
+}
 TILE_SIZE, MARKER_Y_OFFSET = 16, 8
 TILE_CHANNELS = (
     ("X", "solid"), ("S", "breakable_block"), ("-", "empty"),
@@ -326,11 +334,12 @@ def load_playthrough(source: Path, participant: str, level: str,
         hashes[relative] = {"sha256": sha256(content), "bytes": len(content)}
 
     rows = (source / level_relative).read_text(encoding="utf-8").splitlines()
-    if len(rows) != HEIGHT or any(len(row) != WIDTH for row in rows):
-        raise ValueError(f"Expected a {HEIGHT}x{WIDTH} grid: {level_relative}")
+    if len(rows) != HEIGHT or any(len(row) != SOURCE_WIDTH for row in rows):
+        raise ValueError(f"Expected a {HEIGHT}x{SOURCE_WIDTH} source grid: {level_relative}")
     unknown = set("".join(rows)) - TILE_TO_ID.keys()
     if unknown:
         raise ValueError(f"Unknown/omitted tile characters in {level}: {sorted(unknown)}")
+    rows = [row[DROP_LEFT_COLUMNS:] for row in rows]
     tiles = np.array([[TILE_TO_ID[symbol] for symbol in row] for row in rows])
     tile_channels = np.eye(PATH_CHANNEL, dtype=np.uint8)[tiles].transpose(2, 0, 1)
 
@@ -338,8 +347,12 @@ def load_playthrough(source: Path, participant: str, level: str,
     xy = np.asarray(result["trace"], dtype=np.float64)
     if xy.ndim != 2 or xy.shape[1] != 2 or len(xy) == 0 or not np.isfinite(xy).all():
         raise ValueError(f"Expected a nonempty finite Nx2 trace: {result_relative}")
-    columns = np.floor(xy[:, 0] / TILE_SIZE)
+    source_columns = np.floor(xy[:, 0] / TILE_SIZE)
+    columns = source_columns - DROP_LEFT_COLUMNS
     grid_rows = np.floor((xy[:, 1] - MARKER_Y_OFFSET) / TILE_SIZE)
+    source_valid = ((grid_rows >= 0) & (grid_rows < HEIGHT)
+                    & (source_columns >= 0) & (source_columns < SOURCE_WIDTH))
+    cropped_prefix = source_valid & (source_columns < DROP_LEFT_COLUMNS)
     valid = ((grid_rows >= 0) & (grid_rows < HEIGHT)
              & (columns >= 0) & (columns < WIDTH))
     mask = np.zeros((HEIGHT, WIDTH), dtype=np.uint8)
@@ -362,10 +375,13 @@ def load_playthrough(source: Path, participant: str, level: str,
         stats={
             "ordered_samples": len(xy),
             "valid_samples": int(valid.sum()),
-            "out_of_grid_samples": int((~valid).sum()),
+            "out_of_grid_samples": int((~source_valid).sum()),
+            "cropped_prefix_samples": int(cropped_prefix.sum()),
+            "outside_export_samples": int((~valid).sum()),
             "above_grid_samples": int((grid_rows < 0).sum()),
             "below_grid_samples": int((grid_rows >= HEIGHT).sum()),
-            "horizontal_out_of_grid_samples": int(((columns < 0) | (columns >= WIDTH)).sum()),
+            "horizontal_out_of_grid_samples": int(
+                ((source_columns < 0) | (source_columns >= SOURCE_WIDTH)).sum()),
             "visited_cells": int(mask.sum()),
             "status": result["status"],
             "completing_ratio": completion,
@@ -421,7 +437,7 @@ def build_output(source: Path, split_seed: int = 42, validation_fraction: float 
     additional_submissions = sum(count - 1 for count in reuse_counts.values())
     n_exp1 = sum(pair["experiment"] == 1 for pair in pairs)
     summary = {
-        "schema_version": 3 if validation_fraction else 2,
+        "schema_version": 4,
         "input": input_counts,
         "split": split_summary,
         "output": {
@@ -446,7 +462,10 @@ def build_output(source: Path, split_seed: int = 42, validation_fraction: float 
         },
         "unique_playthrough_path_stats": {
             "ordered_samples": sum(play.stats["ordered_samples"] for play in cache.values()),
+            "valid_samples": sum(play.stats["valid_samples"] for play in cache.values()),
             "out_of_grid_samples": sum(play.stats["out_of_grid_samples"] for play in cache.values()),
+            "cropped_prefix_samples": sum(play.stats["cropped_prefix_samples"] for play in cache.values()),
+            "outside_export_samples": sum(play.stats["outside_export_samples"] for play in cache.values()),
             "playthroughs_with_out_of_grid_samples": sum(
                 play.stats["out_of_grid_samples"] > 0 for play in cache.values()),
             "visited_cells": sum(play.stats["visited_cells"] for play in cache.values()),
@@ -457,8 +476,8 @@ def build_output(source: Path, split_seed: int = 42, validation_fraction: float 
             "experiment_1": "retain A/B; exclude E/N annotation rows",
             "experiment_2": "pairs (rank1,rank2), (rank1,rank3), (rank2,rank3)",
             "deduplicate_rankings": False,
-            "map_crop": None,
-            "path_grid": "floor((y-8)/16), floor(x/16); sampled occupancy; skip out-of-grid",
+            "map_crop": MAP_CROP,
+            "path_grid": "floor((y-8)/16), floor(x/16)-16; sampled occupancy; skip outside cropped grid",
             "path_symbols": {"visited": "P", "unvisited": "x"},
             "tile_aliases": "preserve literal # and |; omit b and B; reject unknown symbols",
         },
@@ -469,8 +488,9 @@ def build_output(source: Path, split_seed: int = 42, validation_fraction: float 
         },
     }
     channels = {
-        "schema_version": 1,
+        "schema_version": 2,
         "shape": [PATH_CHANNEL + 1, HEIGHT, WIDTH], "dtype": "uint8",
+        "map_crop": MAP_CROP,
         "axis_order": ["channel", "row", "column"],
         "channels": [{"index": index, "symbol": symbol, "name": name}
                      for index, (symbol, name) in enumerate(TILE_CHANNELS)]
@@ -537,6 +557,36 @@ def atomic_write(path: Path, content: bytes) -> None:
         temporary.replace(path)
     finally:
         temporary.unlink(missing_ok=True)
+
+
+def write_output(output: Path, expected: dict[str, bytes], *, rebuild: bool = False) -> str:
+    """Verify a complete staged export before installing it, with rollback on failure."""
+    if output.is_symlink() or (output.exists() and not output.is_dir()):
+        raise ValueError(f"Expected a regular output directory: {output}")
+    if output.exists() and not rebuild:
+        raise ValueError(f"Output already exists: {output}")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=f".{output.name}.build-", dir=output.parent) as temp:
+        staging = Path(temp) / "dataset"
+        # Keep recovery data outside the staging directory's automatic cleanup.
+        previous = output.with_name(f".{output.name}.previous-{uuid.uuid4().hex}")
+        staging.mkdir()
+        for name, content in expected.items():
+            target = staging / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(content)
+        digest = verify_output(staging, expected)
+        if output.exists():
+            output.rename(previous)
+        try:
+            staging.rename(output)
+        except BaseException:
+            if previous.exists():
+                previous.rename(output)
+            raise
+        if previous.exists():
+            shutil.rmtree(previous)
+    return digest
 
 
 def migrate_output(output: Path, expected: dict[str, bytes], legacy: dict[str, bytes]) -> str:
@@ -610,15 +660,20 @@ def main() -> None:
                         help="Fraction of train_set held out in whole groups (default: 0.2; 0 disables)")
     parser.add_argument("--migrate-layout", action="store_true",
                         help="Validate and move an existing flat or train/test export into the new splits")
+    parser.add_argument("--rebuild", action="store_true",
+                        help="Regenerate an existing export after verifying a complete staged replacement; removes old previews")
     args = parser.parse_args()
-    if args.verify_only and args.migrate_layout:
-        parser.error("--verify-only cannot be combined with --migrate-layout")
+    if sum((args.verify_only, args.migrate_layout, args.rebuild)) > 1:
+        parser.error("--verify-only, --migrate-layout, and --rebuild are mutually exclusive")
     source, output = args.source.resolve(), args.output.absolute()
     if output == source or source in output.parents or output in source.parents:
         parser.error("Output and source must be separate, non-nested directories")
     try:
         files, summary = build_output(source, args.split_seed, args.validation_fraction)
-        if output.exists():
+        if args.rebuild:
+            digest = write_output(output, files, rebuild=True)
+            action = "rebuilt_and_verified"
+        elif output.exists():
             if args.migrate_layout and not (output / "validation_set").exists():
                 legacy, _ = build_output(source, args.split_seed, validation_fraction=0)
                 digest = migrate_output(output, files, legacy)
@@ -629,21 +684,11 @@ def main() -> None:
         elif args.verify_only:
             raise ValueError(f"Output does not exist: {output}")
         else:
-            output.parent.mkdir(parents=True, exist_ok=True)
-            # A failed generation/verification cannot leave a partial target dataset.
-            with tempfile.TemporaryDirectory(prefix=f".{output.name}.build-", dir=output.parent) as temp:
-                staging = Path(temp) / "dataset"
-                staging.mkdir()
-                for name, content in files.items():
-                    target = staging / name
-                    target.parent.mkdir(parents=True, exist_ok=True)
-                    target.write_bytes(content)
-                digest = verify_output(staging, files)
-                staging.rename(output)
+            digest = write_output(output, files)
             action = "created_and_verified"
     except (OSError, ValueError, KeyError) as error:
         parser.exit(1, f"Preprocessing failed: {error}\n"
-                       "Existing output is never overwritten; use a new --output path for changed inputs.\n")
+                       "Use --rebuild to replace a stale export, or choose a new --output path.\n")
     print(json.dumps({"action": action, "output": str(output),
                       "pair_instances": summary["output"]["pair_instances"],
                       "train_instances": summary["split"]["instances"]["train_set"],
@@ -651,6 +696,7 @@ def main() -> None:
                       "test_instances": summary["split"]["instances"]["test_set"],
                       "split_seed": args.split_seed,
                       "validation_fraction": args.validation_fraction,
+                      "encoding_shape": [PATH_CHANNEL + 1, HEIGHT, WIDTH],
                       "verified_files": len(files), "dataset_sha256": digest}, indent=2))
 
 

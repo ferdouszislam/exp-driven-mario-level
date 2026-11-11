@@ -14,8 +14,9 @@ import torch
 from torch import Tensor
 from torch.utils.data import Dataset
 
+# Input dimensions belong to the shared preprocessed dataset schema.
+INPUT_SHAPE = (22, 16, 176)
 
-INPUT_SHAPE = (22, 16, 192)
 TILE_SYMBOLS = ["X", "S", "-", "%", "t", "T", "o", "Q", "@", "U", "L", "1", "2", "g", "k", "r", "K", "R", "y", "#", "|"]
 
 
@@ -66,7 +67,10 @@ def _check_channels(channels: dict) -> None:
         or [channel.get("symbol") for channel in saved] != expected_symbols
         or saved[21].get("name") != "PATH"
     ):
-        raise ValueError("channels.json does not describe the specified 22-channel tile/path encoding")
+        raise ValueError(
+            f"channels.json must describe uint8 {INPUT_SHAPE} tile/path encoding; "
+            "regenerate the dataset with preprocess_dataset.py to drop the first 16 columns"
+        )
 
 
 def load_training_data(root: Path, max_samples: int | None, seed: int) -> TrainingData:

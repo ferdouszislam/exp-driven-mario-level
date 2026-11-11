@@ -1,16 +1,59 @@
 """Check validation grouping and safe migration of the source-derived export."""
 
 import ast
+import io
 import json
 from pathlib import Path
 import random
 import tempfile
 import unittest
+from unittest.mock import patch
+
+import numpy as np
 
 from preprocess_dataset import (
-    DEFAULT_SOURCE, PROJECT_ROOT, assign_splits, assign_validation_split,
-    build_output, collect_pairs, migrate_output, split_training_groups, verify_output,
+    DEFAULT_SOURCE, PROJECT_ROOT, TILE_TO_ID, assign_splits, assign_validation_split,
+    build_output, collect_pairs, load_playthrough, migrate_output, split_training_groups,
+    verify_output, write_output,
 )
+
+
+class CropTests(unittest.TestCase):
+    def test_tiles_and_paths_share_crop_and_boundary_coordinates(self):
+        participant = "00000000-0000-0000-0000-000000000000"
+        rows = ["X" * 16 + "o" + "-" * 174 + "S" for _ in range(16)]
+        result = {
+            "trace": [[255, 8], [256, 8], [272, 24], [3071, 248],
+                      [3072, 8], [-1, 8], [256, 7], [256, 264]],
+            "status": "WIN", "completing-ratio": 1.0,
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            source = Path(temporary)
+            (source / "levels").mkdir()
+            (source / "res").mkdir()
+            level = source / "levels/lvl0.lvl"
+            level.write_text("\n".join(rows) + "\n")
+            (source / f"res/{participant}_lvl0.json").write_text(json.dumps(result))
+            hashes = {}
+            play = load_playthrough(source, participant, "lvl0", hashes)
+            self.assertEqual(level.read_text().splitlines(), rows)
+            self.assertEqual(play.tile_text.decode().splitlines(), [row[16:] for row in rows])
+            encoding = np.load(io.BytesIO(play.encoding), allow_pickle=False)
+            self.assertEqual(encoding.shape, (22, 16, 176))
+            self.assertTrue(np.all(encoding[TILE_TO_ID["o"], :, 0] == 1))
+            self.assertTrue(np.all(encoding[TILE_TO_ID["S"], :, -1] == 1))
+            expected_mask = np.zeros((16, 176), dtype=np.uint8)
+            expected_mask[0, 0] = expected_mask[1, 1] = expected_mask[15, 175] = 1
+            np.testing.assert_array_equal(encoding[21], expected_mask)
+            self.assertEqual(play.path_text.decode().splitlines(), [
+                "".join("P" if cell else "x" for cell in row) for row in expected_mask
+            ])
+            self.assertEqual(play.stats["valid_samples"], 3)
+            self.assertEqual(play.stats["cropped_prefix_samples"], 1)
+            self.assertEqual(play.stats["out_of_grid_samples"], 4)
+            self.assertEqual(play.stats["outside_export_samples"], 5)
+            self.assertEqual(play.stats["visited_cells"], 3)
+            self.assertEqual(hashes["levels/lvl0.lvl"]["bytes"], len(level.read_bytes()))
 
 
 class ValidationSplitTests(unittest.TestCase):
@@ -96,6 +139,46 @@ class MigrationTests(unittest.TestCase):
             self.assertFalse((root / "validation_set").exists())
             self.assertEqual((root / "manifest.json").read_bytes(), self.legacy["manifest.json"])
             self.assertEqual((root / name).read_bytes(), b"changed\n")
+
+
+class RebuildTests(unittest.TestCase):
+    def test_rebuild_verifies_staging_before_replacing_old_export(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "export"
+            root.mkdir()
+            (root / "old.npy").write_bytes(b"old data")
+            (root / "old.png").write_bytes(b"old preview")
+            expected = {"train_set/pair/ranking.txt": b"a\nb\n"}
+            with patch("preprocess_dataset.verify_output", side_effect=ValueError("failed")):
+                with self.assertRaisesRegex(ValueError, "failed"):
+                    write_output(root, expected, rebuild=True)
+            self.assertEqual((root / "old.npy").read_bytes(), b"old data")
+            with patch("preprocess_dataset.verify_output", return_value="verified"):
+                self.assertEqual(write_output(root, expected, rebuild=True), "verified")
+            self.assertEqual((root / "train_set/pair/ranking.txt").read_bytes(), b"a\nb\n")
+            self.assertFalse((root / "old.npy").exists())
+            self.assertFalse((root / "old.png").exists())
+            with self.assertRaisesRegex(ValueError, "already exists"):
+                write_output(root, expected)
+
+    def test_rebuild_restores_existing_export_if_install_fails(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary) / "export"
+            root.mkdir()
+            (root / "old.npy").write_bytes(b"old data")
+            rename = Path.rename
+
+            def fail_install(path, target):
+                if path.name == "dataset":
+                    raise OSError("install failed")
+                return rename(path, target)
+
+            with patch("preprocess_dataset.verify_output", return_value="verified"), \
+                    patch.object(Path, "rename", fail_install):
+                with self.assertRaisesRegex(OSError, "install failed"):
+                    write_output(root, {"new.txt": b"new data"}, rebuild=True)
+            self.assertEqual((root / "old.npy").read_bytes(), b"old data")
+            self.assertEqual(list(Path(temporary).iterdir()), [root])
 
 
 if __name__ == "__main__":

@@ -1,24 +1,26 @@
 # CNN-VAE + Pairwise FC-Tail Architecture Specification
 
-This document specifies the network architecture for implementing the proposed Mario level generation model. It retains the original **shared CNN-VAE** and **concatenated-latent FC-Tail** approach.
+This document specifies the current `initial_model_architecture_crop16` network. It retains the original **shared CNN-VAE** and **concatenated-latent FC-Tail** approach, with dimensions updated for the 176-column export after preprocessing removes the first 16 source columns from both tiles and paths.
 
 ## 1. CNN Encoder
 
-**Input:** `(batch_size, 22, 16, 192)` in channels-first (NCHW) format.
+**Input:** `(batch_size, 22, 16, 176)` in channels-first (NCHW) format.
+
+Each level has **16 rows × 176 columns** after tiles and paths are cropped to source columns `16:192`. This gives **2,816 grid cells** and **61,952 binary channel values** per playthrough.
 
 | Layer | In → Out channels | Kernel | Stride | Padding | Output shape (C × H × W) |
 |---|---|---|---|---|---|
-| Conv2D 1 | 22 → 32 | 4×4 | 2 | 1 | 32 × 8 × 96 |
-| Conv2D 2 | 32 → 64 | 4×4 | 2 | 1 | 64 × 4 × 48 |
-| Conv2D 3 | 64 → 128 | 4×4 | 2 | 1 | 128 × 2 × 24 |
-| Conv2D 4 | 128 → 128 | 4×4 | 2 | 1 | 128 × 1 × 12 |
-| Flatten | — | — | — | — | 1,536 |
-| FC | 1,536 → 128 | — | — | — | 128 |
+| Conv2D 1 | 22 → 32 | 4×4 | 2 | 1 | 32 × 8 × 88 |
+| Conv2D 2 | 32 → 64 | 4×4 | 2 | 1 | 64 × 4 × 44 |
+| Conv2D 3 | 64 → 128 | 4×4 | 2 | 1 | 128 × 2 × 22 |
+| Conv2D 4 | 128 → 128 | 4×4 | 2 | 1 | 128 × 1 × 11 |
+| Flatten | — | — | — | — | 1,408 |
+| FC | 1,408 → 128 | — | — | — | 128 |
 | FC (μ) | 128 → 32 | — | — | — | 32 |
 | FC (log σ²) | 128 → 32 | — | — | — | 32 |
 
 - **Activation:** LeakyReLU with negative slope `0.2` after each convolution and after the 128-unit fully connected layer.
-- **Normalization:** GroupNorm after each convolution, before LeakyReLU. The number of groups is not specified; select a valid value dividing each channel count.
+- **Normalization:** GroupNorm after each convolution, before LeakyReLU. The implementation uses 8 groups, a valid divisor of every normalized channel count.
 - **Max pooling:** None. The strided convolutions perform downsampling.
 - **Latent dimension:** `32`.
 - **VAE sampling (reparameterization):** `z = μ + exp(0.5 * log_var) * ε`, with `ε ~ N(0, I)`.
@@ -30,17 +32,17 @@ This document specifies the network architecture for implementing the proposed M
 
 | Layer | In → Out channels | Kernel | Stride | Padding | Output shape (C × H × W) |
 |---|---|---|---|---|---|
-| FC | 32 → 1,536 | — | — | — | 1,536 |
-| Reshape | — | — | — | — | 128 × 1 × 12 |
-| ConvTranspose2D 1 | 128 → 128 | 4×4 | 2 | 1 | 128 × 2 × 24 |
-| ConvTranspose2D 2 | 128 → 64 | 4×4 | 2 | 1 | 64 × 4 × 48 |
-| ConvTranspose2D 3 | 64 → 32 | 4×4 | 2 | 1 | 32 × 8 × 96 |
-| ConvTranspose2D 4 | 32 → 22 | 4×4 | 2 | 1 | 22 × 16 × 192 |
+| FC | 32 → 1,408 | — | — | — | 1,408 |
+| Reshape | — | — | — | — | 128 × 1 × 11 |
+| ConvTranspose2D 1 | 128 → 128 | 4×4 | 2 | 1 | 128 × 2 × 22 |
+| ConvTranspose2D 2 | 128 → 64 | 4×4 | 2 | 1 | 64 × 4 × 44 |
+| ConvTranspose2D 3 | 64 → 32 | 4×4 | 2 | 1 | 32 × 8 × 88 |
+| ConvTranspose2D 4 | 32 → 22 | 4×4 | 2 | 1 | 22 × 16 × 176 |
 
 - **Activation:** LeakyReLU with negative slope `0.2` after the first three transposed convolutional layers.
 - **Normalization:** GroupNorm after the first three transposed convolutions, before LeakyReLU.
 - **Final output:** 22-channel **logits** (no final sigmoid in the model when using `BCEWithLogitsLoss`).
-- **Reconstruction loss:** Binary cross-entropy across all 22 channels, consistent with the proposal.
+- **Reconstruction loss:** Binary cross-entropy across all 22 channels and all 16×176 grid positions, consistent with the proposal.
 - **Max pooling/unpooling:** None.
 - The decoder is shared between both playthroughs.
 
@@ -65,7 +67,7 @@ This document specifies the network architecture for implementing the proposed M
 ## 4. Overall Architecture
 
 ```text
-Input A: (22, 16, 192)              Input B: (22, 16, 192)
+Input A: (22, 16, 176)              Input B: (22, 16, 176)
           |                                    |
           v                                    v
      SHARED CNN ENCODER                  SHARED CNN ENCODER
@@ -84,8 +86,9 @@ Input A: (22, 16, 192)              Input B: (22, 16, 192)
           v           |            |           v
      SHARED CNN       |            |      SHARED CNN
        DECODER        |            |        DECODER
-     FC 1536          |            |      FC 1536
+     FC 1408          |            |      FC 1408
      Reshape          |            |      Reshape
+     128 x 1 x 11     |            |      128 x 1 x 11
      Deconv 128       |            |      Deconv 128
      Deconv 64        |            |      Deconv 64
      Deconv 32        |            |      Deconv 32
@@ -93,7 +96,7 @@ Input A: (22, 16, 192)              Input B: (22, 16, 192)
           |           |            |           |
           v           +-----+------+           v
   Reconstructed A           |          Reconstructed B
-   (22, 16, 192)            v           (22, 16, 192)
+   (22, 16, 176)            v           (22, 16, 176)
                       Concatenate
                        [z_A; z_B]
                           64
@@ -121,3 +124,5 @@ Input A: (22, 16, 192)              Input B: (22, 16, 192)
 - **Joint training loss from the proposal:** `L = λ_rec * L_rec + λ_KL * L_KL + λ_rank * BCE(p(z_A, z_B), y)`.
 
 **Status:** These layer dimensions are proposed starting hyperparameters, not exact configurations claimed to be taken from a cited paper.
+
+The encoder widths are `176 → 88 → 44 → 22 → 11`; the decoder reverses those widths to produce exactly 176 columns without interpolation; all convolutions use the padding value 1 shown above. New checkpoints record `input_shape=[22,16,176]`, `encoded_shape=[128,1,11]`, `flattened_features=1408`, `source_width=192`, and `dropped_leading_columns=16`. The model has **1,117,591 trainable parameters**. Earlier 192-column checkpoints require their original model definition because their fully connected layers use 1,536 features.

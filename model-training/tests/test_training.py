@@ -147,10 +147,10 @@ class TrainingTests(unittest.TestCase):
         finally:
             for handle in handles:
                 handle.remove()
-        self.assertEqual(encoder_calls, [(id(model.encoder_convs), (2, 128, 1, 12))] * 2)
+        self.assertEqual(encoder_calls, [(id(model.encoder_convs), (2, 128, 1, 11))] * 2)
         self.assertEqual(decoder_calls, [(id(model.decoder_convs), (2, *INPUT_SHAPE))] * 2)
-        encoder_shapes = [(32, 8, 96), (64, 4, 48), (128, 2, 24), (128, 1, 12)]
-        decoder_shapes = [(128, 2, 24), (64, 4, 48), (32, 8, 96), INPUT_SHAPE]
+        encoder_shapes = [(32, 8, 88), (64, 4, 44), (128, 2, 22), (128, 1, 11)]
+        decoder_shapes = [(128, 2, 22), (64, 4, 44), (32, 8, 88), INPUT_SHAPE]
         encoder_layers = [m for m in model.encoder_convs if isinstance(m, nn.Conv2d)]
         decoder_layers = [m for m in model.decoder_convs if isinstance(m, nn.ConvTranspose2d)]
         self.assertEqual(encoder_stages,
@@ -162,10 +162,10 @@ class TrainingTests(unittest.TestCase):
             self.assertEqual(tuple(output[f"mu_{side}"].shape), (2, 32))
             self.assertEqual(tuple(output[f"log_var_{side}"].shape), (2, 32))
         for decoder_input, side in zip(decoder_inputs, ("a", "b"), strict=True):
-            projected = model.decoder_projection(output[f"z_{side}"]).reshape(2, 128, 1, 12)
+            projected = model.decoder_projection(output[f"z_{side}"]).reshape(2, 128, 1, 11)
             torch.testing.assert_close(decoder_input, projected)
         self.assertEqual(tuple(output["rank_logits"].shape), (2,))
-        self.assertEqual(sum(p.numel() for p in model.parameters()), 1_138_199)
+        self.assertEqual(sum(p.numel() for p in model.parameters()), 1_117_591)
         self.assertEqual([(m.in_channels, m.out_channels) for m in encoder_layers],
                          [(22, 32), (32, 64), (64, 128), (128, 128)])
         self.assertEqual([(m.in_channels, m.out_channels) for m in decoder_layers],
@@ -179,11 +179,11 @@ class TrainingTests(unittest.TestCase):
                          [nn.Conv2d, nn.GroupNorm, nn.LeakyReLU] * 4)
         self.assertEqual([type(m) for m in model.decoder_convs],
                          [nn.ConvTranspose2d, nn.GroupNorm, nn.LeakyReLU] * 3 + [nn.ConvTranspose2d])
-        self.assertEqual(model.encoder_hidden[1].in_features, 1_536)
+        self.assertEqual(model.encoder_hidden[1].in_features, 1_408)
         self.assertEqual(model.encoder_hidden[1].out_features, 128)
         self.assertIsInstance(model.encoder_hidden[2], nn.LeakyReLU)
         self.assertEqual(model.decoder_projection.in_features, 32)
-        self.assertEqual(model.decoder_projection.out_features, 1_536)
+        self.assertEqual(model.decoder_projection.out_features, 1_408)
         self.assertIsInstance(model.decoder_projection, nn.Linear)
         self.assertEqual(
             [type(module) for module in model.fc_tail],
@@ -196,9 +196,12 @@ class TrainingTests(unittest.TestCase):
         self.assertEqual([module.p for module in model.fc_tail if isinstance(module, nn.Dropout)],
                          [0.1])
         metadata = architecture_metadata()
-        self.assertEqual(metadata["architecture_version"], "initial_model_architecture")
-        self.assertEqual(metadata["encoded_shape"], [128, 1, 12])
-        self.assertEqual(metadata["flattened_features"], 1_536)
+        self.assertEqual(metadata["architecture_version"], "initial_model_architecture_crop16")
+        self.assertEqual(metadata["input_shape"], [22, 16, 176])
+        self.assertEqual(metadata["source_width"], 192)
+        self.assertEqual(metadata["dropped_leading_columns"], 16)
+        self.assertEqual(metadata["encoded_shape"], [128, 1, 11])
+        self.assertEqual(metadata["flattened_features"], 1_408)
         self.assertEqual(metadata["stride"], [2, 2])
         self.assertEqual(metadata["encoder_output_shapes"], [list(shape) for shape in encoder_shapes])
         self.assertEqual(metadata["decoder_output_shapes"], [list(shape) for shape in decoder_shapes])
@@ -337,7 +340,7 @@ class TrainingTests(unittest.TestCase):
         data = load_training_data(self.root, None, 42)
         model = PairwiseCNNVAE()
         hp = Hyperparameters(1e-3, 1.0, 0.001, 1.0)
-        cases = (("all_match", 0.0), ("four_mismatches", 4 / (2 * 4 * 16 * 192)),
+        cases = (("all_match", 0.0), ("four_mismatches", 4 / (2 * 4 * INPUT_SHAPE[1] * INPUT_SHAPE[2])),
                  ("all_different", 1.0))
         for scenario, expected_distance in cases:
             with self.subTest(scenario=scenario):
@@ -419,6 +422,33 @@ class TrainingTests(unittest.TestCase):
         self.assertEqual(data.available_comparisons, 4)
         self.assertEqual(len(data.entries), 4)
         self.assertTrue(any(path.suffix == ".npy" for path in opened))
+
+    def test_old_full_width_exports_are_rejected_without_cropping_again(self) -> None:
+        channels_path = self.root / "channels.json"
+        channels = json.loads(channels_path.read_text(encoding="utf-8"))
+        channels["shape"] = [22, 16, 192]
+        channels_path.write_text(json.dumps(channels), encoding="utf-8")
+        with self.assertRaisesRegex(ValueError, "regenerate the dataset"):
+            load_training_data(self.root, None, 42)
+
+        channels["shape"] = list(INPUT_SHAPE)
+        channels_path.write_text(json.dumps(channels), encoding="utf-8")
+        path = self.root / self.source_entries[0]["playthroughs"][0]["files"]["encoding"]
+        full_width = np.zeros((22, 16, 192), dtype=np.uint8)
+        full_width[2] = 1
+        np.save(path, full_width, allow_pickle=False)
+        with self.assertRaisesRegex(ValueError, r"Expected uint8 \(22, 16, 176\)"):
+            load_training_data(self.root, None, 42)
+
+        cropped = full_width[:, :, 16:].copy()
+        cropped[21, 0, 0] = 1
+        cropped[21, -1, -1] = 1
+        np.save(path, cropped, allow_pickle=False)
+        data = load_training_data(self.root, None, 42)
+        loaded = data.tensors[path.relative_to(self.root).as_posix()]
+        np.testing.assert_array_equal(loaded.numpy(), cropped)
+        with self.assertRaisesRegex(ValueError, "Expected input shape"):
+            PairwiseCNNVAE().encode(torch.zeros(1, 22, 16, 192))
 
     def test_saved_validation_is_loaded_whole_alongside_capped_training(self) -> None:
         expected_validation = self._save_validation_entry()
@@ -554,7 +584,7 @@ class TrainingTests(unittest.TestCase):
                 self.assertEqual(checkpoint["epoch"], preview["epoch"])
                 self.assertEqual(checkpoint["config"]["combination_id"], "combination_01")
                 architecture = checkpoint["config"]["architecture"]
-                self.assertEqual(architecture["architecture_version"], "initial_model_architecture")
+                self.assertEqual(architecture["architecture_version"], "initial_model_architecture_crop16")
                 self.assertEqual(architecture["normalization"], "GroupNorm")
                 self.assertEqual(architecture["dropout"], 0.1)
                 self.assertEqual(architecture["dropout_after_fc_layers"], [1])
@@ -572,6 +602,9 @@ class TrainingTests(unittest.TestCase):
                 for portion in ("optimization", "train", "validation"):
                     self.assertEqual(actual[portion], expected[portion])
             report = (output / "REPORT.md").read_text(encoding="utf-8")
+            self.assertIn("initial_model_architecture_crop16", report)
+            self.assertIn("(22, 16, 176)", report)
+            self.assertIn("drops the first 16 columns", report)
             for preview in previews:
                 self.assertIn(f"{directory_name}/{preview['comparison_image']}", report)
                 self.assertIn(f"{directory_name}/{preview['checkpoint']}", report)

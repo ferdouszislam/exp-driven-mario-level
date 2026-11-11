@@ -1,55 +1,65 @@
 # Preprocessing Mario-Fun-Study for pairwise fun comparisons
 
-[`preprocess_dataset.py`](preprocess_dataset.py) converts the supplied cleaned human annotations into comparison folders. It first assigns an 80/20 training/test split, then holds out 20% of that training portion in `validation_set/`, using the same whole-group method as [`train.py`](../../model-training/train.py). Each folder holds two complete tile grids, their participant-specific path masks, their multi-hot NumPy arrays, and a two-line preference file. The full dataset audit and paper discrepancies are documented in [`dataset-explained.md`](dataset-explained.md).
+[`preprocess_dataset.py`](preprocess_dataset.py) converts the supplied cleaned human annotations into comparison folders. It first assigns an 80/20 training/test split, then holds out 20% of that training portion in `validation_set/`, using the same whole-group method as [`train.py`](../../model-training/train.py). Each folder holds two cropped tile grids, their participant-specific path masks, their multi-hot NumPy arrays, and a two-line preference file. The first 16 source columns are removed from both tiles and paths, leaving 176 columns. The full dataset audit and paper discrepancies are documented in [`dataset-explained.md`](dataset-explained.md).
 
 The source is `Mario-Fun-Study/exp_data/survey_data/formal/` and the default output is `preprocessed_dataset/`. Run the commands below from this project directory.
 
 ## Setup and reproduction
 
-Use Python 3.11 or newer; this export was generated and checked with Python 3.14.7. The whole project uses one root `.venv` and one [requirements.txt](requirements.txt). Create the environment once, then install the shared dependencies:
+Use Python 3.11 or newer; this export was generated and checked with Python 3.14.7. Reuse the repository-root `.venv` with the preprocessing [requirements.txt](requirements.txt). Create the environment once from the repository root, then install these dependencies:
 
 ```bash
 python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python -m pip install -r datasets/fun-study-dataset-analysis/requirements.txt
 ```
 
-The dependency file pins `numpy==2.3.4` and `Pillow==12.0.0` for preprocessing and image rendering. If `.venv` already exists, reuse it and run the installation command above; no separate environment is needed for either script.
+Subsequent short script commands run from `datasets/fun-study-dataset-analysis/` and address the root interpreter as `../../.venv/bin/python`. The dependency file pins `numpy==2.3.4` and `Pillow==12.0.0` for preprocessing and image rendering. If `.venv` already exists, reuse it and run the installation command above; no separate environment is needed for either script.
 
 Generate the dataset with the default split seed, `42`:
 
 ```bash
-.venv/bin/python preprocess_dataset.py
+../../.venv/bin/python preprocess_dataset.py
 ```
 
 Verify the generated files against the source annotations, maps, and human paths:
 
 ```bash
-.venv/bin/python preprocess_dataset.py --verify-only
+../../.venv/bin/python preprocess_dataset.py --verify-only
 ```
 
 Choose another output directory when needed:
 
 ```bash
-.venv/bin/python preprocess_dataset.py --output my_preprocessed_dataset
-.venv/bin/python preprocess_dataset.py --output my_preprocessed_dataset --verify-only
+../../.venv/bin/python preprocess_dataset.py --output my_preprocessed_dataset
+../../.venv/bin/python preprocess_dataset.py --output my_preprocessed_dataset --verify-only
 ```
 
 Use the same seed when generating and verifying another split:
 
 ```bash
-.venv/bin/python preprocess_dataset.py --split-seed 7 --output dataset_seed7
-.venv/bin/python preprocess_dataset.py --split-seed 7 --output dataset_seed7 --verify-only
+../../.venv/bin/python preprocess_dataset.py --split-seed 7 --output dataset_seed7
+../../.venv/bin/python preprocess_dataset.py --split-seed 7 --output dataset_seed7 --verify-only
 ```
 
 `--source` can select another copy of the formal study directory. The source and output must be separate directories, with neither nested inside the other. With no flags, their locations are resolved relative to the script, so the defaults also work when invoked from another directory.
 
-An existing output is validated against the expected source-derived contents and split seed. An identical rerun leaves it in place; a mismatch fails instead of overwriting it. Use a new output directory when intentionally changing inputs or preprocessing policy.
+An existing output is validated against the expected source-derived contents and split seed. An identical rerun leaves it in place; a mismatch fails instead of overwriting it. Use a new output directory when intentionally changing inputs or preprocessing policy, or explicitly rebuild the existing export as described below.
 
-To add validation to an existing train/test export, or migrate an earlier flat export, run once:
+To recalculate an existing 192-column export with the current 16-column crop, run from the repository root:
 
 ```bash
-.venv/bin/python preprocess_dataset.py --migrate-layout
-.venv/bin/python preprocess_dataset.py --verify-only
+.venv/bin/python datasets/fun-study-dataset-analysis/preprocess_dataset.py --rebuild
+.venv/bin/python datasets/fun-study-dataset-analysis/preprocess_dataset.py --verify-only
+.venv/bin/python datasets/fun-study-dataset-analysis/encoding_to_level_image.py dataset
+```
+
+`--rebuild` constructs and verifies the new export in a temporary sibling directory before replacing the selected output. It regenerates all three splits from source with the requested seeds and fractions. Old PNG previews are discarded and can be recreated with the renderer. The default seeds preserve comparison memberships and rankings; the crop changes the tile/path files, tensors, and their metadata.
+
+To add validation to an existing export that already uses the current crop, or migrate its earlier flat layout, run once:
+
+```bash
+../../.venv/bin/python preprocess_dataset.py --migrate-layout
+../../.venv/bin/python preprocess_dataset.py --verify-only
 ```
 
 Migration first checks all existing comparison files against content reconstructed from the source. For a train/test export it moves only the selected training folders into `validation_set/` and updates the global metadata. The seven files inside each comparison folder keep their contents, and the test split keeps its membership and contents. Use `--output` and `--split-seed` with migration when selecting a different output path or seed. Normal generation does not silently migrate an existing export.
@@ -63,8 +73,8 @@ From the repository root, run the dataset preparation script with:
 Use `--validation-fraction 0.2` for the default 80/20 split of the original training portion. For a different ratio, supply the same fraction during generation and verification, for example:
 
 ```bash
-.venv/bin/python preprocess_dataset.py --validation-fraction 0.1 --output dataset_val10
-.venv/bin/python preprocess_dataset.py --validation-fraction 0.1 --output dataset_val10 --verify-only
+../../.venv/bin/python preprocess_dataset.py --validation-fraction 0.1 --output dataset_val10
+../../.venv/bin/python preprocess_dataset.py --validation-fraction 0.1 --output dataset_val10 --verify-only
 ```
 
 `--validation-fraction 0` retains the earlier train/test-only layout.
@@ -129,11 +139,11 @@ Each instance contains **seven core data files**, plus two PNGs after preview ge
 
 | File | Contents |
 |---|---|
-| `<level>.tiles.txt` | 16 rows of 192 literal tile characters; the static source map |
-| `<level>.path.txt` | 16 rows of 192 characters: `P` for a visited path-marker cell and `x` otherwise |
-| `<level>.npy` | A `uint8` multi-hot array with shape `(22, 16, 192)` |
+| `<level>.tiles.txt` | 16 rows of 176 literal tile characters; source columns `16:192` |
+| `<level>.path.txt` | 16 rows of 176 characters: `P` for a visited path-marker cell and `x` otherwise |
+| `<level>.npy` | A `uint8` multi-hot array with shape `(22, 16, 176)` |
 | `ranking.txt` | Two concrete level IDs, one per line, preferred first |
-| `<level>.png` | Optional 3072×256 preview of the corresponding encoding, including black X path markers at the default scale |
+| `<level>.png` | Optional 2816×256 preview of the corresponding encoding, including black X path markers at the default scale |
 
 Generate the previews using the [existing renderer](ENCODING_TO_LEVEL_IMAGE.md). From the repository root, run:
 
@@ -154,22 +164,22 @@ The path belongs to the participant who submitted that comparison. If another pa
 
 Folder numbers are the one-based data-row positions in the cleaned source CSVs, before exclusions. Experiment I numbering therefore has gaps. Each Experiment II row keeps its number across its three `pair1`–`pair3` folders.
 
-The 726 NumPy files contain approximately 49 MB of array data in total. Repeated appearances are deliberately stored within their comparison folders for self-contained loading.
+The 726 NumPy files contain approximately 45 MB of array data in total. Repeated appearances are deliberately stored within their comparison folders for self-contained loading.
 
 ## Tile and path encoding
 
-The grids preserve all **192 stored columns**, including the starting segment. Rows increase downward and columns increase rightward from the upper-left origin. No crop is applied.
+The source grids have **192 columns**. The export drops the first **16 columns** from every map, retaining source columns `16:192` as **176 exported columns**. The same crop applies to the path mask. Exported column 0 corresponds to source column 16, or source x = 256 pixels. Rows increase downward and columns increase rightward from the cropped upper-left origin; source maps and trace coordinates remain unchanged.
 
 Each human trace contains ordered pixel positions `[x, y]`. Each sampled position maps to:
 
 ```text
-column = floor(x / 16)
+column = floor(x / 16) - 16
 row    = floor((y - 8) / 16)
 ```
 
-This follows the repository's drawn trace-marker convention. A sample marks its cell only if `0 <= row < 16` and `0 <= column < 192`. Out-of-grid samples are counted and skipped; they are not clipped onto border cells. The converter does not interpolate between samples. Repeated visits set the same bit again.
+This follows the repository's drawn trace-marker convention. A sample marks its cell only if `0 <= row < 16` and `0 <= column < 176`. Samples in the removed prefix and out-of-grid samples are counted and skipped; they are not clipped onto border cells. The converter does not interpolate between samples. Repeated visits set the same bit again.
 
-In this export's 450 unique playthroughs, **1,903 of 764,548 recorded samples** fall outside the grid, across **203 playthroughs**. These counts are reported once per unique playthrough in `summary.json`, rather than being inflated by repeated item appearances.
+In this export's 450 unique playthroughs, **1,903 of 764,548 recorded samples** fall outside the original 192-column source grid, across **203 playthroughs**. `out_of_grid_samples` retains that source-frame meaning. `cropped_prefix_samples` separately counts **83,908** otherwise-valid samples removed with columns 0–15; `outside_export_samples` is **85,811**, their sum with the original out-of-grid count. The cropped export retains **678,737 valid samples** across **153,653 visited cells**. `valid_samples` and `visited_cells` refer to that cropped frame. These counts are reported once per unique playthrough in `summary.json`, rather than being inflated by repeated item appearances.
 
 The path text is a binary occupancy mask: it discards sample order, repeated visits, duration, actions, and any path outside the stored grid. Original ordered positions remain available in the source `formal/res/` files and are linked through the manifest. A `P` identifies the recorded marker cell, not Mario's full collision footprint.
 
@@ -227,12 +237,12 @@ preferred, other = (instance / "ranking.txt").read_text().splitlines()
 preferred_array = np.load(instance / f"{preferred}.npy", allow_pickle=False)
 other_array = np.load(instance / f"{other}.npy", allow_pickle=False)
 
-assert preferred_array.shape == other_array.shape == (22, 16, 192)
+assert preferred_array.shape == other_array.shape == (22, 16, 176)
 assert preferred_array.dtype == other_array.dtype == np.uint8
 assert np.all(preferred_array[:21].sum(axis=0) == 1)
 assert set(np.unique(preferred_array)).issubset({0, 1})
 
-path_mask = preferred_array[21]   # (16, 192), one at recorded path cells
+path_mask = preferred_array[21]   # (16, 176), one at recorded path cells
 tile_channels = preferred_array[:21]
 ```
 
@@ -244,7 +254,7 @@ The five root JSON files describe the export:
 
 | File | Purpose |
 |---|---|
-| `channels.json` | Exact channel order, tile meanings, shape, dtype, and path text symbols |
+| `channels.json` | Exact channel order, tile meanings, exported/source shapes, crop, dtype, and path text symbols |
 | `manifest.json` | `instances` list with split assignments, relative paths, comparison-to-source mapping, participant identities, original annotation groups, and concrete level/playthrough references |
 | `summary.json` | Counts, split details, path statistics, preprocessing policies, script hash, and NumPy version |
 | `excluded_comparisons.json` | Original Experiment I rows excluded because their label was `E` or `N` |
@@ -252,11 +262,11 @@ The five root JSON files describe the export:
 
 Verification checks the expected core folder/file inventory and reconstructs the expected content from source. It compares tile and path text, preference order, and loaded NumPy arrays, including their shape, dtype, binary values, and tile/path consistency. It also checks global metadata and source hashes. Optional PNG counterparts of expected `.npy` files are allowed alongside the core files; unrelated extra files are rejected. PNGs are excluded from the core dataset digest. Their rendered pixels can be validated separately against a fresh render of each encoding; `--verify-only` checks the core data and permits these preview files. It requires an existing export and performs no generation.
 
-The script reports `created_and_verified` after a new export, `migrated_and_verified` after moving a checked flat export, or `verified_existing` after a matching rerun or verification. It also reports the train/test counts, seed, core file count, and core dataset SHA-256. This export contains **2,546 core files**: `363 × 7` instance files plus five root metadata files. With all 726 PNG previews, the directory contains **3,272 files**. The recorded script hash and NumPy version are part of the expected metadata, so changing either can make a previous export fail exact verification even when the intended preprocessing policy is unchanged.
+The script reports `created_and_verified` after a new export, `rebuilt_and_verified` after an explicit rebuild, `migrated_and_verified` after moving a checked flat export, or `verified_existing` after a matching rerun or verification. It also reports the train/validation/test counts, seed, core file count, and core dataset SHA-256. This export contains **2,546 core files**: `363 × 7` instance files plus five root metadata files. With all 726 PNG previews, the directory contains **3,272 files**. The recorded script hash and NumPy version are part of the expected metadata, so changing either can make a previous export fail exact verification even when the intended preprocessing policy is unchanged.
 
 For this export, a fresh generation into another directory produced byte-identical contents across all 2,546 files. Rerunning against that existing output validated it without changing file modification times. A deliberately altered ranking file in a temporary copy was rejected by verification and left untouched. Independently reconstructed source comparisons, masks, and tensors also matched every generated instance.
 
-The split layout keeps schema version **2** for `manifest.json`; the three-way `summary.json` uses schema version **3**. Each manifest entry has `split` (`train_set`, `validation_set`, or `test_set`), `split_group_id` (its connected group), and `relative_directory` (for example, `validation_set/<instance_id>`). Its `ranking_file` and per-playthrough `files` paths are also relative to the output root. The entry selected in the loading example can be inspected directly:
+The split layout keeps schema version **2** for `manifest.json`; the cropped `summary.json` uses schema version **4**, and `channels.json` uses schema version **2** with source dimensions and crop metadata. Each manifest entry has `split` (`train_set`, `validation_set`, or `test_set`), `split_group_id` (its connected group), and `relative_directory` (for example, `validation_set/<instance_id>`). Its `ranking_file` and per-playthrough `files` paths are also relative to the output root. The entry selected in the loading example can be inspected directly:
 
 ```python
 assert entry["instance_id"] == instance.name

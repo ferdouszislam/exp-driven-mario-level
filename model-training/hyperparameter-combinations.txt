@@ -3,23 +3,7 @@
 # Only the listed rows are trained, in file order.
 # Each row uses a fresh model and the full --epochs budget.
 # Blank lines and # comments are allowed; use a dot for decimal values.
-1e-4, 1e-2, 1e-3, 1e-2
-1e-4, 1e-2, 1e-3, 1
-1e-4, 1, 1e-3, 1e-2
-1e-4, 1, 1e-3, 1
-1e-5, 1e-2, 1e-3, 1e-2
-1e-5, 1e-2, 1e-3, 1
-1e-5, 1, 1e-3, 1e-2
-1e-5, 1, 1e-3, 1
-5e-5, 1e-2, 1e-3, 1e-2
-5e-5, 1e-2, 1e-3, 1
-5e-5, 1, 1e-3, 1e-2
-5e-5, 1, 1e-3, 1
-1e-6, 1e-2, 1e-3, 1e-2
-1e-6, 1e-2, 1e-3, 1
-1e-6, 1, 1e-3, 1e-2
-1e-6, 1, 1e-3, 1
-5e-6, 1e-2, 1e-3, 1e-2
-5e-6, 1e-2, 1e-3, 1
-5e-6, 1, 1e-3, 1e-2
-5e-6, 1, 1e-3, 1
+
+
+3e-4, 0.1, 1e-4, 0.01
+

@@ -4,11 +4,11 @@ This report audits the supplied [Mario-Fun-Study](Mario-Fun-Study/) checkout aga
 
 **The dataset supports your proposed representation:** a static character grid, a separate human path mask on the same grid, and a tile-one-hot-plus-path tensor. Its supervision consists of **comparative human fun judgments**, rather than an absolute fun score assigned to every level. The correct training item is normally **a particular participant's playthrough of a particular level**.
 
-The reproducible export is now implemented in [preprocess_dataset.py](preprocess_dataset.py), with reproduction steps in [PREPROCESSING.md](PREPROCESSING.md) and generated pairs in [preprocessed_dataset/](preprocessed_dataset/). The final export uses **21 literal tile channels, omitting `b/B`, plus one path channel**. It retains 90 decisive Experiment I comparisons and expands 91 three-level rankings into 273 pairs, for **363 instance folders**. The 17 equally-fun and 17 neither-fun judgments are omitted from this export. The larger source-audit counts below still describe the complete cleaned release, before that final selection.
+The reproducible export is now implemented in [preprocess_dataset.py](preprocess_dataset.py), with reproduction steps in [PREPROCESSING.md](PREPROCESSING.md) and generated pairs in [preprocessed_dataset/](preprocessed_dataset/). The final export uses **21 literal tile channels, omitting `b/B`, plus one path channel**. It retains 90 decisive Experiment I comparisons and expands 91 three-level rankings into 273 pairs, for **363 instance folders**. The 17 equally-fun and 17 neither-fun judgments are omitted from this export. The export removes the first 16 columns from every 192-column source map and crops the participant path by the same amount, producing `(22, 16, 176)` tensors. Its default split has 232 training, 58 validation, and 73 test comparisons. The larger source-audit counts below still describe the complete cleaned release, before that final selection; source dimensions and source-coordinate path statistics remain 16×192 unless stated otherwise.
 
 ## 1. Main findings for your project
 
-- The main formal-study pool contains **930 different maps**, all **16 rows × 192 columns**. A `.lvl` file is already a plain-text character grid, so its contents can become your tile `.txt` file directly.
+- The main formal-study pool contains **930 different maps**, all **16 rows × 192 columns**. A `.lvl` file is already a plain-text character grid, and the current export retains columns `16:192` in its tile `.txt` files.
 - The supplied cleaned annotations cover **313 distinct maps** and **518 distinct participant–level playthroughs**. The remaining maps do not automatically have usable cleaned human fun supervision.
 - Player positions are ordered pixel coordinates. To match the repository's drawn path marker, use `column = floor(x / 16)` and `row = floor((y - 8) / 16)`, with the origin at the upper-left.
 - Preserve the static tile and path in separate channels. A cell has one active tile channel, plus a second active bit if the path visits it. Even an empty cell has an active empty-tile channel.
@@ -34,7 +34,7 @@ Participants could submit multiple rounds. Therefore annotation rows, participan
 
 These are the first two pair judgments in the cleaned [annotation.csv](Mario-Fun-Study/exp_data/survey_data/formal/annotation.csv). Each pair is displayed in the participant's **most-to-least fun order**; `>` means preferred in that comparison, not a global score.
 
-The images below are the dataset's released PNGs, showing static level layouts without player-path overlays. All ten example PNGs are **2816×256 pixels**, or **176×16 tiles**, whereas the corresponding stored grids are **192×16 tiles**. Their narrower width is consistent with excluding the 16-column starting segment discussed in Section 5.4. Use the complete `.lvl` grids for path alignment. Click an image to open its full resolution.
+The images below are the dataset's released PNGs, showing static level layouts without player-path overlays. All ten example PNGs are **2816×256 pixels**, or **176×16 tiles**, whereas the corresponding stored grids are **192×16 tiles**. Their narrower width is consistent with excluding the 16-column starting segment discussed in Section 5.4. Project paths in the complete `.lvl` coordinate system, then crop tiles and paths together for the current export. Click an image to open its full resolution.
 
 **Pair 1: `lvl89 > lvl134`.** Source: first data row, `ANNT=A`, participant `f1db3f62-7202-4d4f-ab26-8f7b7cb62c2a`.
 
@@ -253,7 +253,7 @@ The paper describes **11 generated 16×16 segments** (PDF p. 6), whereas the sav
 
 The exact historical concatenation operation was not found, so the buffer explanation is a supported interpretation rather than proof of every file's construction history.
 
-**For the initial conversion, keep all 192 columns.** Player x coordinates align with those stored maps. If you later remove the starting segment, crop the tile grid and mask to columns `16:192`, and convert positions with `x_new = x - 256`. Prefix positions then fall outside the cropped map. Do not remove a segment from only one modality.
+**The current export removes the first 16 columns from every level.** Raw player x coordinates align with the 192-column source maps. Cropping tiles and the path mask to columns `16:192` produces 176 columns; equivalently, use `column = floor(x / 16) - 16` or `x_new = x - 256` for the exported coordinates. Prefix positions fall outside the cropped map and are omitted from occupancy. Source files, preference labels, and split grouping remain unchanged. The source-prefix variants described above are all removed by the same fixed crop.
 
 ## 6. What the player path files contain
 
@@ -321,7 +321,7 @@ column = floor(x / 16)
 row    = floor((y - 8) / 16)
 ```
 
-This identifies one marker cell per sample. It is not a reconstruction of Mario's full body footprint, and the rendering code alone does not establish that the marker is his exact physical center.
+These are source-grid coordinates; the current exported coordinate is `column - 16` with valid columns 0–175. The source-coordinate examples and statistics in this section retain the complete 192-column frame. This identifies one marker cell per sample. It is not a reconstruction of Mario's full body footprint, and the rendering code alone does not establish that the marker is his exact physical center.
 
 For participant `f1db3f62-7202-4d4f-ab26-8f7b7cb62c2a` playing `lvl89`:
 
@@ -363,7 +363,7 @@ The paper explicitly notes that position-only traces omit gameplay events and th
 The implemented export places each preferred/less-preferred pair in its own folder:
 
 ```text
-preprocessed_dataset/<instance_id>/
+preprocessed_dataset/<train_set|validation_set|test_set>/<instance_id>/
     <preferred_level>.tiles.txt
     <preferred_level>.path.txt
     <preferred_level>.npy
@@ -373,9 +373,9 @@ preprocessed_dataset/<instance_id>/
     ranking.txt
 ```
 
-1. **Tile text:** the original 16×192 characters, one row per line, copied into each relevant instance folder.
-2. **Path-mask text:** another 16×192 grid, using `x` for unvisited and `P` for visited. It contains no tile characters. `P` is an export symbol, not a tile in the source maps.
-3. **Merged tensor:** a `(22, 16, 192)` NumPy `uint8` array per playthrough, preserving tile identity and independent path occupancy.
+1. **Tile text:** 16×176 characters, one row per line, retaining source columns `16:192` in each relevant instance folder.
+2. **Path-mask text:** an aligned 16×176 grid, using `x` for unvisited and `P` for visited. It contains no tile characters. `P` is an export symbol, not a tile in the source maps.
+3. **Merged tensor:** a `(22, 16, 176)` NumPy `uint8` array per playthrough, preserving tile identity and independent path occupancy.
 4. **Ranking text:** two level IDs, one per line, preferred first.
 
 A mask preserves *where* the player went. The ordered positions preserve *how* the player moved. The original ordered positions remain in the source `res/` files, linked by the export's manifest; no separate ordered-position file is included among the seven requested instance files. Retain those source logs for later analyses of order, backtracking, stopping, and off-grid motion.
@@ -399,7 +399,7 @@ If you include auxiliary/source maps later, deliberately handle additional alias
 Using channel-first order:
 
 ```text
-M.shape = (C_tiles + 1, 16, 192)
+M.shape = (C_tiles + 1, 16, 176)
 M[tile_id(row,column), row, column] = 1
 M[path_channel, row, column] = 1 if visited, else 0
 ```
@@ -417,7 +417,7 @@ For a model predicting this representation, the mutually exclusive tile classes 
 
 ### 8.4 Read-only encoding example
 
-This example constructs an encoding **in memory only**, using NumPy. It neither exports files nor imports the repository's GUI/Java dependencies. Run after the inventory example, which defines `BASE`.
+This example constructs the current cropped encoding **in memory only**, using NumPy. It neither exports files nor imports the repository's GUI/Java dependencies. Run after the inventory example, which defines `BASE`.
 
 ```python
 import json
@@ -435,6 +435,8 @@ def encode_playthrough(participant_id, level_id):
     height, width = len(rows), len(rows[0])
     assert (height, width) == (16, 192)
     assert all(len(line) == width for line in rows)
+    rows = [line[16:] for line in rows]
+    width = 176
     tile_ids = np.array([[TILE_TO_ID[c] for c in line] for line in rows])
     tile_one_hot = np.eye(len(TILE_VOCAB), dtype=np.uint8)[tile_ids]
     tile_one_hot = tile_one_hot.transpose(2, 0, 1)
@@ -442,7 +444,7 @@ def encode_playthrough(participant_id, level_id):
     key = f"{participant_id}_{level_id}"
     result = json.loads((BASE / "res" / f"{key}.json").read_text())
     xy = np.asarray(result["trace"], dtype=np.float64)
-    columns = np.floor(xy[:, 0] / 16).astype(np.int32)
+    columns = np.floor(xy[:, 0] / 16).astype(np.int32) - 16
     grid_rows = np.floor((xy[:, 1] - 8) / 16).astype(np.int32)
     valid = ((grid_rows >= 0) & (grid_rows < height)
              & (columns >= 0) & (columns < width))
@@ -463,11 +465,11 @@ def encode_playthrough(participant_id, level_id):
     }
 
 example = encode_playthrough("f1db3f62-7202-4d4f-ab26-8f7b7cb62c2a", "lvl89")
-assert example["multi_hot"].shape == (22, 16, 192)
-assert int(example["path_mask"].sum()) == 403
+assert example["multi_hot"].shape == (22, 16, 176)
+assert int(example["path_mask"].sum()) == 375
 assert example["tile_rows"][13][0] == "-"
 assert example["multi_hot"][TILE_TO_ID["-"], 13, 0] == 1
-assert example["multi_hot"][PATH_CHANNEL, 13, 0] == 1
+assert example["multi_hot"][PATH_CHANNEL, 13, 0] == 0
 ```
 
 ## 9. Mapping maps and paths to fun supervision
