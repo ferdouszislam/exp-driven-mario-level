@@ -1,0 +1,9 @@
+# One complete combination per line, in this column order:
+# learning_rate, lambda_rec, lambda_kl, lambda_rank
+# Only the listed rows are trained, in file order.
+# Each row uses a fresh model and the full --epochs budget.
+# Blank lines and # comments are allowed; use a dot for decimal values.
+
+
+3e-4, 0.1, 1e-4, 0.01
+

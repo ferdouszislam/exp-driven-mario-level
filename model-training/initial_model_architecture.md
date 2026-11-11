@@ -1,6 +1,6 @@
 # CNN-VAE + Pairwise FC-Tail Architecture Specification
 
-This document specifies the current `initial_model_architecture_crop16` network. It retains the original **shared CNN-VAE** and **concatenated-latent FC-Tail** approach, with dimensions updated for the 176-column export after preprocessing removes the first 16 source columns from both tiles and paths.
+This document specifies the `initial_model_architecture_crop16` network implemented in [initial_model_architecture/model.py](initial_model_architecture/model.py). Run its dedicated pipeline from [initial_model_architecture/](initial_model_architecture/README.md). It retains the original **shared CNN-VAE** and **concatenated-latent FC-Tail** approach, with dimensions updated for the 176-column export after preprocessing removes the first 16 source columns from both tiles and paths.
 
 ## 1. CNN Encoder
 

@@ -2,7 +2,7 @@
 
 This document specifies **`model_arch_2_crop16`**, the four-stage LayerNorm/ReLU architecture adapted to the 176-column export. Preprocessing removes the first 16 columns from every 192-column source level and applies the same crop to its player path. It retains the **shared CNN-VAE** and **concatenated-latent FC-Tail**, using LayerNorm, ReLU, and Dropout(0.2) after the first FC-Tail hidden layer.
 
-This is a separate architecture specification. The active [model.py](model.py) implements the GroupNorm/LeakyReLU variant `initial_model_architecture_crop16`, described in [initial_model_architecture.md](initial_model_architecture.md). Training and checkpoint previews are described in [TRAINING.md](TRAINING.md).
+The matching implementation is [model_arch_2/model.py](model_arch_2/model.py). Run the dedicated pipeline from [model_arch_2/](model_arch_2/README.md). Training and checkpoint previews are described in [TRAINING.md](TRAINING.md).
 
 ## 1. CNN Encoder
 
@@ -171,10 +171,10 @@ These counts include affine biases and LayerNorm's learned scale and shift. Each
 
 ### Checkpoint architecture metadata
 
-A matching implementation of this specification should record `architecture_version="model_arch_2_crop16"`, `input_shape=[22,16,176]`, `source_width=192`, `dropped_leading_columns=16`, `normalization="LayerNorm"`, `layer_norm_axes=["channel","height","width"]`, `stride=[2,2]`, `encoded_shape=[128,1,11]`, and `flattened_features=1408`. It should also record encoder channels `[22,32,64,128,128]` and decoder channels `[128,128,64,32,22]`.
+The matching implementation records `architecture_version="model_arch_2_crop16"`, `input_shape=[22,16,176]`, `source_width=192`, `dropped_leading_columns=16`, `normalization="LayerNorm"`, `layer_norm_axes=["channel","height","width"]`, `stride=[2,2]`, `encoded_shape=[128,1,11]`, and `flattened_features=1408`. It also records encoder channels `[22,32,64,128,128]` and decoder channels `[128,128,64,32,22]`.
 
-`encoder_layer_norm_shapes` should record `[[32,8,88],[64,4,44],[128,2,22],[128,1,11]]`, and `decoder_layer_norm_shapes` should record `[[128,2,22],[64,4,44],[32,8,88]]`. The normalization settings should be saved as `layer_norm_eps=1e-5` and `layer_norm_elementwise_affine=True`. Activation metadata should record ReLU, a linear decoder projection, dropout probability `0.2`, and dropout placement `[1]`.
+`encoder_layer_norm_shapes` records `[[32,8,88],[64,4,44],[128,2,22],[128,1,11]]`, and `decoder_layer_norm_shapes` records `[[128,2,22],[64,4,44],[32,8,88]]`. The normalization settings are saved as `layer_norm_eps=1e-5` and `layer_norm_elementwise_affine=True`. Activation metadata records ReLU, a linear decoder projection, dropout probability `0.2`, and dropout placement `[1]`.
 
-Earlier 192-column checkpoints retain their saved version labels and require their corresponding model definitions, including the original fully connected and LayerNorm shapes. Check the full normalization, channel, stride, shape, activation, and dropout metadata when choosing a matching model definition for restoration. The active `PairwiseCNNVAE` class does not implement this LayerNorm/ReLU variant.
+Earlier 192-column checkpoints retain their saved version labels and require their corresponding model definitions, including the original fully connected and LayerNorm shapes. Check the full normalization, channel, stride, shape, activation, and dropout metadata when choosing a matching model definition for restoration. Restore this variant using `PairwiseCNNVAE` from `model_arch_2/model.py`.
 
 **Status:** These layer dimensions are implementation choices, not exact configurations claimed to be taken from a cited paper.

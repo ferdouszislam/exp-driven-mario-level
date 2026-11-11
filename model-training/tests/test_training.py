@@ -18,7 +18,9 @@ import torch
 from torch import nn
 
 
-TRAINING_DIR = Path(__file__).resolve().parents[1]
+TRAINING_ROOT = Path(__file__).resolve().parents[1]
+TRAINING_DIR = TRAINING_ROOT / "initial_model_architecture"
+sys.path.insert(0, str(TRAINING_ROOT))
 sys.path.insert(0, str(TRAINING_DIR))
 
 from data import ComparisonDataset, INPUT_SHAPE, TILE_SYMBOLS, load_training_data

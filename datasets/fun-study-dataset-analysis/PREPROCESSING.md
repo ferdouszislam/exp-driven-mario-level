@@ -1,6 +1,6 @@
 # Preprocessing Mario-Fun-Study for pairwise fun comparisons
 
-[`preprocess_dataset.py`](preprocess_dataset.py) converts the supplied cleaned human annotations into comparison folders. It first assigns an 80/20 training/test split, then holds out 20% of that training portion in `validation_set/`, using the same whole-group method as [`train.py`](../../model-training/train.py). Each folder holds two cropped tile grids, their participant-specific path masks, their multi-hot NumPy arrays, and a two-line preference file. The first 16 source columns are removed from both tiles and paths, leaving 176 columns. The full dataset audit and paper discrepancies are documented in [`dataset-explained.md`](dataset-explained.md).
+[`preprocess_dataset.py`](preprocess_dataset.py) converts the supplied cleaned human annotations into comparison folders. It first assigns an 80/20 training/test split, then holds out 20% of that training portion in `validation_set/`, using the same whole-group method as [`train.py`](../../model-training/initial_model_architecture/train.py). Each folder holds two cropped tile grids, their participant-specific path masks, their multi-hot NumPy arrays, and a two-line preference file. The first 16 source columns are removed from both tiles and paths, leaving 176 columns. The full dataset audit and paper discrepancies are documented in [`dataset-explained.md`](dataset-explained.md).
 
 The source is `Mario-Fun-Study/exp_data/survey_data/formal/` and the default output is `preprocessed_dataset/`. Run the commands below from this project directory.
 

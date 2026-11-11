@@ -2,7 +2,7 @@
 
 This document specifies the three-stage LayerNorm/ReLU variant, **`model_arch_1_crop16`**, adapted to the 176-column export. Preprocessing removes the first 16 columns from both the source level and its path mask, retaining source columns `16:192`. The original **4×4 kernels are retained as an implementation assumption**. All convolutional and transposed convolutional layers use stride **2**, padding **1**, and dilation **1**.
 
-This variant preserves the `model_arch_1` channel sizes, activations, and both FC-Tail dropout layers. The active [model.py](model.py) implements the four-stage GroupNorm variant described in [initial_model_architecture.md](initial_model_architecture.md); implementing this specification requires its own matching model definition. Training conventions are described in [TRAINING.md](TRAINING.md).
+This variant preserves the `model_arch_1` channel sizes, activations, and both FC-Tail dropout layers. Its matching implementation is [model_arch_1/model.py](model_arch_1/model.py). Run the dedicated pipeline from [model_arch_1/](model_arch_1/README.md); training conventions are described in [TRAINING.md](TRAINING.md).
 
 ## 1. CNN Encoder
 
@@ -176,8 +176,8 @@ These counts include affine biases and LayerNorm's learned scale and shift. Each
 
 ### Checkpoint architecture metadata
 
-A matching implementation of this cropped specification should record `architecture_version="model_arch_1_crop16"`, `input_shape=[22,16,176]`, `source_width=192`, `dropped_leading_columns=16`, `normalization="LayerNorm"`, `layer_norm_axes=["channel","height","width"]`, `stride=[2,2]`, `encoded_shape=[32,2,22]`, and `flattened_features=1408`. Its metadata should also record encoder channels `[22,32,64,32]`, decoder channels `[32,64,32,22]`, and the normalized feature-map shapes.
+The matching implementation records `architecture_version="model_arch_1_crop16"`, `input_shape=[22,16,176]`, `source_width=192`, `dropped_leading_columns=16`, `normalization="LayerNorm"`, `layer_norm_axes=["channel","height","width"]`, `stride=[2,2]`, `encoded_shape=[32,2,22]`, and `flattened_features=1408`. Its metadata also records encoder channels `[22,32,64,32]`, decoder channels `[32,64,32,22]`, and the normalized feature-map shapes.
 
-The corresponding `encoder_layer_norm_shapes` are `[[32,8,88],[64,4,44],[32,2,22]]`, and `decoder_layer_norm_shapes` are `[[64,4,44],[32,8,88]]`. The normalization settings should be saved as `layer_norm_eps=1e-5` and `layer_norm_elementwise_affine=True`.
+The corresponding `encoder_layer_norm_shapes` are `[[32,8,88],[64,4,44],[32,2,22]]`, and `decoder_layer_norm_shapes` are `[[64,4,44],[32,8,88]]`. The normalization settings are saved as `layer_norm_eps=1e-5` and `layer_norm_elementwise_affine=True`.
 
-Existing 192-column checkpoints retain their saved version labels and require their corresponding model definitions for restoration. Their projection sizes and LayerNorm affine shapes differ from this cropped specification. The current `PairwiseCNNVAE` class implements `initial_model_architecture_crop16`, with different channels and normalization; it is not an implementation of this variant. Check the complete architecture metadata before restoring a checkpoint.
+Existing 192-column checkpoints retain their saved version labels and require their corresponding model definitions for restoration. Their projection sizes and LayerNorm affine shapes differ from this cropped specification. Restore this variant using `PairwiseCNNVAE` from `model_arch_1/model.py`. Check the complete architecture metadata before restoring a checkpoint.

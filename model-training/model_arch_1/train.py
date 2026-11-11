@@ -1,4 +1,4 @@
-"""Compare CNN-VAE hyperparameter combinations from an editable text file."""
+"""Train model_arch_1 using combinations from the local hyperparameter file."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ import math
 from pathlib import Path
 import platform
 import random
+import sys
 import time
 
 import numpy as np
@@ -20,8 +21,12 @@ import torch
 from torch.nn import functional as F
 from torch.utils.data import DataLoader
 
-from data import ComparisonDataset, load_training_data
 from model import PairwiseCNNVAE, architecture_metadata
+
+# Keep this folder's model local while reusing the common pipeline utilities.
+sys.path.insert(1, str(Path(__file__).resolve().parents[1]))
+
+from data import ComparisonDataset, load_training_data
 from plotting import plot_loss_curves
 from reconstruction_previews import (
     PREVIEW_COUNT, save_checkpoint_reconstructions, select_validation_levels,
@@ -39,7 +44,7 @@ CHECKPOINT_END_EPOCH: int | None = None
 BATCH_SIZE = 16
 SEED = 42
 HERE = Path(__file__).resolve().parent
-DEFAULT_DATASET = HERE.parent / "datasets/fun-study-dataset-analysis/preprocessed_dataset"
+DEFAULT_DATASET = HERE.parent.parent / "datasets/fun-study-dataset-analysis/preprocessed_dataset"
 DEFAULT_HYPERPARAMETERS = HERE / "hyperparameter-combinations.txt"
 
 

@@ -59,7 +59,7 @@ class CropTests(unittest.TestCase):
 class ValidationSplitTests(unittest.TestCase):
     def test_validation_membership_matches_training_script(self):
         # Load the original policy without requiring the training dependencies.
-        tree = ast.parse((PROJECT_ROOT.parent.parent / "model-training/train.py").read_text())
+        tree = ast.parse((PROJECT_ROOT.parent.parent / "model-training/initial_model_architecture/train.py").read_text())
         function = next(node for node in tree.body
                         if isinstance(node, ast.FunctionDef) and node.name == "split_training_groups")
         namespace = {"random": random}

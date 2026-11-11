@@ -1,7 +1,7 @@
 """Rank epochs with both train and validation accuracy > 0.5 and plot metrics.
 
-Run from the repository root:
-    .venv/bin/python model-training/analyze_runs.py
+Run from the repository root for any architecture:
+    .venv/bin/python model-training/analyze_runs.py --runs-dir model-training/model_arch_1/runs
 """
 
 from __future__ import annotations

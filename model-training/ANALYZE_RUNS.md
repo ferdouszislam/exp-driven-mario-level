@@ -1,12 +1,19 @@
 # Rank saved experiment epochs
 
-From the repository root, use the existing virtual environment:
+The shared [analyze_runs.py](analyze_runs.py) works with results from any architecture. Select the results with `--runs-dir`; it reads saved metrics and configuration without importing a model. You can run it from a model folder using the shared root virtual environment. For example, from the repository root:
 
 ```bash
-.venv/bin/python model-training/analyze_runs.py
+cd model-training/model_arch_1
+../../.venv/bin/python ../analyze_runs.py --runs-dir runs
 ```
 
-The script scans `model-training/runs/<experiment-version>/<combination>/epoch_metrics.csv`
+Use `model-training/initial_model_architecture` or `model-training/model_arch_2` in the `cd` command for another architecture. The equivalent command from the repository root is:
+
+```bash
+.venv/bin/python model-training/analyze_runs.py --runs-dir model-training/model_arch_1/runs
+```
+
+The script scans the selected runs folder's `<experiment-version>/<combination>/epoch_metrics.csv`
 and reads each combination's saved `config.json`. It uses the original combination
 number and hyperparameters from that configuration, regardless of folder sorting
 or changes to `hyperparameter-combinations.txt`. No model loading or retraining is needed.
@@ -33,7 +40,7 @@ ranking does not use rounded display values or a tie tolerance.
 
 ## Outputs
 
-By default, reports are saved under `model-training/run-analysis/`:
+By default, reports are saved to `run-analysis/` beside the selected runs folder:
 
 ```text
 run-analysis/
@@ -74,25 +81,36 @@ one explicitly with `--experiment` reports an error.
 
 ## Options
 
+The following commands run **inside your chosen architecture folder**:
+
 ```bash
 # Analyze just one version.
-.venv/bin/python model-training/analyze_runs.py --experiment m2_e100_v3
+../../.venv/bin/python ../analyze_runs.py --runs-dir runs --experiment m2_e100_v3
 
 # Analyze selected versions and keep a separate report snapshot.
-.venv/bin/python model-training/analyze_runs.py \
+../../.venv/bin/python ../analyze_runs.py --runs-dir runs \
   --experiment m1_e50 --experiment m2_e100_v2 \
   --top-n 5 --output-dir /tmp/mario-top-five
 
 # Analyze another runs folder (paths may be relative or absolute).
-.venv/bin/python model-training/analyze_runs.py \
+../../.venv/bin/python ../analyze_runs.py \
   --runs-dir /path/to/runs --output-dir /path/to/reports
 ```
 
 When `--output-dir` is omitted, `run-analysis` is created beside the selected runs
-folder. Defaults work from any current directory because the default input path is
-relative to the script. Output must be outside the input runs directory.
+folder. If `--runs-dir` is omitted, the script uses the earlier root-level
+`model-training/runs/` folder, resolved relative to the script. Explicit relative
+paths resolve from your current directory. Output must be outside the input runs directory.
 
-Run the focused checks with:
+Earlier artifacts under `model-training/runs/` remain in place. From a model folder, analyze them explicitly with:
+
+```bash
+../../.venv/bin/python ../analyze_runs.py --runs-dir ../runs
+```
+
+This writes reports to `model-training/run-analysis/` by default, beside the selected earlier runs folder. An explicit `--output-dir` chooses another location.
+
+Run the focused checks **from the repository root** with:
 
 ```bash
 .venv/bin/python -m unittest discover -s model-training/tests -p 'test_analyze_runs.py'
