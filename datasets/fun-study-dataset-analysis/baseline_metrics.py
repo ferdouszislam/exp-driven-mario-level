@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare three fixed baselines with validation tiles, as in train.py.
+"""Score reconstruction baselines and report fixed theoretical ranking baselines.
 
 Run from the repository root:
     .venv/bin/python datasets/fun-study-dataset-analysis/baseline_metrics.py
@@ -12,6 +12,8 @@ import json
 from pathlib import Path
 
 import numpy as np
+import torch
+from torch.nn import functional as F
 
 
 HERE = Path(__file__).resolve().parent
@@ -78,12 +80,28 @@ def calculate_baselines(root: Path) -> dict:
         "(ii) Bottom two rows ground (`X`), otherwise empty (`-`)": ground,
         "(iii) Most probable tile at each cell, fitted on `train_set`": probabilities.argmax(axis=0),
     }
+    # Treat generated binary tile encodings as logits. Keep the path logit
+    # at zero so every baseline has the full 22-channel training output shape.
+    baseline_logits = {}
+    for name, generated_tiles in baselines.items():
+        logits = torch.zeros(SHAPE, dtype=torch.float32)
+        logits[:TILE_CHANNELS] = F.one_hot(
+            torch.from_numpy(generated_tiles), num_classes=TILE_CHANNELS,
+        ).permute(2, 0, 1).float()
+        baseline_logits[name] = logits
+
     mismatches = {name: 0 for name in baselines}
+    reconstruction_totals = {name: 0.0 for name in baselines}
     total_tiles = 0
     for path in validation_files:
-        input_tiles = load_encoding(path)[:TILE_CHANNELS].argmax(axis=0)
+        encoding = load_encoding(path)
+        input_tiles = encoding[:TILE_CHANNELS].argmax(axis=0)
+        target = torch.from_numpy(encoding.astype(np.float32))
         for name, generated_tiles in baselines.items():
             mismatches[name] += int(np.count_nonzero(input_tiles != generated_tiles))
+            reconstruction_totals[name] += F.binary_cross_entropy_with_logits(
+                baseline_logits[name], target,
+            ).item()
         total_tiles += input_tiles.size
 
     return {
@@ -95,6 +113,9 @@ def calculate_baselines(root: Path) -> dict:
         "mismatches": mismatches,
         "normalized_hamming_distance": {
             name: count / total_tiles for name, count in mismatches.items()
+        },
+        "reconstruction_bce": {
+            name: total / len(validation_files) for name, total in reconstruction_totals.items()
         },
     }
 
@@ -116,17 +137,55 @@ def render_report(results: dict, root: Path) -> str:
         f"the validation denominator is "
         f"{results['total_tiles']:,} tile cells.",
         "",
-        "| Generated baseline | Mismatched cells | Normalized Hamming distance |",
-        "| --- | ---: | ---: |",
+        "| Generated baseline | Mismatched cells | Normalized Hamming distance | Reconstruction BCE |",
+        "| --- | ---: | ---: | ---: |",
     ]
     for name, count in results["mismatches"].items():
         distance = results["normalized_hamming_distance"][name]
-        lines.append(f"| {name} | {count:,} | {distance:.4f} |")
+        reconstruction = results["reconstruction_bce"][name]
+        lines.append(f"| {name} | {count:,} | {distance:.4f} | {reconstruction:.4f} |")
     lines += [
+        "",
+        "## Fun ranking: random-guessing probability baseline (p = 0.5)",
+        "",
+        "These are fixed theoretical baselines; no ranking predictions or metric",
+        "calculations are needed. Reversing each comparison balances targets 0 and 1.",
+        "",
+        "| Ranking baseline | Fun ranking BCE | Accuracy |",
+        "| --- | ---: | ---: |",
+        "| All ranking outputs are probability 0.5 | 0.6931 | 50% |",
         "",
         "## Calculation",
         "",
-        "Matches `evaluate_training_pairs` in [train.py](../../model-training/initial_model_architecture/train.py):",
+        "### Reconstruction BCE",
+        "",
+        "Uses `binary_cross_entropy_with_logits` with the default mean reduction, as in",
+        "`loss_components` in [train.py](../../model-training/initial_model_architecture/train.py).",
+        "Each fixed grid is encoded with logit 1 for the selected tile and logit 0 for",
+        "the other 20 tile channels. All three baselines use path-channel logit 0.",
+        "These are logits: sigmoid maps 0 to probability 0.5 and 1 to approximately 0.7311.",
+        "Targets are the complete float32 binary encodings, including the path channel.",
+        "BCE is averaged over all 22 × 16 × 176 bits and both levels of each comparison,",
+        "then over validation comparisons. Averaging the per-occurrence BCE values here",
+        "is equivalent to training's `0.5 * (BCE(side_a) + BCE(side_b))` because all",
+        "occurrences have the same shape and every comparison has two levels.",
+        "The reported loss is unweighted, before applying `lambda_rec`.",
+        "",
+        "### Fun ranking BCE and accuracy",
+        "",
+        "Every forward and reversed ordered pair receives output probability 0.5,",
+        "independently of the three reconstruction baselines. This assigns equal",
+        "probability to both classes, giving the random-guessing BCE baseline.",
+        "For either target, `-y * log(0.5) - (1 - y) * log(0.5)` equals",
+        "`-log(0.5) = log(2)`, approximately 0.6931 (natural logarithm).",
+        "The report records this fixed, unweighted BCE directly, before `lambda_rank`.",
+        "Training's `probability >= 0.5` rule resolves these ties to class 1.",
+        "Reversing every comparison produces equal numbers of targets 0 and 1,",
+        "so exactly half of these predictions are correct: accuracy is 50%.",
+        "",
+        "### Normalized Hamming distance",
+        "",
+        "Matches `evaluate_training_pairs` in the same training pipeline:",
         "take `argmax` over the first 21 tile channels, compare tile IDs at each cell,",
         "sum mismatches across both levels in every validation comparison, and divide",
         "by the total number of tile cells. The independent path channel (index 21)",
@@ -152,7 +211,7 @@ def render_report(results: dict, root: Path) -> str:
         "",
         "## Reproduce",
         "",
-        "From the repository root, using the existing environment (NumPy is required):",
+        "From the repository root, using the existing training environment (NumPy and PyTorch are required):",
         "",
         "```sh",
         ".venv/bin/python datasets/fun-study-dataset-analysis/baseline_metrics.py",
