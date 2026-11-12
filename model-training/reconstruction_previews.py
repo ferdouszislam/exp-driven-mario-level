@@ -11,6 +11,8 @@ import random
 import numpy as np
 import torch
 
+from categorical_reconstruction import reconstruction_probabilities
+
 
 PREVIEW_COUNT = 5
 RENDERER_PATH = (Path(__file__).resolve().parents[1]
@@ -53,7 +55,8 @@ def _renderer():
 
 def save_checkpoint_reconstructions(model, data, samples: list[dict], output: Path,
                                     device: torch.device, seed: int,
-                                    checkpoint: str, epoch: int, *, selection_seed: int | None = None) -> dict:
+                                    checkpoint: str, epoch: int, *, selection_seed: int | None = None,
+                                    categorical_tiles: bool = False) -> dict:
     """Save paired level PNGs from one posterior sample for each validation input.
 
     The caller seeds and preserves the training RNG streams around this reporting
@@ -69,7 +72,11 @@ def save_checkpoint_reconstructions(model, data, samples: list[dict], output: Pa
         "sample_count": len(samples),
         "selection_policy": SELECTION_POLICY,
         "latent_policy": "one reparameterized posterior sample per validation input",
-        "decoding": "argmax over 21 tile logits; independent path bit at logit >= 0 (probability >= 0.5)",
+        "decoding": (
+            "argmax over 21 tile softmax probabilities; independent sigmoid path probability >= 0.5"
+            if categorical_tiles else
+            "argmax over 21 tile logits; independent path bit at logit >= 0 (probability >= 0.5)"
+        ),
         "channels_metadata": "channels.json" if samples else None,
         "comparison_image": "comparison.png" if samples else None,
         "samples": [],
@@ -93,8 +100,13 @@ def save_checkpoint_reconstructions(model, data, samples: list[dict], output: Pa
             logits = model.decode(model.reparameterize(mu, log_var))
         if not torch.isfinite(logits).all():
             raise FloatingPointError("Non-finite VAE reconstruction logits in checkpoint preview.")
-        tile_ids = logits[:, :21].argmax(dim=1).cpu().numpy()
-        path_bits = (logits[:, 21] >= 0).to(torch.uint8).cpu().numpy()
+        if categorical_tiles:
+            probabilities = reconstruction_probabilities(logits)
+            tile_ids = probabilities[:, :21].argmax(dim=1).cpu().numpy()
+            path_bits = (probabilities[:, 21] >= 0.5).to(torch.uint8).cpu().numpy()
+        else:
+            tile_ids = logits[:, :21].argmax(dim=1).cpu().numpy()
+            path_bits = (logits[:, 21] >= 0).to(torch.uint8).cpu().numpy()
     finally:
         model.train(previous_training)
 

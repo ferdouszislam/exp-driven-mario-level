@@ -201,6 +201,60 @@ class AnalyzeRunsTests(unittest.TestCase):
                              [float(record[f"train_{metric}"]),
                               float(record[f"validation_{metric}"])])
 
+    def test_softmax_metrics_preserve_components_and_use_categorical_plot_label(self) -> None:
+        row = self.epoch(1, "0.6", "0.7")
+        for split in ("train", "validation"):
+            row.pop(f"{split}_reconstruction_bce")
+            row[f"{split}_reconstruction_loss"] = "3.12345678901234567"
+            row[f"{split}_tile_cross_entropy"] = "2.92345678901234567"
+            row[f"{split}_path_bce"] = "0.2"
+        self.combination("softmax", 1, [row])
+        record = analysis.load_experiment(self.experiment)[0]
+        self.assertNotIn("train_reconstruction_bce", record)
+        for split in ("train", "validation"):
+            for metric in ("reconstruction_loss", "tile_cross_entropy", "path_bce"):
+                self.assertEqual(record[f"{split}_{metric}"], row[f"{split}_{metric}"])
+        from matplotlib.figure import Figure
+
+        with patch.object(Figure, "savefig", autospec=True) as save:
+            analysis.plot_record(record, self.root / "softmax.png")
+        reconstruction_axis = save.call_args.args[0].axes[1]
+        self.assertEqual(reconstruction_axis.get_title(), "Reconstruction (tile CE + path BCE)")
+        self.assertEqual([bar.get_height() for bar in reconstruction_axis.patches],
+                         [float(row[f"{split}_reconstruction_loss"])
+                          for split in ("train", "validation")])
+
+    def test_softmax_nonfinite_component_is_reported(self) -> None:
+        row = self.epoch(1, "0.6", "0.7")
+        for split in ("train", "validation"):
+            row[f"{split}_reconstruction_loss"] = row.pop(f"{split}_reconstruction_bce")
+            row[f"{split}_path_bce"] = "NaN"
+        self.combination("softmax", 1, [row])
+        with self.assertRaisesRegex(ValueError, "path_bce"):
+            analysis.load_experiment(self.experiment)
+
+    def test_cli_preserves_metrics_for_bce_and_softmax_combinations(self) -> None:
+        self.combination("bce", 1, [self.epoch(1, "0.7", "0.6")])
+        row = self.epoch(1, "0.8", "0.7")
+        for split in ("train", "validation"):
+            row[f"{split}_reconstruction_loss"] = row.pop(f"{split}_reconstruction_bce")
+            row[f"{split}_tile_cross_entropy"] = "0.12345678901234567"
+            row[f"{split}_path_bce"] = "0.2"
+        self.combination("softmax", 2, [row])
+        output = self.root / "analysis"
+        with redirect_stdout(io.StringIO()):
+            self.assertEqual(analysis.main(["--runs-dir", str(self.runs),
+                                            "--output-dir", str(output)]), 0)
+        with (output / self.experiment.name / "top_validation_accuracy.csv").open(
+                newline="", encoding="utf-8") as handle:
+            records = list(csv.DictReader(handle))
+        softmax, bce = records
+        self.assertEqual(softmax["train_tile_cross_entropy"], "0.12345678901234567")
+        self.assertEqual(softmax["validation_path_bce"], "0.2")
+        self.assertEqual(softmax["train_reconstruction_bce"], "")
+        self.assertEqual(bce["train_reconstruction_bce"], "0.2")
+        self.assertEqual(bce["train_reconstruction_loss"], "")
+
     def test_cli_writes_both_rankings_and_every_selected_png(self) -> None:
         self.combination("params", 7, [
             self.epoch(1, "0.6", "0.6"),

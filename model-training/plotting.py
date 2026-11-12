@@ -22,9 +22,14 @@ def plot_loss_curves(
     marker = "o" if len(epochs) == 1 else None
     last_epoch = epochs[-1]
     epoch_ticks = sorted({1 + round((last_epoch - 1) * index / 6) for index in range(7)})
+    categorical_tiles = "reconstruction_loss" in history[0]["train"]
+    reconstruction = (
+        ("reconstruction_loss", "Reconstruction (tile CE + path BCE)", "Loss")
+        if categorical_tiles else ("reconstruction_bce", "Reconstruction BCE", "Loss")
+    )
     measurements = (
         ("total_loss", "Weighted total loss", "Loss"),
-        ("reconstruction_bce", "Reconstruction BCE", "Loss"),
+        reconstruction,
         ("kl_divergence", "KL divergence", "Loss"),
         ("ranking_bce", "Fun-ranking BCE", "Loss"),
         ("accuracy", "Ranking accuracy", "Accuracy"),

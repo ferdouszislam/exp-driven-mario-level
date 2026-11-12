@@ -25,6 +25,8 @@ METRICS = (
 )
 METRIC_COLUMNS = tuple(f"{split}_{metric}" for metric in METRICS
                        for split in ("train", "validation"))
+SOFTMAX_METRICS = tuple("reconstruction_loss" if metric == "reconstruction_bce" else metric
+                       for metric in METRICS)
 RANKINGS = {
     "validation_accuracy": ("top_validation_accuracy.csv", "Highest validation accuracy"),
     "accuracy_gap": ("smallest_accuracy_gap.csv", "Smallest absolute accuracy gap"),
@@ -87,9 +89,20 @@ def load_experiment(experiment_dir: Path) -> list[dict]:
         seen_epochs = set()
         with metrics_path.open(newline="", encoding="utf-8-sig") as handle:
             reader = csv.DictReader(handle)
-            missing = {"epoch", *METRIC_COLUMNS} - set(reader.fieldnames or ())
+            fieldnames = set(reader.fieldnames or ())
+            categorical_tiles = any(f"{split}_reconstruction_loss" in fieldnames
+                                    for split in ("train", "validation"))
+            metrics = SOFTMAX_METRICS if categorical_tiles else METRICS
+            metric_columns = tuple(f"{split}_{metric}" for metric in metrics
+                                   for split in ("train", "validation"))
+            missing = {"epoch", *metric_columns} - fieldnames
             if missing:
                 raise ValueError(f"{metrics_path}: missing columns: {', '.join(sorted(missing))}.")
+            component_columns = tuple(f"{split}_{metric}"
+                                      for metric in ("tile_cross_entropy", "path_bce")
+                                      for split in ("train", "validation")
+                                      if f"{split}_{metric}" in fieldnames)
+            saved_columns = (*metric_columns, *component_columns)
             for line_number, row in enumerate(reader, 2):
                 location = f"{metrics_path}:{line_number}"
                 try:
@@ -99,7 +112,7 @@ def load_experiment(experiment_dir: Path) -> list[dict]:
                 if epoch < 1 or epoch in seen_epochs:
                     raise ValueError(f"{location}: invalid or duplicate epoch {epoch}.")
                 seen_epochs.add(epoch)
-                for column in METRIC_COLUMNS:
+                for column in saved_columns:
                     value = decimal_value(row[column], f"{location}: {column}")
                     if column.endswith(("accuracy", "normalized_hamming_distance")) and not 0 <= value <= 1:
                         raise ValueError(f"{location}: {column} must be between 0 and 1.")
@@ -108,7 +121,7 @@ def load_experiment(experiment_dir: Path) -> list[dict]:
                     context.prec = 50
                     gap = abs(Decimal(row["train_accuracy"]) - Decimal(row["validation_accuracy"]))
                 record = {**metadata, "epoch": epoch, "accuracy_gap": gap,
-                          **{column: row[column] for column in METRIC_COLUMNS}}
+                          **{column: row[column] for column in saved_columns}}
                 # Keep the additional reported train/validation metric when present.
                 for column in ("train_f1_score", "validation_f1_score"):
                     record[column] = row.get(column, "")
@@ -148,8 +161,12 @@ def plot_record(record: dict, output_path: Path) -> None:
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
+    categorical_tiles = "train_reconstruction_loss" in record
+    metrics = SOFTMAX_METRICS if categorical_tiles else METRICS
     titles = (
-        "Weighted total loss", "Reconstruction BCE", "KL divergence",
+        "Weighted total loss",
+        "Reconstruction (tile CE + path BCE)" if categorical_tiles else "Reconstruction BCE",
+        "KL divergence",
         "Fun-ranking BCE", "Ranking accuracy", "Normalized tile Hamming distance",
     )
     figure, axes = plt.subplots(2, 3, figsize=(14, 8.5), layout="constrained")
@@ -161,7 +178,7 @@ def plot_record(record: dict, output_path: Path) -> None:
             f"Absolute accuracy gap: {float(record['accuracy_gap']):.6g}\n{parameter_text}",
             fontsize=13,
         )
-        for axis, metric, title in zip(axes.flat, METRICS, titles, strict=True):
+        for axis, metric, title in zip(axes.flat, metrics, titles, strict=True):
             values = [float(record[f"{split}_{metric}"]) for split in ("train", "validation")]
             bars = axis.bar(["Train", "Validation"], values, width=0.58,
                             color=["#2563eb", "#dc2626"])
@@ -290,7 +307,9 @@ def main(argv: list[str] | None = None) -> int:
                 plot_record(record, output / record["plot_file"])
             for criterion, selected in rankings.items():
                 write_csv(output / RANKINGS[criterion][0], selected,
-                          fieldnames=list(records[0] | {"plot_file": ""}))
+                          fieldnames=list(dict.fromkeys(
+                              key for record in records for key in (*record, "plot_file")
+                          )))
             write_experiment_report(output, records, rankings)
             # Remove only this script's obsolete chart files after the reports succeed.
             current_plots = {record["plot_file"] for record in selected_epochs.values()}

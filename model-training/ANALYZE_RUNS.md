@@ -57,8 +57,11 @@ run-analysis/
 Each CSV contains the rank, experiment and architecture names, original combination
 number/ID and folder, learning rate, all three loss weights, batch size, latent
 dimension, dropout, seeds, epoch, absolute accuracy gap, and the train/validation
-values for total loss, reconstruction BCE, KL divergence, ranking BCE, accuracy,
-and normalized tile Hamming distance. F1 scores are also retained when present.
+values for total loss, reconstruction loss, KL divergence, ranking BCE, accuracy,
+and normalized tile Hamming distance. Original pipelines use `reconstruction_bce`;
+the `_softmax` variants use `reconstruction_loss` = mean tile cross-entropy + mean
+path BCE. Their `tile_cross_entropy` and `path_bce` component columns are retained
+when present. F1 scores are also retained when present.
 Source CSV/config paths and a PNG path make each result traceable. Source paths are
 relative to the input runs folder; PNG paths are relative to the experiment report.
 Logged metric strings are preserved in the CSVs without rounding.
@@ -66,7 +69,8 @@ Logged metric strings are preserved in the CSVs without rounding.
 Each unique selected `(experiment version, combination, epoch)` gets **one PNG with
 six bar-chart panels**, with a Train and Validation bar in every panel. If an epoch
 appears in both lists, both entries link to the same PNG. Total loss is already
-weighted; the three loss parts are shown unweighted, exactly as saved by training.
+weighted; reconstruction, KL, and ranking losses are shown unweighted, exactly as
+saved by training. The reconstruction panel is labeled for the saved loss convention.
 Accuracy and Hamming distance use the original 0–1 scale. Chart labels and Markdown
 previews display six significant digits; CSVs contain the full logged values.
 

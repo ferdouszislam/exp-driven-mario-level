@@ -4,15 +4,18 @@ Each architecture has a dedicated, independently runnable pipeline folder:
 
 | Folder | Architecture specification | Network |
 |---|---|---|
-| [initial_model_architecture/](initial_model_architecture/README.md) | [initial_model_architecture.md](initial_model_architecture.md) | Four stages, GroupNorm, LeakyReLU |
-| [model_arch_1/](model_arch_1/README.md) | [model_arch_1.md](model_arch_1.md) | Three stages, LayerNorm, ReLU |
-| [model_arch_2/](model_arch_2/README.md) | [model_arch_2.md](model_arch_2.md) | Four stages, LayerNorm, ReLU |
+| [initial_model_architecture/](initial_model_architecture/) | [initial_model_architecture.md](initial_model_architecture.md) | Four stages, GroupNorm, LeakyReLU |
+| [model_arch_1/](model_arch_1/) | [model_arch_1.md](model_arch_1.md) | Three stages, LayerNorm, ReLU |
+| [model_arch_2/](model_arch_2/) | [model_arch_2.md](model_arch_2.md) | Four stages, LayerNorm, ReLU |
+| [initial_model_architecture_softmax/](initial_model_architecture_softmax/README.md) | [initial_model_architecture_softmax.md](initial_model_architecture_softmax.md) | Initial architecture with categorical tiles and binary path |
+| [model_arch_1_softmax/](model_arch_1_softmax/README.md) | [model_arch_1_softmax.md](model_arch_1_softmax.md) | Architecture 1 with categorical tiles and binary path |
+| [model_arch_2_softmax/](model_arch_2_softmax/README.md) | [model_arch_2_softmax.md](model_arch_2_softmax.md) | Architecture 2 with categorical tiles and binary path |
 
 Choose the folder for the model you want to train. Each contains its own `model.py`, `train.py`, and editable `hyperparameter-combinations.txt`. Running its `train.py` selects that architecture. Default training outputs go into that folder's `runs/`.
 
 Architecture-agnostic utilities live once in `model-training/`: [data.py](data.py) loads the common dataset, [plotting.py](plotting.py) plots training histories, [reconstruction_previews.py](reconstruction_previews.py) renders inputs and reconstructions through the supplied model's `encode`, `reparameterize`, and `decode` methods, and [analyze_runs.py](analyze_runs.py) ranks saved metrics from any selected runs folder. Training imports the shared modules automatically. Analysis reports default to `run-analysis/` beside the selected runs folder.
 
-All three pipelines implement the joint training stage of the [project proposal](player-exp-pairwise-cnn-vae-pcgml-proposal.pdf). They share the saved dataset and training conventions described below. Each has a shared encoder and decoder for the two playthroughs and a classifier that predicts whether the first playthrough is preferred to the second.
+The original three pipelines implement the joint training stage of the [project proposal](player-exp-pairwise-cnn-vae-pcgml-proposal.pdf). Their `_softmax` variants change the reconstruction output interpretation and loss as described in section 6. All six share the saved dataset and training conventions described below. Each has a shared encoder and decoder for the two playthroughs and a classifier that predicts whether the first playthrough is preferred to the second.
 
 The workflow reads explicit training rows from the selected folder's `hyperparameter-combinations.txt`, with a default budget of **50 epochs per listed combination**. Each data row specifies one complete run, and only the listed rows are trained. Every epoch records fitting and validation measurements, and each combination produces curves for losses, overall accuracy, and normalized tile Hamming distance. You choose a combination and epoch from those records. Each experiment starts with a fresh model and uses the same saved `train_set` and `validation_set` assignments. Supplying both checkpoint-range bounds enables model saving and an input/reconstruction preview for each saved model, using five randomly selected validation levels.
 
@@ -34,7 +37,7 @@ cd model-training/model_arch_1
 ../../.venv/bin/python train.py
 ```
 
-Use `model-training/initial_model_architecture` or `model-training/model_arch_2` in the `cd` command to select another model. The command trains every row in that folder's `hyperparameter-combinations.txt` for 50 epochs and saves measurements and curves under its own `runs/<UTC-timestamp>/`. Checkpoint saving is disabled by default. Editing one folder's hyperparameter file or training constants affects that folder's subsequent runs.
+Use any folder from the table in the `cd` command to select another model; for example, `cd model-training/model_arch_1_softmax` selects its categorical-tile variant. The command trains every row in that folder's `hyperparameter-combinations.txt` for 50 epochs and saves measurements and curves under its own `runs/<UTC-timestamp>/`. Checkpoint saving is disabled by default. Editing one folder's hyperparameter file or training constants affects that folder's subsequent runs.
 
 The remaining training commands in this section run **inside your chosen architecture folder**. For a small end-to-end run, create a separate one-combination file and train with four original comparisons for two epochs. Saving both epochs also exercises validation reconstruction previews:
 
@@ -177,7 +180,7 @@ All models use `(22, 16, 176)` inputs, 4×4 convolution kernels, stride 2, paddi
 z = μ + exp(0.5 * log_var) * ε,   ε ~ N(0, I)
 ```
 
-Each decoder projects the latent vector to 1,408 features, applies ReLU to that projection only in `model_arch_1`, reshapes it to its model's encoded shape, and reverses its encoder's spatial reductions to reconstruct exactly `(22, 16, 176)`. The decoder's output and the FC-Tail's scalar output are logits for BCE-with-logits losses. Sigmoid gives `P(first playthrough preferred)` when reporting probabilities. All FC-Tails use sizes `64 → 64 → 32 → 1` on the concatenation `[z_A; z_B]`. Dropout is active during optimization and disabled during evaluation. There is no max pooling or unpooling. See the linked specifications for complete layer tables and checkpoint metadata.
+Each decoder projects the latent vector to 1,408 features, applies ReLU to that projection only in `model_arch_1` and its `_softmax` variant, reshapes it to its model's encoded shape, and reverses its encoder's spatial reductions to reconstruct exactly `(22, 16, 176)`. `decode` returns raw logits in every pipeline. The original pipelines use BCE-with-logits over all reconstruction channels. The `_softmax` pipelines also expose `decode_probabilities`, which applies softmax across tile channels 0–20 at each cell and sigmoid independently to path channel 21. Their layers and parameter counts match their corresponding base architecture; their checkpoint architecture versions append `_softmax` to the base version shown above. The FC-Tail remains a scalar logit trained with BCE-with-logits; sigmoid gives `P(first playthrough preferred)` when reporting probabilities. All FC-Tails use sizes `64 → 64 → 32 → 1` on the concatenation `[z_A; z_B]`. Dropout is active during optimization and disabled during evaluation. There is no max pooling or unpooling. See the linked specifications for complete layer tables and checkpoint metadata.
 
 ## 6. Joint losses and their reductions
 
@@ -189,13 +192,23 @@ L_total = λ_rec × L_rec + λ_KL × L_KL + λ_rank × L_rank
 
 For a batch containing `B` ordered examples:
 
-1. **Reconstruction BCE:** compute binary cross-entropy with logits independently for A and B. Each side is averaged over `B × 22 × 16 × 176` bits, then the two side losses are averaged. All geometry and path bits have equal weight. The loss remains binary cross-entropy across all channels, as specified in the proposal.
+1. **Original pipelines: reconstruction BCE.** Compute binary cross-entropy with logits independently for A and B. Each side is averaged over `B × 22 × 16 × 176` bits, then the two side losses are averaged. All geometry and path bits have equal weight. The loss remains binary cross-entropy across all channels, as specified in the proposal.
 2. **KL divergence:** for each side and each example, compute `-0.5 × sum_j(1 + log_var_j - μ_j² - exp(log_var_j))`, summing over all 32 latent coordinates. Average over the batch, then average the A and B results. This measures divergence from the standard normal prior; it is not divided by 32.
 3. **Ranking BCE:** compute binary cross-entropy with logits between the FC-Tail output and the ordered-pair target, averaged over the batch.
 
 Training reports each unweighted component and their weighted total. Epoch losses average batch values using the number of ordered examples in each batch, so a shorter last batch receives its correct weight. Dropout and fresh posterior draws are active during optimization. Ranking gradients flow through both sampled latent vectors into the shared encoder and FC-Tail. Reconstruction gradients train the encoder and decoder, while the KL term trains the posterior parameters through the encoder.
 
-The loss implementation uses `torch.nn.functional.binary_cross_entropy_with_logits` with its mean reduction. See [loss_components and weighted_loss](initial_model_architecture/train.py) in each folder's `train.py`.
+The original loss implementation uses `torch.nn.functional.binary_cross_entropy_with_logits` with its mean reduction. See [loss_components and weighted_loss](initial_model_architecture/train.py) in each folder's `train.py`.
+
+**For the three `_softmax` variants, replace reconstruction item 1 with categorical tiles plus a binary player path.** For each side, obtain tile class targets with `input[:, :21].argmax(dim=1)`. `F.cross_entropy(tile_logits, tile_targets)` computes the negative log softmax probability of the correct tile, averaged over `B × 16 × 176` cells. `F.binary_cross_entropy_with_logits(path_logits, path_targets)` computes sigmoid-based binary cross-entropy, also averaged over `B × 16 × 176` cells. Both functions consume raw logits and include their activations stably; do not pass already activated probabilities to either loss.
+
+```text
+L_tile = (mean_tile_CE_A + mean_tile_CE_B) / 2
+L_path = (mean_path_BCE_A + mean_path_BCE_B) / 2
+L_rec  = L_tile + L_path
+```
+
+`lambda_rec` weights that sum once in the joint loss. KL and ranking losses retain the definitions above. Histories and epoch CSVs record `reconstruction_loss`, `tile_cross_entropy`, and `path_bce`, replacing the original pipelines' `reconstruction_bce` field. Plotting and saved-run analysis recognize the appropriate reconstruction metric. The new reconstruction and total loss values are not directly comparable with the original 22-bit-averaged BCE values because the objective and reduction scale differ. Keep comparisons within the same reconstruction objective.
 
 ## 7. Independent experiments and the fixed split
 
@@ -250,11 +263,11 @@ These two measurements use `model.eval()`, disabled gradients, and dropout off. 
 
 The evaluator saves and restores random-number-generator states around measurement. The next optimization epoch therefore continues its training random streams from their previous state. Measurement leaves model parameters fixed.
 
-For each measured pair, reconstruction BCE and KL are calculated once and averaged over its two inputs. Ranking BCE averages the forward target-1 and reverse target-0 losses. Dataset losses then average over original comparisons. The total uses that combination's own weights and the reductions defined in section 6.
+For each measured pair, reconstruction loss and KL are calculated once and averaged over its two inputs. Ranking BCE averages the forward target-1 and reverse target-0 losses. Dataset losses then average over original comparisons. The total uses that combination's own weights and the reductions defined in section 6.
 
 Every epoch prints fitting and validation values to the console and writes them to JSON and CSV. The recorded measurements include
 
-- Weighted total loss, reconstruction BCE, KL divergence, and ranking BCE.
+- Weighted total loss, reconstruction loss, KL divergence, and ranking BCE; `_softmax` variants also record tile cross-entropy and path BCE separately.
 - Overall ordered-pair accuracy.
 - Binary F1-score for positive class 1.
 - Normalized tile Hamming distance between input and reconstructed geometry.
@@ -273,7 +286,7 @@ f1_score = 2 × TP / (2 × TP + FP + FN)
 
 Binary F1 uses `f1_score` and `f1_positive_label=1`. Its value is 0 when the denominator is zero. Saved `class_support` and `confusion_matrix` diagnostics provide the underlying label and prediction counts.
 
-Normalized Hamming distance measures reconstruction differences at the **tile level**. For each playthrough occurrence, the input tile ID is the argmax of its one-hot geometry channels 0–20. The reconstructed tile ID is the argmax of the corresponding decoder logits over those same 21 channels. The decoder reconstruction comes from the same current sampled latent used for the epoch's other measurements. Channel 21 records path occupancy and is excluded from this geometry comparison. Reconstruction BCE continues to use all 22 channels as defined in section 6.
+Normalized Hamming distance measures reconstruction differences at the **tile level**. For each playthrough occurrence, the input tile ID is the argmax of its one-hot geometry channels 0–20. The reconstructed tile ID is the argmax of the corresponding decoder logits over those same 21 channels, equivalently the argmax of their softmax probabilities in the new variants. The decoder reconstruction comes from the same current sampled latent used for the epoch's other measurements. Channel 21 records path occupancy and is excluded from this geometry comparison. Reconstruction loss continues to train both tiles and path as defined in section 6.
 
 Each playthrough contributes all **16 × 176 = 2,816 tile positions**. For a measured portion containing `N` original comparisons, the normalized distance aggregates both playthroughs in every comparison.
 
@@ -318,7 +331,7 @@ Each parameter-named directory, such as `1e-4_1e-2_1e-3_1e-2/`, contains its own
 | `validation_metrics.json` | Complete validation metrics at the final epoch, including normalized tile Hamming distance, or JSON `null` for a single-group run |
 | `train_predictions.csv` | Final-epoch ordered predictions for the fitting portion |
 | `validation_predictions.csv` | Final-epoch ordered validation predictions when validation is available |
-| `validation_curves.png` | A 3×2 figure for weighted total loss, reconstruction BCE, KL divergence, ranking BCE, overall accuracy, and normalized tile Hamming distance, each showing fitting and available validation values against epoch number |
+| `validation_curves.png` | A 3×2 figure for weighted total loss, reconstruction loss (original BCE or categorical tiles plus path BCE), KL divergence, ranking BCE, overall accuracy, and normalized tile Hamming distance, each showing fitting and available validation values against epoch number |
 | `checkpoints/epoch_030.pt`, etc. | Optional model and optimizer state for each completed epoch within an explicitly configured inclusive checkpoint window |
 | `checkpoint_previews.json` | Index of saved checkpoint epochs and their sample counts, comparison PNGs, and sample manifests; updated after each checkpoint's preview is saved |
 | `reconstructions/epoch_030/`, etc. | Validation inputs and VAE reconstructions associated with that saved checkpoint, described below |
@@ -345,7 +358,7 @@ The same selected inputs and their recorded paths are reused across every saved 
 
 Preview inference uses evaluation mode, disabled gradients, and the seed `(seed + 2) % (2**32)`, which is 44 by default. Reusing the seed gives the same latent-noise sequence for comparison as model parameters change. The previous model mode and the training RNG states are restored after preview generation, so previews do not change subsequent optimization.
 
-Decoder logits become a valid binary `(22, 16, 176)` encoding before rendering. At every cell, argmax over channels 0–20 selects exactly one tile. Channel 21 is decoded independently with `logit >= 0`, equivalent to path probability at least 0.5. Both the original and reconstructed arrays are rendered by `encoding_to_image` from the existing [encoding_to_level_image.py](../datasets/fun-study-dataset-analysis/encoding_to_level_image.py). Black X markers are drawn over the tiles to show the corresponding path.
+Decoder outputs become a valid binary `(22, 16, 176)` encoding before rendering. The original pipelines select one tile with argmax over tile logits and set the independent path bit with `logit >= 0`. The `_softmax` pipelines pass `categorical_tiles=True` to the shared preview function, which applies [reconstruction_probabilities](categorical_reconstruction.py) to raw `decode` output: softmax over channels 0–20, then tile argmax; sigmoid over channel 21, then path probability `>= 0.5`. The public model method `decode_probabilities` exposes the same probability transformation for other callers. These discrete decisions are mathematically equivalent for identical logits, but the new variants learn tiles with a categorical loss. Both the original and reconstructed arrays are rendered by `encoding_to_image` from the existing [encoding_to_level_image.py](../datasets/fun-study-dataset-analysis/encoding_to_level_image.py). Black X markers are drawn over the tiles to show the corresponding path.
 
 For example, a saved epoch-30 model has these preview files beneath its combination directory:
 
