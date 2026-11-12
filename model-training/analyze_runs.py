@@ -19,6 +19,7 @@ import sys
 HERE = Path(__file__).resolve().parent
 MIN_ACCURACY = Decimal("0.5")
 HYPERPARAMETERS = ("learning_rate", "lambda_rec", "lambda_kl", "lambda_rank")
+OPTIONAL_HYPERPARAMETERS = ("background_error_weight",)
 METRICS = (
     "total_loss", "reconstruction_bce", "kl_divergence", "ranking_bce",
     "accuracy", "normalized_hamming_distance",
@@ -69,6 +70,13 @@ def load_experiment(experiment_dir: Path) -> list[dict]:
             if name not in hyperparameters:
                 raise ValueError(f"{config_path}: missing hyperparameter {name}.")
             decimal_value(str(hyperparameters[name]), f"{config_path}: {name}")
+        optional_parameters = {
+            name: hyperparameters[name]
+            for name in OPTIONAL_HYPERPARAMETERS if name in hyperparameters
+        }
+        for name, value in optional_parameters.items():
+            if decimal_value(str(value), f"{config_path}: {name}") < 1:
+                raise ValueError(f"{config_path}: {name} must be at least 1.")
         architecture = config.get("architecture", {})
         metadata = {
             "experiment_version": experiment_dir.name,
@@ -78,6 +86,7 @@ def load_experiment(experiment_dir: Path) -> list[dict]:
             "combination_id": combination_id,
             "combination_directory": metrics_path.parent.name,
             **{name: hyperparameters[name] for name in HYPERPARAMETERS},
+            **optional_parameters,
             "batch_size": config.get("batch_size", ""),
             "latent_dim": architecture.get("latent_dim", ""),
             "dropout": architecture.get("dropout", ""),
@@ -163,15 +172,24 @@ def plot_record(record: dict, output_path: Path) -> None:
 
     categorical_tiles = "train_reconstruction_loss" in record
     metrics = SOFTMAX_METRICS if categorical_tiles else METRICS
+    reconstruction_title = ("Reconstruction (tile CE + path BCE)" if categorical_tiles
+                            else "Reconstruction BCE")
+    if "background_error_weight" in record:
+        reconstruction_title = ("Reconstruction (weighted tile CE + path BCE)" if categorical_tiles
+                                else "Reconstruction (weighted tile BCE + path BCE)")
     titles = (
         "Weighted total loss",
-        "Reconstruction (tile CE + path BCE)" if categorical_tiles else "Reconstruction BCE",
+        reconstruction_title,
         "KL divergence",
         "Fun-ranking BCE", "Ranking accuracy", "Normalized tile Hamming distance",
     )
     figure, axes = plt.subplots(2, 3, figsize=(14, 8.5), layout="constrained")
     try:
         parameter_text = "   ".join(f"{name}={record[name]:g}" for name in HYPERPARAMETERS)
+        optional_text = "   ".join(f"{name}={record[name]:g}"
+                                   for name in OPTIONAL_HYPERPARAMETERS if name in record)
+        if optional_text:
+            parameter_text += "\n" + optional_text
         figure.suptitle(
             f"{record['experiment_version']}  |  {record['architecture_version']}\n"
             f"{record['combination_id']}  |  Epoch {record['epoch']}  |  "
@@ -195,7 +213,7 @@ def plot_record(record: dict, output_path: Path) -> None:
             axis.set_axisbelow(True)
             axis.grid(axis="y", color="#d1d5db", linewidth=0.6, alpha=0.7)
             axis.spines[["top", "right"]].set_visible(False)
-        figure.supxlabel("Loss components are unweighted as logged; total loss already includes the lambda weights.",
+        figure.supxlabel("Loss components exclude lambda weights; reconstruction includes any background-error penalty.",
                            fontsize=10)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         figure.savefig(output_path, format="png", dpi=150)

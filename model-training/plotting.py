@@ -23,9 +23,12 @@ def plot_loss_curves(
     last_epoch = epochs[-1]
     epoch_ticks = sorted({1 + round((last_epoch - 1) * index / 6) for index in range(7)})
     categorical_tiles = "reconstruction_loss" in history[0]["train"]
+    weighted_tiles = "background_error_weight" in hyperparameters
     reconstruction = (
-        ("reconstruction_loss", "Reconstruction (tile CE + path BCE)", "Loss")
-        if categorical_tiles else ("reconstruction_bce", "Reconstruction BCE", "Loss")
+        ("reconstruction_loss", "Reconstruction (weighted tile CE + path BCE)" if weighted_tiles
+         else "Reconstruction (tile CE + path BCE)", "Loss")
+        if categorical_tiles else ("reconstruction_bce", "Reconstruction (weighted tile BCE + path BCE)"
+                                   if weighted_tiles else "Reconstruction BCE", "Loss")
     )
     measurements = (
         ("total_loss", "Weighted total loss", "Loss"),
@@ -46,6 +49,8 @@ def plot_loss_curves(
             f"{name}={hyperparameters[name]:g}"
             for name in ("learning_rate", "lambda_rec", "lambda_kl", "lambda_rank")
         )
+        if weighted_tiles:
+            parameter_text += f"\nbackground_error_weight={hyperparameters['background_error_weight']:g}"
         figure.suptitle(f"{combination_id}\n{parameter_text}", fontsize=12)
         for axis, (measurement_key, title, y_label) in zip(axes.flat, measurements, strict=True):
             axis.plot(

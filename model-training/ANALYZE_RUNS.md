@@ -20,6 +20,8 @@ or changes to `hyperparameter-combinations.txt`. No model loading or retraining 
 The only extra dependency beyond Python's standard library is Matplotlib, already
 listed in `model-training/requirements.txt`.
 
+The same commands work inside any of the six `_weighted` pipeline folders. Their saved `background_error_weight` is retained as an additional column in ranking CSVs and displayed in chart titles. Existing four-hyperparameter runs remain supported; if a report contains both kinds, that column is blank for runs without the conditional penalty. Reconstruction components already include their saved background-error penalty and exclude the outer lambda weights. Compare their values with the reconstruction objective and multiplier in view.
+
 For **each experiment version separately**, it selects:
 
 1. The 10 highest validation accuracies, breaking ties by the smaller absolute
@@ -69,7 +71,7 @@ Logged metric strings are preserved in the CSVs without rounding.
 Each unique selected `(experiment version, combination, epoch)` gets **one PNG with
 six bar-chart panels**, with a Train and Validation bar in every panel. If an epoch
 appears in both lists, both entries link to the same PNG. Total loss is already
-weighted; reconstruction, KL, and ranking losses are shown unweighted, exactly as
+weighted; reconstruction, KL, and ranking losses exclude the outer lambda weights, exactly as
 saved by training. The reconstruction panel is labeled for the saved loss convention.
 Accuracy and Hamming distance use the original 0–1 scale. Chart labels and Markdown
 previews display six significant digits; CSVs contain the full logged values.

@@ -10,12 +10,18 @@ Each architecture has a dedicated, independently runnable pipeline folder:
 | [initial_model_architecture_softmax/](initial_model_architecture_softmax/README.md) | [initial_model_architecture_softmax.md](initial_model_architecture_softmax.md) | Initial architecture with categorical tiles and binary path |
 | [model_arch_1_softmax/](model_arch_1_softmax/README.md) | [model_arch_1_softmax.md](model_arch_1_softmax.md) | Architecture 1 with categorical tiles and binary path |
 | [model_arch_2_softmax/](model_arch_2_softmax/README.md) | [model_arch_2_softmax.md](model_arch_2_softmax.md) | Architecture 2 with categorical tiles and binary path |
+| [initial_model_architecture_weighted/](initial_model_architecture_weighted/README.md) | [initial_model_architecture.md](initial_model_architecture.md) | Initial architecture with conditional tile BCE weighting |
+| [model_arch_1_weighted/](model_arch_1_weighted/README.md) | [model_arch_1.md](model_arch_1.md) | Architecture 1 with conditional tile BCE weighting |
+| [model_arch_2_weighted/](model_arch_2_weighted/README.md) | [model_arch_2.md](model_arch_2.md) | Architecture 2 with conditional tile BCE weighting |
+| [initial_model_architecture_softmax_weighted/](initial_model_architecture_softmax_weighted/README.md) | [initial_model_architecture_softmax.md](initial_model_architecture_softmax.md) | Initial architecture with conditional tile CE weighting |
+| [model_arch_1_softmax_weighted/](model_arch_1_softmax_weighted/README.md) | [model_arch_1_softmax.md](model_arch_1_softmax.md) | Architecture 1 with conditional tile CE weighting |
+| [model_arch_2_softmax_weighted/](model_arch_2_softmax_weighted/README.md) | [model_arch_2_softmax.md](model_arch_2_softmax.md) | Architecture 2 with conditional tile CE weighting |
 
 Choose the folder for the model you want to train. Each contains its own `model.py`, `train.py`, and editable `hyperparameter-combinations.txt`. Running its `train.py` selects that architecture. Default training outputs go into that folder's `runs/`.
 
 Architecture-agnostic utilities live once in `model-training/`: [data.py](data.py) loads the common dataset, [plotting.py](plotting.py) plots training histories, [reconstruction_previews.py](reconstruction_previews.py) renders inputs and reconstructions through the supplied model's `encode`, `reparameterize`, and `decode` methods, and [analyze_runs.py](analyze_runs.py) ranks saved metrics from any selected runs folder. Training imports the shared modules automatically. Analysis reports default to `run-analysis/` beside the selected runs folder.
 
-The original three pipelines implement the joint training stage of the [project proposal](player-exp-pairwise-cnn-vae-pcgml-proposal.pdf). Their `_softmax` variants change the reconstruction output interpretation and loss as described in section 6. All six share the saved dataset and training conventions described below. Each has a shared encoder and decoder for the two playthroughs and a classifier that predicts whether the first playthrough is preferred to the second.
+The original three pipelines implement the joint training stage of the [project proposal](player-exp-pairwise-cnn-vae-pcgml-proposal.pdf). Their `_softmax` variants change the reconstruction output interpretation and loss as described in section 6. Six additional `_weighted` variants impose a larger tile loss for wrongly predicting ground or air at a cell with another true tile type. All twelve share the saved dataset and training conventions described below. Each has a shared encoder and decoder for the two playthroughs and a classifier that predicts whether the first playthrough is preferred to the second.
 
 The workflow reads explicit training rows from the selected folder's `hyperparameter-combinations.txt`, with a default budget of **50 epochs per listed combination**. Each data row specifies one complete run, and only the listed rows are trained. Every epoch records fitting and validation measurements, and each combination produces curves for losses, overall accuracy, and normalized tile Hamming distance. You choose a combination and epoch from those records. Each experiment starts with a fresh model and uses the same saved `train_set` and `validation_set` assignments. Supplying both checkpoint-range bounds enables model saving and an input/reconstruction preview for each saved model, using five randomly selected validation levels.
 
@@ -57,6 +63,8 @@ EOF
 ```
 
 Open `runs/smoke/REPORT.md` inside that model folder to see its curves and checkpoint comparison sheets. The temporary file leaves the folder's hyperparameter file unchanged. Use a fresh output directory for another invocation.
+
+The smoke file above is for the six pipelines without the `_weighted` suffix. When running a weighted pipeline, append its fifth value to the data row, for example `1e-4, 1, 1e-3, 1e-2, 3`; see the conditional-weighting rules in section 6. Its parser requires five columns.
 
 For all combinations listed in the folder's main file, using the complete supplied training portion and the 50-epoch default, use
 
@@ -180,7 +188,7 @@ All models use `(22, 16, 176)` inputs, 4×4 convolution kernels, stride 2, paddi
 z = μ + exp(0.5 * log_var) * ε,   ε ~ N(0, I)
 ```
 
-Each decoder projects the latent vector to 1,408 features, applies ReLU to that projection only in `model_arch_1` and its `_softmax` variant, reshapes it to its model's encoded shape, and reverses its encoder's spatial reductions to reconstruct exactly `(22, 16, 176)`. `decode` returns raw logits in every pipeline. The original pipelines use BCE-with-logits over all reconstruction channels. The `_softmax` pipelines also expose `decode_probabilities`, which applies softmax across tile channels 0–20 at each cell and sigmoid independently to path channel 21. Their layers and parameter counts match their corresponding base architecture; their checkpoint architecture versions append `_softmax` to the base version shown above. The FC-Tail remains a scalar logit trained with BCE-with-logits; sigmoid gives `P(first playthrough preferred)` when reporting probabilities. All FC-Tails use sizes `64 → 64 → 32 → 1` on the concatenation `[z_A; z_B]`. Dropout is active during optimization and disabled during evaluation. There is no max pooling or unpooling. See the linked specifications for complete layer tables and checkpoint metadata.
+Each decoder projects the latent vector to 1,408 features, applies ReLU to that projection only in the `model_arch_1` family (base, `_softmax`, `_weighted`, and `_softmax_weighted`), reshapes it to its model's encoded shape, and reverses its encoder's spatial reductions to reconstruct exactly `(22, 16, 176)`. `decode` returns raw logits in every pipeline. The original pipelines use BCE-with-logits over all reconstruction channels. The `_softmax` pipelines also expose `decode_probabilities`, which applies softmax across tile channels 0–20 at each cell and sigmoid independently to path channel 21. Their layers and parameter counts match their corresponding base architecture; their checkpoint architecture versions append `_softmax` to the base version shown above. The weighted variants inherit their corresponding layers and append `_weighted` to that pipeline's checkpoint architecture version. The FC-Tail remains a scalar logit trained with BCE-with-logits; sigmoid gives `P(first playthrough preferred)` when reporting probabilities. All FC-Tails use sizes `64 → 64 → 32 → 1` on the concatenation `[z_A; z_B]`. Dropout is active during optimization and disabled during evaluation. There is no max pooling or unpooling. See the linked specifications for complete layer tables and checkpoint metadata.
 
 ## 6. Joint losses and their reductions
 
@@ -196,7 +204,7 @@ For a batch containing `B` ordered examples:
 2. **KL divergence:** for each side and each example, compute `-0.5 × sum_j(1 + log_var_j - μ_j² - exp(log_var_j))`, summing over all 32 latent coordinates. Average over the batch, then average the A and B results. This measures divergence from the standard normal prior; it is not divided by 32.
 3. **Ranking BCE:** compute binary cross-entropy with logits between the FC-Tail output and the ordered-pair target, averaged over the batch.
 
-Training reports each unweighted component and their weighted total. Epoch losses average batch values using the number of ordered examples in each batch, so a shorter last batch receives its correct weight. Dropout and fresh posterior draws are active during optimization. Ranking gradients flow through both sampled latent vectors into the shared encoder and FC-Tail. Reconstruction gradients train the encoder and decoder, while the KL term trains the posterior parameters through the encoder.
+Training reports each component before the outer lambda weights, and their weighted total. Epoch losses average batch values using the number of ordered examples in each batch, so a shorter last batch receives its correct weight. Dropout and fresh posterior draws are active during optimization. Ranking gradients flow through both sampled latent vectors into the shared encoder and FC-Tail. Reconstruction gradients train the encoder and decoder, while the KL term trains the posterior parameters through the encoder.
 
 The original loss implementation uses `torch.nn.functional.binary_cross_entropy_with_logits` with its mean reduction. See [loss_components and weighted_loss](initial_model_architecture/train.py) in each folder's `train.py`.
 
@@ -210,9 +218,31 @@ L_rec  = L_tile + L_path
 
 `lambda_rec` weights that sum once in the joint loss. KL and ranking losses retain the definitions above. Histories and epoch CSVs record `reconstruction_loss`, `tile_cross_entropy`, and `path_bce`, replacing the original pipelines' `reconstruction_bce` field. Plotting and saved-run analysis recognize the appropriate reconstruction metric. The new reconstruction and total loss values are not directly comparable with the original 22-bit-averaged BCE values because the objective and reduction scale differ. Keep comparisons within the same reconstruction objective.
 
+### Conditional penalty for wrong ground or air predictions
+
+The six folders ending in `_weighted` use the same network layers as their corresponding base pipeline. Their extra hyperparameter, `background_error_weight`, is a finite multiplier at least 1. The supplied combinations copy the corresponding base folder's rows and append `3`. Edit that fifth column to choose the multiplier for each run. A value of `1` recovers the corresponding base reconstruction objective.
+
+For every cell, determine the true tile with `input[:, :21].argmax(dim=1)` and the decoded tile with `logits[:, :21].argmax(dim=1)`. The background set is channels **0 (`X`, ground), 2 (`-`, empty air), and 19 (`#`, the literal solid alias)**. The literal mushroom stalk `|` at channel 20 remains a separate tile type. The cell gets weight `k = background_error_weight` only if its true tile is outside this background set and its decoded prediction is inside it. Every other cell has weight 1. Consequently coin-to-air and pipe-to-ground errors get the extra multiplier; coin-to-enemy, air-to-coin, and ground-to-air errors retain their ordinary loss.
+
+Let `N = batch_size * 16 * 176`, `w_i` be that cell weight, and `path_BCE_i` be the usual independent path loss at cell `i`. For one side of a pair:
+
+```text
+weighted softmax:
+L_rec = sum_i(w_i * tile_CE_i + path_BCE_i) / N
+
+weighted original BCE:
+L_rec = sum_i(w_i * sum_c=0..20(tile_BCE_i,c) + path_BCE_i) / (22 * N)
+```
+
+The weighted BCE objective multiplies all 21 tile-bit errors at an affected cell. The path bit keeps weight 1 even at that location. The denominators stay fixed; these objectives do not divide by the sum of cell weights. Both trainers average the side-A and side-B reconstruction losses, then apply `lambda_rec` in the existing joint loss. KL and ranking calculations keep their usual definitions. The shared implementation is [background_error_weighting.py](background_error_weighting.py).
+
+This is a hard condition based on the winning tile prediction. Its mask is fixed during each backward pass; gradients flow through the CE/BCE errors and receive the chosen multiplier. The mask switches when the winning prediction changes. It also applies during fitting and validation reporting, using the same multiplier saved for that combination.
+
+Weighted original pipelines retain the `reconstruction_bce` metric name. Weighted softmax pipelines retain `reconstruction_loss`, `tile_cross_entropy`, and `path_bce`; their tile metric already includes the conditional penalty. These component values exclude the outer lambda weights. Configurations, checkpoints, parameter-folder names, reports, and plot titles record `background_error_weight`. Compare reconstruction values with their objective and multiplier in view, along with Hamming distance and rendered reconstructions.
+
 ## 7. Independent experiments and the fixed split
 
-The training rows are read at startup from the selected model folder's `hyperparameter-combinations.txt`. Each folder has its own editable copy. Each row supplies exactly four comma-separated numeric values in this order: **learning rate, reconstruction weight, KL weight, ranking weight**. For example, this file specifies exactly three runs:
+The training rows are read at startup from the selected model folder's `hyperparameter-combinations.txt`. Each folder has its own editable copy. For the six pipelines without the `_weighted` suffix, each row supplies exactly four comma-separated numeric values in this order: **learning rate, reconstruction weight, KL weight, ranking weight**. For example, this file specifies exactly three runs:
 
 ```text
 # learning_rate, lambda_rec, lambda_kl, lambda_rank
@@ -223,9 +253,17 @@ The training rows are read at startup from the selected model folder's `hyperpar
 
 Add, edit, or remove complete rows to choose the runs. Training preserves the file's data-row order: the first row becomes `combination_01`, the second becomes `combination_02`, and so on. Comments and blank lines do not count as runs. The number of runs equals the number of listed data rows.
 
-Each output folder is named `learning_rate_lambda_rec_lambda_kl_lambda_rank`, in that order. Values between zero and one use scientific notation without zero-padded exponents; whole numbers omit `.0`. For example, `(1e-4, 1, 1e-3, 1)` produces `1e-4_1_1e-3_1/`. Number formatting preserves the configured float precision so distinct parameter values retain distinct folder names. The sequential `combination_01`, `combination_02`, and later values remain experiment identifiers in metadata, reports, and console messages; `experiments.json` records each identifier's actual `directory`.
+Each base pipeline's output folder is named `learning_rate_lambda_rec_lambda_kl_lambda_rank`, in that order. Weighted pipelines append `_background_error_weight`. Values between zero and one use scientific notation without zero-padded exponents; whole numbers omit `.0`. For example, `(1e-4, 1, 1e-3, 1)` produces `1e-4_1_1e-3_1/`, and the corresponding weighted row ending in `3` produces `1e-4_1_1e-3_1_3/`. Number formatting preserves the configured float precision so distinct parameter values retain distinct folder names. The sequential `combination_01`, `combination_02`, and later values remain experiment identifiers in metadata, reports, and console messages; `experiments.json` records each identifier's actual `directory`.
 
-Use a dot for decimals, such as `0.01`. The commented header documents the required column order. Blank lines, full-line `#` comments, and inline `#` comments are allowed. Learning rates must be finite and positive; loss weights must be finite and non-negative. Empty files, rows with other than four numeric values, duplicate complete rows, and invalid numbers fail before loading the dataset or creating a run directory. Individual parameter values may occur in multiple different rows.
+Weighted pipelines require a fifth column after those four values:
+
+```text
+# learning_rate, lambda_rec, lambda_kl, lambda_rank, background_error_weight
+1e-4, 0.01, 0.001, 0.01, 3
+1e-4, 0.01, 0.001, 0.01, 5
+```
+
+Use a dot for decimals, such as `0.01`. The commented header documents the required column order. Blank lines, full-line `#` comments, and inline `#` comments are allowed. Learning rates must be finite and positive; the three lambda weights must be finite and non-negative; `background_error_weight` must be finite and at least 1. Empty files, rows with the wrong number of numeric values (four for base pipelines, five for weighted pipelines), duplicate complete rows, and invalid numbers fail before loading the dataset or creating a run directory. Individual parameter values may occur in multiple different rows.
 
 `--hyperparameters-file path/to/combinations.txt` selects another file for one invocation. The default file is resolved beside `train.py`, independently of the working directory. The source file path and the listed combinations, in file order, are saved in `run_config.json`; each combination's selected values are also saved in `config.json` and `experiments.json`. Editing the text file changes subsequent invocations.
 
@@ -241,7 +279,7 @@ The main controls are available near the top of `train.py` and through the CLI.
 
 | Control | Default | Meaning |
 |---|---:|---|
-| `DEFAULT_HYPERPARAMETERS` / `--hyperparameters-file` | `hyperparameter-combinations.txt` beside `train.py` | One explicit row of four parameter values per training run |
+| `DEFAULT_HYPERPARAMETERS` / `--hyperparameters-file` | `hyperparameter-combinations.txt` beside `train.py` | One explicit row per training run: four values for base pipelines, five for weighted pipelines |
 | `NUM_TRAINING_SAMPLES` / `--num-training-samples` | `None` | Cap on original comparisons, preserving whole groups |
 | `EPOCHS` / `--epochs` | 50 | Full epoch budget for every combination in the selected file |
 | `CHECKPOINT_START_EPOCH` / `--checkpoint-start-epoch` | `None` | Optional first checkpoint epoch, inclusive, supplied together with the end epoch |
@@ -320,7 +358,7 @@ Each invocation creates one experiment root with the shared configuration and sp
 | `experiments.json` | All combinations, their `pending`, `running`, `completed`, or `failed` status, and completed summaries with curve and checkpoint-preview paths |
 | `REPORT.md` | Human-readable run settings, links to each combination's six-panel fitting/validation curves, and an embedded input/reconstruction sheet for each saved checkpoint after all combinations finish |
 
-Each parameter-named directory, such as `1e-4_1e-2_1e-3_1e-2/`, contains its own outputs. Its folder name records the learning rate, reconstruction weight, KL weight, and ranking weight; the number of directories follows the listed rows.
+Each parameter-named directory, such as `1e-4_1e-2_1e-3_1e-2/`, contains its own outputs. Its folder name records the learning rate, reconstruction weight, KL weight, and ranking weight; weighted pipelines append the background-error multiplier, for example `1e-4_1e-2_1e-3_1e-2_3/`. The number of directories follows the listed rows.
 
 | File | Contents |
 |---|---|

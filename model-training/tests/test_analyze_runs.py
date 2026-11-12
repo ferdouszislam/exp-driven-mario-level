@@ -233,6 +233,41 @@ class AnalyzeRunsTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "path_bce"):
             analysis.load_experiment(self.experiment)
 
+    def test_weighted_metrics_retain_multiplier_and_identify_it_in_plots(self) -> None:
+        from matplotlib.figure import Figure
+
+        for categorical in (False, True):
+            with self.subTest(categorical=categorical):
+                experiment = self.runs / str(categorical)
+                row = self.epoch(1, "0.6", "0.7")
+                if categorical:
+                    for split in ("train", "validation"):
+                        row[f"{split}_reconstruction_loss"] = row.pop(f"{split}_reconstruction_bce")
+                destination = self.combination("weighted", 1, [row], experiment)
+                config_path = destination / "config.json"
+                config = json.loads(config_path.read_text(encoding="utf-8"))
+                config["hyperparameters"]["background_error_weight"] = 3.0
+                config_path.write_text(json.dumps(config), encoding="utf-8")
+                record = analysis.load_experiment(experiment)[0]
+                self.assertEqual(record["background_error_weight"], 3.0)
+                with patch.object(Figure, "savefig", autospec=True) as save:
+                    analysis.plot_record(record, self.root / "weighted.png")
+                figure = save.call_args.args[0]
+                self.assertIn("background_error_weight=3", figure._suptitle.get_text())
+                self.assertIn("weighted tile CE" if categorical else "weighted tile BCE",
+                              figure.axes[1].get_title())
+
+    def test_invalid_background_error_multiplier_is_reported(self) -> None:
+        destination = self.combination("weighted", 1, [self.epoch(1, "0.6", "0.7")])
+        config_path = destination / "config.json"
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        for multiplier in (0.5, "NaN", "inf", "invalid"):
+            with self.subTest(multiplier=multiplier):
+                config["hyperparameters"]["background_error_weight"] = multiplier
+                config_path.write_text(json.dumps(config), encoding="utf-8")
+                with self.assertRaisesRegex(ValueError, "background_error_weight"):
+                    analysis.load_experiment(self.experiment)
+
     def test_cli_preserves_metrics_for_bce_and_softmax_combinations(self) -> None:
         self.combination("bce", 1, [self.epoch(1, "0.7", "0.6")])
         row = self.epoch(1, "0.8", "0.7")
@@ -240,7 +275,11 @@ class AnalyzeRunsTests(unittest.TestCase):
             row[f"{split}_reconstruction_loss"] = row.pop(f"{split}_reconstruction_bce")
             row[f"{split}_tile_cross_entropy"] = "0.12345678901234567"
             row[f"{split}_path_bce"] = "0.2"
-        self.combination("softmax", 2, [row])
+        destination = self.combination("softmax", 2, [row])
+        config_path = destination / "config.json"
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        config["hyperparameters"]["background_error_weight"] = 3.0
+        config_path.write_text(json.dumps(config), encoding="utf-8")
         output = self.root / "analysis"
         with redirect_stdout(io.StringIO()):
             self.assertEqual(analysis.main(["--runs-dir", str(self.runs),
@@ -249,6 +288,8 @@ class AnalyzeRunsTests(unittest.TestCase):
                 newline="", encoding="utf-8") as handle:
             records = list(csv.DictReader(handle))
         softmax, bce = records
+        self.assertEqual(softmax["background_error_weight"], "3.0")
+        self.assertEqual(bce["background_error_weight"], "")
         self.assertEqual(softmax["train_tile_cross_entropy"], "0.12345678901234567")
         self.assertEqual(softmax["validation_path_bce"], "0.2")
         self.assertEqual(softmax["train_reconstruction_bce"], "")

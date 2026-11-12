@@ -13,6 +13,31 @@ from plotting import plot_loss_curves
 
 
 class PlottingTests(unittest.TestCase):
+    def test_weighted_curves_identify_loss_and_fifth_hyperparameter(self):
+        from matplotlib.figure import Figure
+
+        for metric, title in (
+            ("reconstruction_bce", "Reconstruction (weighted tile BCE + path BCE)"),
+            ("reconstruction_loss", "Reconstruction (weighted tile CE + path BCE)"),
+        ):
+            with self.subTest(metric=metric), tempfile.TemporaryDirectory() as directory:
+                measurements = {
+                    "total_loss": 4.0, metric: 3.5, "kl_divergence": 0.1,
+                    "ranking_bce": 0.4, "accuracy": 0.75,
+                    "normalized_hamming_distance": 0.25,
+                }
+                history = [{"epoch": 1, "train": measurements, "validation": measurements}]
+                parameters = {"learning_rate": 1e-4, "lambda_rec": 1.0,
+                              "lambda_kl": 0.001, "lambda_rank": 1.0,
+                              "background_error_weight": 3.0}
+                with patch.object(Figure, "savefig", autospec=True) as save:
+                    plot_loss_curves(history, parameters, Path(directory) / "curves.png", "combination_01")
+                figure = save.call_args.args[0]
+                self.assertEqual(figure.axes[1].get_title(), title)
+                self.assertIn("background_error_weight=3", figure._suptitle.get_text())
+                self.assertEqual([list(line.get_ydata()) for line in figure.axes[1].lines],
+                                 [[3.5], [3.5]])
+
     def test_reconstruction_panel_uses_saved_loss_convention(self):
         from matplotlib.figure import Figure
 
