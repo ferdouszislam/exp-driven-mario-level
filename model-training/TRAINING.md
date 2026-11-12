@@ -23,7 +23,7 @@ Architecture-agnostic utilities live once in `model-training/`: [data.py](data.p
 
 The original three pipelines implement the joint training stage of the [project proposal](player-exp-pairwise-cnn-vae-pcgml-proposal.pdf). Their `_softmax` variants change the reconstruction output interpretation and loss as described in section 6. Six additional `_weighted` variants impose a larger tile loss for wrongly predicting ground or air at a cell with another true tile type. All twelve share the saved dataset and training conventions described below. Each has a shared encoder and decoder for the two playthroughs and a classifier that predicts whether the first playthrough is preferred to the second.
 
-The workflow reads explicit training rows from the selected folder's `hyperparameter-combinations.txt`, with a default budget of **50 epochs per listed combination**. Each data row specifies one complete run, and only the listed rows are trained. Every epoch records fitting and validation measurements, and each combination produces curves for losses, overall accuracy, and normalized tile Hamming distance. You choose a combination and epoch from those records. Each experiment starts with a fresh model and uses the same saved `train_set` and `validation_set` assignments. Supplying both checkpoint-range bounds enables model saving and an input/reconstruction preview for each saved model, using five randomly selected validation levels.
+The workflow reads explicit training rows from the selected folder's `hyperparameter-combinations.txt`, with a default budget of **100 epochs per listed combination**. Each data row specifies one complete run, and only the listed rows are trained. Every epoch records fitting and validation measurements, and each combination produces curves for losses, overall accuracy, and normalized tile Hamming distance. You choose a combination and epoch from those records. Each experiment starts with a fresh model and uses the same saved `train_set` and `validation_set` assignments. Supplying both checkpoint-range bounds enables model saving and an input/reconstruction preview for each saved model, using five randomly selected validation levels.
 
 ## 1. Setup and commands
 
@@ -43,7 +43,7 @@ cd model-training/model_arch_1
 ../../.venv/bin/python train.py
 ```
 
-Use any folder from the table in the `cd` command to select another model; for example, `cd model-training/model_arch_1_softmax` selects its categorical-tile variant. The command trains every row in that folder's `hyperparameter-combinations.txt` for 50 epochs and saves measurements and curves under its own `runs/<UTC-timestamp>/`. Checkpoint saving is disabled by default. Editing one folder's hyperparameter file or training constants affects that folder's subsequent runs.
+Use any folder from the table in the `cd` command to select another model; for example, `cd model-training/model_arch_1_softmax` selects its categorical-tile variant. The command trains every row in that folder's `hyperparameter-combinations.txt` for 100 epochs and saves measurements and curves under its own `runs/<UTC-timestamp>/`. Checkpoint saving is disabled by default. Editing one folder's hyperparameter file or training constants affects that folder's subsequent runs.
 
 The remaining training commands in this section run **inside your chosen architecture folder**. For a small end-to-end run, create a separate one-combination file and train with four original comparisons for two epochs. Saving both epochs also exercises validation reconstruction previews:
 
@@ -66,10 +66,10 @@ Open `runs/smoke/REPORT.md` inside that model folder to see its curves and check
 
 The smoke file above is for the six pipelines without the `_weighted` suffix. When running a weighted pipeline, append its fifth value to the data row, for example `1e-4, 1, 1e-3, 1e-2, 3`; see the conditional-weighting rules in section 6. Its parser requires five columns.
 
-For all combinations listed in the folder's main file, using the complete supplied training portion and the 50-epoch default, use
+For all combinations listed in the folder's main file, using the complete supplied training portion and the 100-epoch default, use
 
 ```bash
-../../.venv/bin/python train.py --output-dir runs/comparison_50_epochs
+../../.venv/bin/python train.py --output-dir runs/comparison_100_epochs
 ```
 
 An explicit single-epoch checkpoint range can be exercised with four comparisons and two training epochs per combination:
@@ -83,7 +83,7 @@ An explicit single-epoch checkpoint range can be exercised with four comparisons
   --output-dir runs/comparison_checkpoint_check
 ```
 
-That run saves one epoch-2 checkpoint and its reconstruction previews per combination. To train for the default 50 epochs and save epochs 30 through 40 inclusive, use
+That run saves one epoch-2 checkpoint and its reconstruction previews per combination. To train for the default 100 epochs and save epochs 30 through 40 inclusive, use
 
 ```bash
 ../../.venv/bin/python train.py \
@@ -271,7 +271,7 @@ Each combination receives a freshly initialized model and Adam optimizer. Resett
 
 The saved `validation_set` is authoritative: fitting uses the selected `train_set` comparisons, and validation uses all saved validation comparisons across all experiments. Training does not split `train_set` a second time. The preprocessing default takes 20% of the original 290 training comparisons using whole groups and seed 42, giving **232 fitting comparisons and 58 validation comparisons**. Both input orders are then generated inside their assigned portion. `run_config.json` records `validation_source` as `validation_set` and sets its internal `validation_fraction` to `null` because no internal split was performed.
 
-Each combination fits on those 232 comparisons for its entire **50-epoch** default budget. The fixed validation portion supports comparison of epochs and experiments. After all experiments finish, you choose the combination and epoch using the recorded measurements and curves. Every combination completes the requested epoch budget independently.
+Each combination fits on those 232 comparisons for its entire **100-epoch** default budget. The fixed validation portion supports comparison of epochs and experiments. After all experiments finish, you choose the combination and epoch using the recorded measurements and curves. Every combination completes the requested epoch budget independently.
 
 For legacy datasets without saved validation entries, training retains its internal split controlled by `--validation-fraction` (default `0.2`). It sorts and seeded-shuffles group IDs, then takes whole groups until reaching the target while retaining at least one fitting group. Indivisible groups can change the achieved fraction. If only one selected group is available in that legacy layout, validation measurements are recorded as `null`. In the saved layout, the training seed and sample cap do not change validation membership; change the preprocessing split to choose another validation set.
 
@@ -281,7 +281,7 @@ The main controls are available near the top of `train.py` and through the CLI.
 |---|---:|---|
 | `DEFAULT_HYPERPARAMETERS` / `--hyperparameters-file` | `hyperparameter-combinations.txt` beside `train.py` | One explicit row per training run: four values for base pipelines, five for weighted pipelines |
 | `NUM_TRAINING_SAMPLES` / `--num-training-samples` | `None` | Cap on original comparisons, preserving whole groups |
-| `EPOCHS` / `--epochs` | 50 | Full epoch budget for every combination in the selected file |
+| `EPOCHS` / `--epochs` | 100 | Full epoch budget for every combination in the selected file |
 | `CHECKPOINT_START_EPOCH` / `--checkpoint-start-epoch` | `None` | Optional first checkpoint epoch, inclusive, supplied together with the end epoch |
 | `CHECKPOINT_END_EPOCH` / `--checkpoint-end-epoch` | `None` | Optional last checkpoint epoch, inclusive, supplied together with the start epoch |
 | `--batch-size` | 16 | Ordered fitting examples per optimization batch |

@@ -37,7 +37,7 @@ from reconstruction_previews import (
 # Counts original comparison folders BEFORE generating both input orders.
 # Whole comparison groups are retained, so the actual count can be below this cap.
 NUM_TRAINING_SAMPLES: int | None = None
-EPOCHS = 50
+EPOCHS = 100
 # Set both inclusive checkpoint bounds to enable model saving.
 CHECKPOINT_START_EPOCH: int | None = None
 CHECKPOINT_END_EPOCH: int | None = None
