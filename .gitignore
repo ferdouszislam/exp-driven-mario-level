@@ -213,6 +213,10 @@ checkpoints/
 
 /model-training/runs/
 /model-training/run-analysis/
+/model-training/*/runs/
+/model-training/*/run-analysis/
+/model-training/runs_wo_crop/
+/model-training/run-analysis_wo_crop/
 
 /datasets/fun-study-dataset-analysis/.git-not/
 
