@@ -6,14 +6,14 @@ The source is `Mario-Fun-Study/exp_data/survey_data/formal/` and the default out
 
 ## Setup and reproduction
 
-Use Python 3.11 or newer; this export was generated and checked with Python 3.14.7. Reuse the repository-root `.venv` with the preprocessing [requirements.txt](requirements.txt). Create the environment once from the repository root, then install these dependencies:
+Use Python 3.11 or newer; this export was generated and checked with Python 3.14.7. Reuse the repository-root `.venv` with the shared project [requirements.txt](../../requirements.txt). Create the environment once from the repository root, then install these dependencies:
 
 ```bash
 python3 -m venv .venv
-.venv/bin/python -m pip install -r datasets/fun-study-dataset-analysis/requirements.txt
+.venv/bin/python -m pip install -r requirements.txt
 ```
 
-Subsequent short script commands run from `datasets/fun-study-dataset-analysis/` and address the root interpreter as `../../.venv/bin/python`. The dependency file pins `numpy==2.3.4` and `Pillow==12.0.0` for preprocessing and image rendering. If `.venv` already exists, reuse it and run the installation command above; no separate environment is needed for either script.
+Subsequent short script commands run from `datasets/fun-study-dataset-analysis/` and address the root interpreter as `../../.venv/bin/python`. The shared dependency file pins `numpy==2.3.4` and `Pillow==13.0.0` for preprocessing and image rendering, plus PyTorch and Matplotlib for baseline metrics and model training. If `.venv` already exists, reuse it and run the installation command above; no separate environment is needed for either script. The older per-folder requirements files forward to the root file.
 
 Generate the dataset with the default split seed, `42`:
 

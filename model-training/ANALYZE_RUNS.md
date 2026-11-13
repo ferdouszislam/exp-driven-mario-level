@@ -18,7 +18,7 @@ and reads each combination's saved `config.json`. It uses the original combinati
 number and hyperparameters from that configuration, regardless of folder sorting
 or changes to `hyperparameter-combinations.txt`. No model loading or retraining is needed.
 The only extra dependency beyond Python's standard library is Matplotlib, already
-listed in `model-training/requirements.txt`.
+listed in the repository-root [requirements.txt](../requirements.txt).
 
 The same commands work inside any of the six `_weighted` pipeline folders. Their saved `background_error_weight` is retained as an additional column in ranking CSVs and displayed in chart titles. Existing four-hyperparameter runs remain supported; if a report contains both kinds, that column is blank for runs without the conditional penalty. Reconstruction components already include their saved background-error penalty and exclude the outer lambda weights. Compare their values with the reconstruction objective and multiplier in view.
 

@@ -27,14 +27,14 @@ The workflow reads explicit training rows from the selected folder's `hyperparam
 
 ## 1. Setup and commands
 
-Install the common training dependencies from the repository root. Reuse the root `.venv` if it exists:
+Install the shared project dependencies from the repository root. Reuse the root `.venv` if it exists:
 
 ```bash
 python3 -m venv .venv
-.venv/bin/python -m pip install -r model-training/requirements.txt
+.venv/bin/python -m pip install -r requirements.txt
 ```
 
-Dependencies remain centralized in [requirements.txt](requirements.txt); the model folders use the same root environment. The pinned dependencies include PyTorch **2.15.0**, NumPy **2.3.4**, Matplotlib **3.11.2**, and Pillow **12.0.0**. Matplotlib generates each combination's `validation_curves.png`; Pillow supports the existing level renderer and checkpoint comparison sheets.
+Dependencies are centralized in the repository-root [requirements.txt](../requirements.txt); preprocessing, rendering, analysis, and all model folders use the same root environment. The pinned dependencies match the installed root environment: PyTorch **2.15.0**, NumPy **2.3.4**, Matplotlib **3.11.2**, and Pillow **13.0.0**. Matplotlib generates each combination's `validation_curves.png`; Pillow supports the existing level renderer and checkpoint comparison sheets. The older per-folder requirements files forward to the root file.
 
 Enter whichever architecture folder you want. For example, from the repository root:
 

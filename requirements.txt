@@ -1,0 +1,6 @@
+# Shared dependencies for preprocessing, rendering, analysis, and all training variants.
+# Pinned to the versions installed in the repository-root .venv.
+numpy==2.3.4
+torch==2.15.0
+matplotlib==3.11.2
+Pillow==13.0.0

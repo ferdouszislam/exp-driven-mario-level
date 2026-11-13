@@ -9,10 +9,10 @@ The examples below show **three samples from `train_set` and three from `test_se
 Use the shared root `.venv` described in [`PREPROCESSING.md`](PREPROCESSING.md). From `datasets/fun-study-dataset-analysis/`, install dependencies with:
 
 ```bash
-../../.venv/bin/python -m pip install -r requirements.txt
+../../.venv/bin/python -m pip install -r ../../requirements.txt
 ```
 
-The preprocessing [requirements.txt](requirements.txt) pins `numpy==2.3.4` and `Pillow==12.0.0`. Preprocessing and rendering use the same environment; reuse the existing `.venv`.
+The repository-root [requirements.txt](../../requirements.txt) pins `numpy==2.3.4` and `Pillow==13.0.0` alongside the training and analysis dependencies. Preprocessing and rendering use the same environment; reuse the existing `.venv`.
 
 Render both levels in every comparison folder across `train_set/`, `validation_set/`, and `test_set/`. Run this command from the repository root using its existing `.venv`:
 
