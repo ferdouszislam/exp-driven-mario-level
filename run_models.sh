@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --account=def-drafiei
+#SBATCH --account=def-drafiei_gpu
 #SBATCH --partition=gpubase_bygpu_b1
 #SBATCH --gpus=h100:1
 #SBATCH --cpus-per-task=4
