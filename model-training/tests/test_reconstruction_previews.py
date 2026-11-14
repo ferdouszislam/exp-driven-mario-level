@@ -1,7 +1,8 @@
-"""Check validation sampling and checkpoint reconstruction images."""
+"""Check train/validation sampling and checkpoint reconstruction images."""
 
 from __future__ import annotations
 
+import copy
 import json
 from pathlib import Path
 import random
@@ -21,7 +22,9 @@ TRAINING_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(TRAINING_DIR))
 
 from data import INPUT_SHAPE, TILE_SYMBOLS
-from reconstruction_previews import select_validation_levels, save_checkpoint_reconstructions
+from reconstruction_previews import (
+    select_preview_levels, select_validation_levels, save_checkpoint_reconstructions,
+)
 
 
 class ControlledVAE(nn.Module):
@@ -116,6 +119,59 @@ class ReconstructionPreviewTests(unittest.TestCase):
         self.assertEqual(json.loads((output / "samples.json").read_text()), manifest)
         self.assertEqual([path.name for path in output.iterdir()], ["samples.json"])
         self.assertEqual(model.calls, [])
+
+    def test_train_sampling_selects_five_unique_levels_without_changing_rng(self):
+        entries = copy.deepcopy(self.entries)
+        for entry in entries:
+            entry["split"] = "train_set"
+            for play in entry["playthroughs"]:
+                play["files"]["encoding"] = play["files"]["encoding"].replace(
+                    "validation_set/", "train_set/")
+        duplicate = copy.deepcopy(entries[0])
+        duplicate["instance_id"] = "zz-repeated-comparison"
+        entries.append(duplicate)
+        random_state = random.getstate()
+        samples = select_preview_levels(entries, seed=42)
+        self.assertEqual(random.getstate(), random_state)
+        self.assertEqual(len(samples), 5)
+        self.assertEqual(len({sample["level_id"] for sample in samples}), 5)
+        self.assertTrue(all(sample["encoding"].startswith("train_set/") for sample in samples))
+        self.assertTrue(all(sample["instance_id"] != duplicate["instance_id"] for sample in samples))
+        self.assertEqual(samples, select_preview_levels(list(reversed(entries)), seed=42))
+        self.assertNotEqual(samples, select_preview_levels(entries, seed=43))
+        self.assertEqual(len(select_preview_levels(entries[:1], seed=42)), 2)
+        self.assertEqual(select_preview_levels([], seed=42), [])
+
+    def test_train_preview_labels_the_manifest_and_comparison_sheet(self):
+        samples = select_preview_levels(self.entries, seed=42, count=1)
+        samples[0]["encoding"] = samples[0]["encoding"].replace("validation_set/", "train_set/")
+        self.data.tensors[samples[0]["encoding"]] = next(iter(self.data.tensors.values()))
+        output = self.root / "train"
+        with patch("PIL.ImageDraw.ImageDraw.text", autospec=True) as draw_text:
+            manifest = save_checkpoint_reconstructions(
+                ControlledVAE(), self.data, samples, output, torch.device("cpu"), 43,
+                "checkpoints/epoch_003.pt", 3, split="train", selection_seed=42,
+            )
+        self.assertEqual(manifest["split"], "train")
+        self.assertEqual(manifest["selection_seed"], 42)
+        self.assertIn("train", manifest["selection_policy"].lower())
+        self.assertNotIn("validation", manifest["selection_policy"].lower())
+        self.assertIn("train", manifest["latent_policy"].lower())
+        labels = [str(call.args[2]) for call in draw_text.call_args_list]
+        self.assertTrue(any("Training input" in label for label in labels), labels)
+        self.assertTrue(all("Validation input" not in label for label in labels), labels)
+        self.assertEqual(json.loads((output / "samples.json").read_text()), manifest)
+
+    def test_empty_train_preview_has_train_specific_metadata(self):
+        with patch("reconstruction_previews._renderer", side_effect=AssertionError("Unexpected render")):
+            manifest = save_checkpoint_reconstructions(
+                ControlledVAE(), self.data, [], self.root / "empty-train", torch.device("cpu"),
+                43, "checkpoints/epoch_003.pt", 3, split="train",
+            )
+        self.assertEqual(manifest["split"], "train")
+        self.assertEqual(manifest["sample_count"], 0)
+        self.assertIn("train", manifest["skipped_reason"].lower())
+        self.assertNotIn("validation", manifest["skipped_reason"].lower())
 
     def test_saved_images_and_encodings_use_sampled_vae_output(self):
         model = ControlledVAE()

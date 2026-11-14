@@ -33,7 +33,7 @@ from checkpoint_ranges import (
 from data import ComparisonDataset, load_training_data
 from plotting import plot_loss_curves
 from reconstruction_previews import (
-    PREVIEW_COUNT, save_checkpoint_reconstructions, select_validation_levels,
+    PREVIEW_COUNT, save_checkpoint_reconstructions, select_preview_levels,
 )
 
 
@@ -405,27 +405,33 @@ def run_combination(data, fitting: list[dict], validation: list[dict],
                 save_epoch_checkpoint(checkpoint, model, optimizer, config, data,
                                       fitting, validation, row)
                 saved_checkpoints.append(checkpoint.relative_to(output).as_posix())
-                preview_directory = output / "reconstructions" / checkpoint.stem
-                with preserve_random_state():
-                    seed_everything(config["preview_seed"])
-                    preview = save_checkpoint_reconstructions(
-                        model, data, config["validation_preview_samples"], preview_directory,
-                        device, config["preview_seed"], checkpoint.relative_to(output).as_posix(), epoch,
-                        selection_seed=config["seed"],
-                    )
-                relative_directory = preview_directory.relative_to(output).as_posix()
+                previews = {}
+                for split in ("validation", "train"):
+                    preview_directory = output / "reconstructions" / checkpoint.stem / split
+                    with preserve_random_state():
+                        seed_everything(config["preview_seed"])
+                        preview = save_checkpoint_reconstructions(
+                            model, data, config[f"{split}_preview_samples"], preview_directory,
+                            device, config["preview_seed"], checkpoint.relative_to(output).as_posix(), epoch,
+                            selection_seed=config["seed"], split=split,
+                        )
+                    relative_directory = preview_directory.relative_to(output).as_posix()
+                    previews[split] = {
+                        "sample_count": preview["sample_count"],
+                        "comparison_image": (f"{relative_directory}/{preview['comparison_image']}"
+                                             if preview["comparison_image"] is not None else None),
+                        "samples_file": f"{relative_directory}/samples.json",
+                    }
+                    if preview["sample_count"]:
+                        print(f"{combination_id} epoch {epoch} {split} reconstructions: "
+                              f"{preview_directory / preview['comparison_image']}", flush=True)
                 checkpoint_previews.append({
                     "epoch": epoch,
                     "checkpoint": checkpoint.relative_to(output).as_posix(),
-                    "sample_count": preview["sample_count"],
-                    "comparison_image": (f"{relative_directory}/{preview['comparison_image']}"
-                                         if preview["comparison_image"] is not None else None),
-                    "samples_file": f"{relative_directory}/samples.json",
+                    **previews["validation"],
+                    "train": previews["train"],
                 })
                 write_json(output / "checkpoint_previews.json", checkpoint_previews)
-                if preview["sample_count"]:
-                    print(f"{combination_id} epoch {epoch} validation reconstructions: "
-                          f"{preview_directory / preview['comparison_image']}", flush=True)
     finally:
         if history:
             plot_loss_curves(history, asdict(hp), output / "validation_curves.png", combination_id)
@@ -488,8 +494,9 @@ def write_report(output: Path, config: dict, experiments: list[dict]) -> None:
     previews = [(experiment, preview) for experiment in experiments
                 for preview in experiment.get("checkpoint_previews", [])]
     if previews:
-        lines += ["", "## Saved-model validation reconstructions", "",
-                  f"Up to {PREVIEW_COUNT} distinct validation levels are randomly selected once and reused",
+        lines += ["", "## Saved-model validation and training reconstructions", "",
+                  f"Up to {PREVIEW_COUNT} distinct levels from each of the fitting and validation portions",
+                  "are randomly selected once and reused",
                   "for every checkpoint and configuration. Each sheet shows the original input followed",
                   "by its VAE reconstruction from a sampled posterior latent vector. Sampling uses the",
                   "same seed for each checkpoint. Black X markers show the input or reconstructed path.",
@@ -504,6 +511,14 @@ def write_report(output: Path, config: dict, experiments: list[dict]) -> None:
                              f"({directory}/{preview['comparison_image']})")
             else:
                 lines.append("No validation levels were available for reconstruction previews.")
+            train_preview = preview.get("train")
+            if train_preview is not None:
+                lines += ["", f"[Training sample details]({directory}/{train_preview['samples_file']})", ""]
+                if train_preview["comparison_image"] is not None:
+                    lines.append(f"![{train_preview['sample_count']} training inputs and VAE reconstructions]"
+                                 f"({directory}/{train_preview['comparison_image']})")
+                else:
+                    lines.append("No training levels were available for reconstruction previews.")
     (output / "REPORT.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -553,7 +568,8 @@ def main(argv=None) -> None:
     else:
         fitting, validation = split_training_groups(data.entries, args.validation_fraction, args.seed)
         validation_source = "train_set"
-    preview_samples = select_validation_levels(validation, args.seed)
+    preview_samples = select_preview_levels(validation, args.seed)
+    train_preview_samples = select_preview_levels(fitting, args.seed)
     output = (args.output_dir or HERE / "runs" / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")).resolve()
     if output.exists() and any(output.iterdir()):
         raise ValueError(f"Output directory must be new or empty {output}")
@@ -581,6 +597,8 @@ def main(argv=None) -> None:
         "preview_seed": (args.seed + 2) % (2**32),
         "validation_preview_requested_levels": PREVIEW_COUNT,
         "validation_preview_samples": preview_samples,
+        "train_preview_requested_levels": PREVIEW_COUNT,
+        "train_preview_samples": train_preview_samples,
         "device": str(device), "cpu_threads": args.cpu_threads,
         "architecture": architecture_metadata(),
         "python_version": platform.python_version(), "pytorch_version": str(torch.__version__),

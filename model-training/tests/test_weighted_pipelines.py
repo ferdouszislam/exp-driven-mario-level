@@ -202,6 +202,12 @@ class WeightedPipelineTests(unittest.TestCase):
                     previews = json.loads((combination / "checkpoint_previews.json").read_text())
                     self.assertEqual(previews[0]["sample_count"], 2)
                     self.assertGreater((combination / previews[0]["comparison_image"]).stat().st_size, 0)
+                    self.assertEqual(previews[0]["train"]["sample_count"], 2)
+                    train_samples = json.loads((combination / previews[0]["train"]["samples_file"]).read_text())
+                    self.assertEqual(train_samples["split"], "train")
+                    self.assertTrue(all(sample["encoding"].startswith("train_set/")
+                                        for sample in train_samples["samples"]))
+                    self.assertGreater((combination / previews[0]["train"]["comparison_image"]).stat().st_size, 0)
                     checkpoint_path = combination / previews[0]["checkpoint"]
                     checkpoint = torch.load(checkpoint_path, weights_only=True, map_location="cpu")
                     self.assertEqual(checkpoint["config"]["hyperparameters"]["background_error_weight"], 3)
