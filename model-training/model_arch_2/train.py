@@ -26,6 +26,10 @@ from model import PairwiseCNNVAE, architecture_metadata
 # Keep this folder's model local while reusing the common pipeline utilities.
 sys.path.insert(1, str(Path(__file__).resolve().parents[1]))
 
+from checkpoint_ranges import (
+    add_checkpoint_arguments, checkpoint_epoch_selected, checkpoint_summary,
+    validate_checkpoint_ranges,
+)
 from data import ComparisonDataset, load_training_data
 from plotting import plot_loss_curves
 from reconstruction_previews import (
@@ -38,9 +42,9 @@ from reconstruction_previews import (
 # Whole comparison groups are retained, so the actual count can be below this cap.
 NUM_TRAINING_SAMPLES: int | None = None
 EPOCHS = 100
-# Set both inclusive checkpoint bounds to enable model saving.
-CHECKPOINT_START_EPOCH: int | None = None
-CHECKPOINT_END_EPOCH: int | None = None
+# Set inclusive bounds to integers or paired lists (e.g. [10, 50] and [20, 60]).
+CHECKPOINT_START_EPOCH: int | list[int] | None = None
+CHECKPOINT_END_EPOCH: int | list[int] | None = None
 BATCH_SIZE = 16
 SEED = 42
 HERE = Path(__file__).resolve().parent
@@ -396,8 +400,7 @@ def run_combination(data, fitting: list[dict], validation: list[dict],
                           f"accuracy={metrics['accuracy']:.4f} "
                           f"F1={metrics['f1_score']:.4f} "
                           f"Hamming={metrics['normalized_hamming_distance']:.6f}", flush=True)
-            if (args.checkpoint_start_epoch is not None
-                    and args.checkpoint_start_epoch <= epoch <= args.checkpoint_end_epoch):
+            if checkpoint_epoch_selected(epoch, args.checkpoint_ranges):
                 checkpoint = checkpoints / f"epoch_{epoch:03d}.pt"
                 save_epoch_checkpoint(checkpoint, model, optimizer, config, data,
                                       fitting, validation, row)
@@ -472,20 +475,7 @@ def write_report(output: Path, config: dict, experiments: list[dict]) -> None:
             f"{experiment['last_train_metrics']['accuracy']:.6f} | {validation_accuracy} | "
             f"{len(experiment['checkpoint_files'])} | [Curves]({directory}/validation_curves.png) |"
         )
-    first_checkpoint_epoch = config["checkpoint_start_epoch"]
-    if first_checkpoint_epoch is None:
-        checkpoint_summary = "Checkpoint saving was disabled for this run."
-    else:
-        last_checkpoint_epoch = min(config["epochs"], config["checkpoint_end_epoch"])
-        if first_checkpoint_epoch <= last_checkpoint_epoch:
-            checkpoint_summary = (
-                f"Checkpoints cover epochs {first_checkpoint_epoch}–{last_checkpoint_epoch}, inclusive."
-            )
-        else:
-            checkpoint_summary = (
-                f"Checkpoint saving begins at epoch {first_checkpoint_epoch}, "
-                f"beyond this run's {config['epochs']}-epoch budget."
-            )
+    saving_summary = checkpoint_summary(config["checkpoint_ranges"], config["epochs"])
     lines += ["", "Each graph contains six panels for total loss, reconstruction BCE, KL divergence,",
               "ranking BCE, ranking accuracy, and normalized tile Hamming distance.",
               "The panels show fitting and validation curves against num_epochs.",
@@ -493,7 +483,7 @@ def write_report(output: Path, config: dict, experiments: list[dict]) -> None:
               "overall accuracy, binary F1, and normalized tile Hamming distance.",
               "Hamming distance compares each input tile grid with its own decoder reconstruction,",
               "using the highest-logit geometry tile at each position and averaging over both inputs.",
-              "", checkpoint_summary,
+              "", saving_summary,
               "Each checkpoint filename identifies its saved epoch, such as epoch_021.pt for epoch 21."]
     previews = [(experiment, preview) for experiment in experiments
                 for preview in experiment.get("checkpoint_previews", [])]
@@ -527,10 +517,7 @@ def parse_args(argv=None):
                         help="Cap on original comparisons, keeping whole groups; default all")
     parser.add_argument("--epochs", type=int, default=EPOCHS,
                         help="Complete training duration for every hyperparameter combination")
-    parser.add_argument("--checkpoint-start-epoch", type=int, default=CHECKPOINT_START_EPOCH,
-                        help="First epoch to save, inclusive; specify with --checkpoint-end-epoch")
-    parser.add_argument("--checkpoint-end-epoch", type=int, default=CHECKPOINT_END_EPOCH,
-                        help="Last epoch to save, inclusive; omit both bounds to disable checkpoints")
+    add_checkpoint_arguments(parser)
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE,
                         help="Ordered examples per optimization batch")
     parser.add_argument("--validation-fraction", type=float, default=0.2,
@@ -544,14 +531,7 @@ def parse_args(argv=None):
     for name in ("epochs", "batch_size", "cpu_threads"):
         if getattr(args, name) < 1:
             parser.error(f"--{name.replace('_', '-')} must be positive")
-    if (args.checkpoint_start_epoch is None) != (args.checkpoint_end_epoch is None):
-        parser.error("Specify both --checkpoint-start-epoch and --checkpoint-end-epoch to save checkpoints")
-    if args.checkpoint_start_epoch is not None:
-        for name in ("checkpoint_start_epoch", "checkpoint_end_epoch"):
-            if getattr(args, name) < 1:
-                parser.error(f"--{name.replace('_', '-')} must be positive")
-        if args.checkpoint_end_epoch < args.checkpoint_start_epoch:
-            parser.error("--checkpoint-end-epoch must be at least --checkpoint-start-epoch")
+    validate_checkpoint_ranges(parser, args, CHECKPOINT_START_EPOCH, CHECKPOINT_END_EPOCH)
     if args.num_training_samples is not None and args.num_training_samples < 1:
         parser.error("--num-training-samples must be positive")
     if not 0 < args.validation_fraction < 1:
@@ -593,6 +573,7 @@ def main(argv=None) -> None:
         "epochs": args.epochs, "combination_count": len(combinations),
         "checkpoint_start_epoch": args.checkpoint_start_epoch,
         "checkpoint_end_epoch": args.checkpoint_end_epoch,
+        "checkpoint_ranges": args.checkpoint_ranges,
         "batch_size": args.batch_size,
         "validation_source": validation_source,
         "validation_fraction": args.validation_fraction if validation_source == "train_set" else None,

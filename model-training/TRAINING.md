@@ -23,7 +23,7 @@ Architecture-agnostic utilities live once in `model-training/`: [data.py](data.p
 
 The original three pipelines implement the joint training stage of the [project proposal](player-exp-pairwise-cnn-vae-pcgml-proposal.pdf). Their `_softmax` variants change the reconstruction output interpretation and loss as described in section 6. Six additional `_weighted` variants impose a larger tile loss for wrongly predicting ground or air at a cell with another true tile type. All twelve share the saved dataset and training conventions described below. Each has a shared encoder and decoder for the two playthroughs and a classifier that predicts whether the first playthrough is preferred to the second.
 
-The workflow reads explicit training rows from the selected folder's `hyperparameter-combinations.txt`, with a default budget of **100 epochs per listed combination**. Each data row specifies one complete run, and only the listed rows are trained. Every epoch records fitting and validation measurements, and each combination produces curves for losses, overall accuracy, and normalized tile Hamming distance. You choose a combination and epoch from those records. Each experiment starts with a fresh model and uses the same saved `train_set` and `validation_set` assignments. Supplying both checkpoint-range bounds enables model saving and an input/reconstruction preview for each saved model, using five randomly selected validation levels.
+The workflow reads explicit training rows from the selected folder's `hyperparameter-combinations.txt`, with a default budget of **100 epochs per listed combination**. Each data row specifies one complete run, and only the listed rows are trained. Every epoch records fitting and validation measurements, and each combination produces curves for losses, overall accuracy, and normalized tile Hamming distance. You choose a combination and epoch from those records. Each experiment starts with a fresh model and uses the same saved `train_set` and `validation_set` assignments. Supplying one or more pairs of checkpoint-range bounds enables model saving and an input/reconstruction preview for each saved model, using five randomly selected validation levels.
 
 ## 1. Setup and commands
 
@@ -93,6 +93,19 @@ That run saves one epoch-2 checkpoint and its reconstruction previews per combin
 ```
 
 This saves **11 checkpoints per listed combination**, each with reconstruction previews. The window controls saving while each experiment completes its full training budget. Changing the hyperparameter file changes the number of combinations and total saved models.
+
+To save two separate ranges, repeat the start and end flags:
+
+```bash
+../../.venv/bin/python train.py \
+  --checkpoint-start-epoch 10 \
+  --checkpoint-end-epoch 20 \
+  --checkpoint-start-epoch 50 \
+  --checkpoint-end-epoch 60 \
+  --output-dir runs/comparison_two_ranges
+```
+
+This saves **22 checkpoints per listed combination**, covering epochs 10–20 and 50–60 inclusive, with reconstruction previews for those same epochs. Epochs between the ranges still train and produce measurements. You can also supply the same ranges as `--checkpoint-start-epoch 10 50 --checkpoint-end-epoch 20 60`. Starts and ends are paired by position: the first start with the first end, then the second start with the second end. All twelve model-training pipelines accept both forms and the original single-range form. Overlapping ranges save each epoch only once.
 
 Each output directory must be new or empty. Omit `--output-dir` to create a new UTC-timestamped directory under the selected model folder's `runs/`. The script rejects output inside the input dataset. Explicit relative paths, including `--output-dir` and `--hyperparameters-file`, resolve from your current working directory. Default dataset, hyperparameter, and run paths resolve from the selected script's location. View all flags or analyze completed runs with
 
@@ -282,8 +295,8 @@ The main controls are available near the top of `train.py` and through the CLI.
 | `DEFAULT_HYPERPARAMETERS` / `--hyperparameters-file` | `hyperparameter-combinations.txt` beside `train.py` | One explicit row per training run: four values for base pipelines, five for weighted pipelines |
 | `NUM_TRAINING_SAMPLES` / `--num-training-samples` | `None` | Cap on original comparisons, preserving whole groups |
 | `EPOCHS` / `--epochs` | 100 | Full epoch budget for every combination in the selected file |
-| `CHECKPOINT_START_EPOCH` / `--checkpoint-start-epoch` | `None` | Optional first checkpoint epoch, inclusive, supplied together with the end epoch |
-| `CHECKPOINT_END_EPOCH` / `--checkpoint-end-epoch` | `None` | Optional last checkpoint epoch, inclusive, supplied together with the start epoch |
+| `CHECKPOINT_START_EPOCH` / `--checkpoint-start-epoch` | `None` | Optional inclusive start epochs; accept one value, several values, or repeated flags, paired with end epochs by position |
+| `CHECKPOINT_END_EPOCH` / `--checkpoint-end-epoch` | `None` | Optional inclusive end epochs; supply the same number of values as start epochs |
 | `--batch-size` | 16 | Ordered fitting examples per optimization batch |
 | `--validation-fraction` | 0.2 | Fallback target fraction for legacy datasets without saved validation entries |
 | `--seed` | 42 | Initialization, sample selection, split, and random-stream seed |
@@ -350,7 +363,7 @@ Each invocation creates one experiment root with the shared configuration and sp
 
 | File | Contents |
 |---|---|
-| `run_config.json` | Dataset and fingerprint, requested/actual sample counts, source hyperparameter path and listed combinations in file order, epoch budget, checkpoint bounds, seeds, selected preview inputs, device, environment, architecture, and shared run settings |
+| `run_config.json` | Dataset and fingerprint, requested/actual sample counts, source hyperparameter path and listed combinations in file order, epoch budget, checkpoint bounds and paired ranges, seeds, selected preview inputs, device, environment, architecture, and shared run settings |
 | `channels.json` | Exact input channel codebook |
 | `selected_train_comparisons.json` | Selected manifest entries with participant, playthrough, and grouping provenance |
 | `selected_validation_comparisons.json` | Saved validation manifest entries when `validation_set` is present |
@@ -370,7 +383,7 @@ Each parameter-named directory, such as `1e-4_1e-2_1e-3_1e-2/`, contains its own
 | `train_predictions.csv` | Final-epoch ordered predictions for the fitting portion |
 | `validation_predictions.csv` | Final-epoch ordered validation predictions when validation is available |
 | `validation_curves.png` | A 3×2 figure for weighted total loss, reconstruction loss (original BCE or categorical tiles plus path BCE), KL divergence, ranking BCE, overall accuracy, and normalized tile Hamming distance, each showing fitting and available validation values against epoch number |
-| `checkpoints/epoch_030.pt`, etc. | Optional model and optimizer state for each completed epoch within an explicitly configured inclusive checkpoint window |
+| `checkpoints/epoch_030.pt`, etc. | Optional model and optimizer state for each completed epoch within any configured inclusive checkpoint range, saved once per epoch |
 | `checkpoint_previews.json` | Index of saved checkpoint epochs and their sample counts, comparison PNGs, and sample manifests; updated after each checkpoint's preview is saved |
 | `reconstructions/epoch_030/`, etc. | Validation inputs and VAE reconstructions associated with that saved checkpoint, described below |
 
@@ -380,9 +393,18 @@ The overall-accuracy and normalized-Hamming-distance panels use a vertical range
 
 The dataset SHA-256 fingerprint includes the codebook bytes, selected training-entry metadata, ranking bytes, and encoding bytes, plus the same information for all saved validation entries, with explicit boundaries between components.
 
-Checkpoint saving is **disabled by default**. Both `CHECKPOINT_START_EPOCH` and `CHECKPOINT_END_EPOCH` near the top of `train.py` default to `None`. Enable saving by supplying `--checkpoint-start-epoch` and `--checkpoint-end-epoch` together, or by setting both module constants to integer epochs. Supplying only one bound raises an argument error.
+Checkpoint saving is **disabled by default**. Both `CHECKPOINT_START_EPOCH` and `CHECKPOINT_END_EPOCH` near the top of each `train.py` default to `None`. Enable saving by supplying both CLI flags, using repeated flags or multiple values for multiple ranges. You can instead set both module constants to integer epochs for one range, or to lists for several ranges:
 
-The bounds are inclusive and must be positive, with the end epoch at least the start epoch. They can extend beyond the training budget. The actual checkpoint epochs are the intersection of the configured window with completed training epochs. The run and combination configurations record both supplied bounds, or two `null` values when saving is disabled. Default runs produce zero model checkpoint files at every training length.
+```python
+CHECKPOINT_START_EPOCH = [10, 50]
+CHECKPOINT_END_EPOCH = [20, 60]
+```
+
+For each bound, supplied CLI values replace that constant's defaults. The start and end lists must have the same number of values. Supplying only one bound raises an argument error. Every bound must be positive, and each end must be at least its corresponding start. Ranges may be supplied in any order and may overlap or extend beyond the training budget.
+
+The bounds are inclusive. The actual checkpoint epochs are the union of the configured ranges intersected with completed training epochs; each selected epoch produces one checkpoint and one set of reconstruction previews. For example, ranges 10–20 and 15–25 save 16 checkpoints, covering epochs 10–25 once each. A range entirely beyond the epoch budget produces no checkpoints or previews. Default runs produce zero model checkpoint files at every training length.
+
+The run and combination configurations, including the configuration embedded in each checkpoint, record `checkpoint_start_epoch` and `checkpoint_end_epoch` as lists, even for a single range, and the requested pairs in `checkpoint_ranges` (`[[10, 20], [50, 60]]` in JSON). When saving is disabled, the two bound fields are `null` in JSON and `checkpoint_ranges` is `[]`. These fields retain the requested ranges, including any portions beyond the epoch budget. The final report describes the ranges that fall within the run's epoch budget.
 
 For float32 model parameters and two Adam moment tensors, checkpoint tensor storage is approximately `12 × parameter_count` bytes: **13.4 MB** for the initial architecture, **6.4 MB** for model_arch_1, and **15.3 MB** for model_arch_2. The explicit 30–40 range in section 1 saves 11 checkpoints per listed combination. Multiply the per-checkpoint size by the number of saved epochs and listed combinations, then allow for serialization overhead, reconstruction images, arrays, reports, and plots. These are decimal MB; serialized size varies with configuration metadata and library versions.
 

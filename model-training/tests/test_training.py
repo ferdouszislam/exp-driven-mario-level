@@ -562,10 +562,11 @@ class TrainingTests(unittest.TestCase):
             output = Path(temporary) / "with-previews"
             baseline = Path(temporary) / "without-checkpoints"
             arguments = ["--dataset", str(self.root), "--hyperparameters-file", str(hyperparameters_file),
-                         "--num-training-samples", "1", "--epochs", "3", "--batch-size", "2", "--device", "cpu"]
+                         "--num-training-samples", "1", "--epochs", "6", "--batch-size", "2", "--device", "cpu"]
             with patch.object(training, "plot_loss_curves"), redirect_stdout(io.StringIO()):
                 training.main(arguments + ["--output-dir", str(output),
-                                           "--checkpoint-start-epoch", "1", "--checkpoint-end-epoch", "2"])
+                                           "--checkpoint-start-epoch", "4", "1", "4", "8",
+                                           "--checkpoint-end-epoch", "5", "2", "4", "9"])
                 training.main(arguments + ["--output-dir", str(baseline)])
             directory_name = "1e-4_1e-2_1e-3_1"
             combination = output / directory_name
@@ -574,7 +575,19 @@ class TrainingTests(unittest.TestCase):
             self.assertEqual(experiments[0]["directory"], directory_name)
             self.assertEqual(experiments[0]["loss_graph"], f"{directory_name}/validation_curves.png")
             previews = json.loads((combination / "checkpoint_previews.json").read_text(encoding="utf-8"))
-            self.assertEqual([preview["epoch"] for preview in previews], [1, 2])
+            self.assertEqual([preview["epoch"] for preview in previews], [1, 2, 4, 5])
+            expected_checkpoints = [f"checkpoints/epoch_{epoch:03d}.pt" for epoch in (1, 2, 4, 5)]
+            self.assertEqual(experiments[0]["checkpoint_files"], expected_checkpoints)
+            self.assertEqual(sorted(path.name for path in (combination / "checkpoints").iterdir()),
+                             [Path(path).name for path in expected_checkpoints])
+            self.assertEqual(sorted(path.name for path in (combination / "reconstructions").iterdir()),
+                             [f"epoch_{epoch:03d}" for epoch in (1, 2, 4, 5)])
+            expected_ranges = [[4, 5], [1, 2], [4, 4], [8, 9]]
+            for config_path in (output / "run_config.json", combination / "config.json"):
+                config = json.loads(config_path.read_text(encoding="utf-8"))
+                self.assertEqual(config["checkpoint_ranges"], expected_ranges)
+                self.assertEqual(config["checkpoint_start_epoch"], [4, 1, 4, 8])
+                self.assertEqual(config["checkpoint_end_epoch"], [5, 2, 4, 9])
             self.assertFalse((combination / "reconstructions/epoch_003").exists())
             expected_levels = {play["level_id"] for play in expected_validation["playthroughs"]}
             manifests = []
@@ -585,6 +598,8 @@ class TrainingTests(unittest.TestCase):
                 restored.load_state_dict(checkpoint["model_state_dict"], strict=True)
                 self.assertEqual(checkpoint["epoch"], preview["epoch"])
                 self.assertEqual(checkpoint["config"]["combination_id"], "combination_01")
+                self.assertEqual(checkpoint["config"]["checkpoint_ranges"],
+                                 [tuple(bounds) for bounds in expected_ranges])
                 architecture = checkpoint["config"]["architecture"]
                 self.assertEqual(architecture["architecture_version"], "initial_model_architecture_crop16")
                 self.assertEqual(architecture["normalization"], "GroupNorm")
@@ -607,10 +622,16 @@ class TrainingTests(unittest.TestCase):
             self.assertIn("initial_model_architecture_crop16", report)
             self.assertIn("(22, 16, 176)", report)
             self.assertIn("drops the first 16 columns", report)
+            self.assertIn("Checkpoints cover epochs 1–2, 4–5, inclusive.", report)
             for preview in previews:
                 self.assertIn(f"{directory_name}/{preview['comparison_image']}", report)
                 self.assertIn(f"{directory_name}/{preview['checkpoint']}", report)
             self.assertFalse((baseline / directory_name / "checkpoint_previews.json").exists())
+            self.assertEqual(list((baseline / directory_name / "checkpoints").iterdir()), [])
+            self.assertFalse((baseline / directory_name / "reconstructions").exists())
+            baseline_config = json.loads((baseline / "run_config.json").read_text(encoding="utf-8"))
+            self.assertEqual(baseline_config["checkpoint_ranges"], [])
+            self.assertIn("Checkpoint saving was disabled", (baseline / "REPORT.md").read_text(encoding="utf-8"))
 
     def test_loader_rejects_nonbinary_encoding_and_inconsistent_rank(self) -> None:
         entry = self.source_entries[0]
@@ -676,9 +697,9 @@ class TrainingTests(unittest.TestCase):
         self.assertEqual(rejected.exception.code, 2)
         valid_ranges = [
             (["--epochs", "2"], (None, None)),
-            (["--epochs", "5", "--checkpoint-start-epoch", "2", "--checkpoint-end-epoch", "3"], (2, 3)),
-            (["--epochs", "5", "--checkpoint-start-epoch", "2", "--checkpoint-end-epoch", "2"], (2, 2)),
-            (["--epochs", "5", "--checkpoint-start-epoch", "10", "--checkpoint-end-epoch", "12"], (10, 12)),
+            (["--epochs", "5", "--checkpoint-start-epoch", "2", "--checkpoint-end-epoch", "3"], ([2], [3])),
+            (["--epochs", "5", "--checkpoint-start-epoch", "2", "--checkpoint-end-epoch", "2"], ([2], [2])),
+            (["--epochs", "5", "--checkpoint-start-epoch", "10", "--checkpoint-end-epoch", "12"], ([10], [12])),
         ]
         for arguments, expected_range in valid_ranges:
             with self.subTest(arguments=arguments):
