@@ -531,39 +531,11 @@ class TrainingTests(unittest.TestCase):
                          expected_combinations)
         self.assertEqual(config["validation_source"], "validation_set")
         self.assertIsNone(config["validation_fraction"])
-        self.assertEqual(config["train_preview_requested_levels"], 5)
-        fitting_ids = {entry["instance_id"] for entry in run.call_args.args[1]}
-        self.assertEqual({sample["instance_id"] for sample in config["train_preview_samples"]}, fitting_ids)
-        self.assertTrue(all(sample["encoding"].startswith("train_set/")
-                            for sample in config["train_preview_samples"]))
+        self.assertFalse(any("preview" in key for key in config))
         split = json.loads((output / "split.json").read_text(encoding="utf-8"))
         self.assertEqual(split["validation_instance_ids"], [expected_validation["instance_id"]])
         self.assertEqual(json.loads((output / "selected_validation_comparisons.json").read_text(encoding="utf-8")),
                          [expected_validation])
-
-    def test_train_preview_selection_uses_only_the_fitting_portion_of_fallback_split(self) -> None:
-        parameters = self.root / "preview-split-parameters.txt"
-        parameters.write_text("1e-4, 1, 1e-3, 1e-2\n", encoding="utf-8")
-        with tempfile.TemporaryDirectory() as temporary:
-            output = Path(temporary) / "run"
-            with patch.object(training, "run_combination", return_value={"status": "completed"}) as run, \
-                    patch.object(training, "write_report"), redirect_stdout(io.StringIO()):
-                training.main(["--dataset", str(self.root), "--epochs", "1", "--device", "cpu",
-                               "--validation-fraction", "0.5", "--hyperparameters-file", str(parameters),
-                               "--output-dir", str(output)])
-            config = json.loads((output / "run_config.json").read_text(encoding="utf-8"))
-            fitting, validation = run.call_args.args[1:3]
-            fitting_ids = {entry["instance_id"] for entry in fitting}
-            validation_ids = {entry["instance_id"] for entry in validation}
-            self.assertTrue(fitting_ids)
-            self.assertTrue(validation_ids)
-            self.assertEqual(config["validation_source"], "train_set")
-            train_samples = config["train_preview_samples"]
-            self.assertTrue(train_samples)
-            self.assertTrue({sample["instance_id"] for sample in train_samples} <= fitting_ids)
-            self.assertFalse({sample["instance_id"] for sample in train_samples} & validation_ids)
-            self.assertTrue({sample["instance_id"] for sample in config["validation_preview_samples"]}
-                            <= validation_ids)
 
     def test_ordered_dataset_is_balanced_and_seeded_loader_is_deterministic(self) -> None:
         data = load_training_data(self.root, None, 42)
@@ -580,15 +552,12 @@ class TrainingTests(unittest.TestCase):
         for batch_a, batch_b in zip(first, second, strict=True):
             self.assertTrue(all(torch.equal(a, b) for a, b in zip(batch_a, batch_b, strict=True)))
 
-    def test_every_saved_checkpoint_gets_previews_without_changing_training(self) -> None:
-        expected_validation = self._save_validation_entry()
-        hyperparameters_file = self.root / "preview-hyperparameters.txt"
-        hyperparameters_file.write_text(
-            "1e-4, 0.01, 0.001, 1\n",
-            encoding="utf-8",
-        )
+    def test_saved_checkpoint_ranges_do_not_generate_levels_or_change_training(self) -> None:
+        self._save_validation_entry()
+        hyperparameters_file = self.root / "checkpoint-hyperparameters.txt"
+        hyperparameters_file.write_text("1e-4, 0.01, 0.001, 1\n", encoding="utf-8")
         with tempfile.TemporaryDirectory() as temporary:
-            output = Path(temporary) / "with-previews"
+            output = Path(temporary) / "with-checkpoints"
             baseline = Path(temporary) / "without-checkpoints"
             arguments = ["--dataset", str(self.root), "--hyperparameters-file", str(hyperparameters_file),
                          "--num-training-samples", "3", "--epochs", "6", "--batch-size", "2", "--device", "cpu"]
@@ -599,92 +568,38 @@ class TrainingTests(unittest.TestCase):
                 training.main(arguments + ["--output-dir", str(baseline)])
             directory_name = "1e-4_1e-2_1e-3_1"
             combination = output / directory_name
-            experiments = json.loads((output / "experiments.json").read_text(encoding="utf-8"))
-            self.assertEqual(experiments[0]["combination_id"], "combination_01")
-            self.assertEqual(experiments[0]["directory"], directory_name)
-            self.assertEqual(experiments[0]["loss_graph"], f"{directory_name}/validation_curves.png")
-            previews = json.loads((combination / "checkpoint_previews.json").read_text(encoding="utf-8"))
-            self.assertEqual([preview["epoch"] for preview in previews], [1, 2, 4, 5])
+            experiment = json.loads((output / "experiments.json").read_text(encoding="utf-8"))[0]
             expected_checkpoints = [f"checkpoints/epoch_{epoch:03d}.pt" for epoch in (1, 2, 4, 5)]
-            self.assertEqual(experiments[0]["checkpoint_files"], expected_checkpoints)
+            self.assertEqual(experiment["checkpoint_files"], expected_checkpoints)
+            self.assertNotIn("checkpoint_previews", experiment)
             self.assertEqual(sorted(path.name for path in (combination / "checkpoints").iterdir()),
                              [Path(path).name for path in expected_checkpoints])
-            self.assertEqual(sorted(path.name for path in (combination / "reconstructions").iterdir()),
-                             [f"epoch_{epoch:03d}" for epoch in (1, 2, 4, 5)])
+            self.assertFalse((combination / "reconstructions").exists())
+            self.assertFalse((combination / "checkpoint_previews.json").exists())
             expected_ranges = [[4, 5], [1, 2], [4, 4], [8, 9]]
             for config_path in (output / "run_config.json", combination / "config.json"):
                 config = json.loads(config_path.read_text(encoding="utf-8"))
                 self.assertEqual(config["checkpoint_ranges"], expected_ranges)
-                self.assertEqual(config["checkpoint_start_epoch"], [4, 1, 4, 8])
-                self.assertEqual(config["checkpoint_end_epoch"], [5, 2, 4, 9])
-            self.assertFalse((combination / "reconstructions/epoch_003").exists())
-            expected_levels = {play["level_id"] for play in expected_validation["playthroughs"]}
-            fitting_ids = set(json.loads((output / "split.json").read_text())["fitting_instance_ids"])
-            fitting_levels = {play["level_id"] for entry in self.source_entries
-                              if entry["instance_id"] in fitting_ids for play in entry["playthroughs"]}
-            manifests, train_manifests = [], []
-            for preview in previews:
-                self.assertEqual(preview["sample_count"], 2)
-                epoch_directory = f"reconstructions/epoch_{preview['epoch']:03d}"
-                self.assertEqual(preview["samples_file"], f"{epoch_directory}/validation/samples.json")
-                self.assertEqual(preview["comparison_image"], f"{epoch_directory}/validation/comparison.png")
-                self.assertEqual({path.name for path in (combination / epoch_directory).iterdir()},
-                                 {"train", "validation"})
-                checkpoint = torch.load(combination / preview["checkpoint"], map_location="cpu", weights_only=True)
+                self.assertFalse(any("preview" in key for key in config))
+            for epoch in (1, 2, 4, 5):
+                checkpoint = torch.load(combination / f"checkpoints/epoch_{epoch:03d}.pt",
+                                        map_location="cpu", weights_only=True)
                 restored = PairwiseCNNVAE()
                 restored.load_state_dict(checkpoint["model_state_dict"], strict=True)
-                self.assertEqual(checkpoint["epoch"], preview["epoch"])
-                self.assertEqual(checkpoint["config"]["combination_id"], "combination_01")
-                self.assertEqual(checkpoint["config"]["checkpoint_ranges"],
-                                 [tuple(bounds) for bounds in expected_ranges])
-                architecture = checkpoint["config"]["architecture"]
-                self.assertEqual(architecture["architecture_version"], "initial_model_architecture_crop16")
-                self.assertEqual(architecture["normalization"], "GroupNorm")
-                self.assertEqual(architecture["dropout"], 0.1)
-                self.assertEqual(architecture["dropout_after_fc_layers"], [1])
-                manifest = json.loads((combination / preview["samples_file"]).read_text(encoding="utf-8"))
-                self.assertEqual({sample["level_id"] for sample in manifest["samples"]}, expected_levels)
-                self.assertTrue(all(sample["encoding"].startswith("validation_set/")
-                                    for sample in manifest["samples"]))
-                self.assertGreater((combination / preview["comparison_image"]).stat().st_size, 0)
-                manifests.append(manifest)
-                train_preview = preview["train"]
-                self.assertEqual(train_preview["sample_count"], 5)
-                train_manifest = json.loads((combination / train_preview["samples_file"]).read_text())
-                self.assertEqual(train_manifest["split"], "train")
-                self.assertEqual(train_manifest["sample_count"], 5)
-                self.assertEqual({sample["level_id"] for sample in train_manifest["samples"]}, fitting_levels)
-                self.assertFalse({sample["level_id"] for sample in train_manifest["samples"]} & expected_levels)
-                self.assertTrue(all(sample["encoding"].startswith("train_set/")
-                                    for sample in train_manifest["samples"]))
-                self.assertGreater((combination / train_preview["comparison_image"]).stat().st_size, 0)
-                train_directory = combination / Path(train_preview["samples_file"]).parent
-                self.assertEqual(len(list(train_directory.glob("*_generated.npy"))), 5)
-                train_manifests.append(train_manifest)
-            self.assertEqual([sample["level_id"] for sample in manifests[0]["samples"]],
-                             [sample["level_id"] for sample in manifests[1]["samples"]])
-            self.assertTrue(all(manifest["samples"] == train_manifests[0]["samples"]
-                                for manifest in train_manifests))
+                self.assertEqual(checkpoint["epoch"], epoch)
+                self.assertEqual(checkpoint["config"]["architecture"], architecture_metadata())
+                self.assertTrue(checkpoint["fitting_instance_ids"])
+                self.assertTrue(checkpoint["validation_instance_ids"])
             with_history = json.loads((combination / "train_history.json").read_text(encoding="utf-8"))
             baseline_history = json.loads((baseline / directory_name / "train_history.json").read_text(encoding="utf-8"))
             for actual, expected in zip(with_history, baseline_history, strict=True):
                 for portion in ("optimization", "train", "validation"):
                     self.assertEqual(actual[portion], expected[portion])
             report = (output / "REPORT.md").read_text(encoding="utf-8")
-            self.assertIn("initial_model_architecture_crop16", report)
-            self.assertIn("(22, 16, 176)", report)
-            self.assertIn("drops the first 16 columns", report)
             self.assertIn("Checkpoints cover epochs 1–2, 4–5, inclusive.", report)
-            for preview in previews:
-                self.assertIn(f"{directory_name}/{preview['comparison_image']}", report)
-                self.assertIn(f"{directory_name}/{preview['checkpoint']}", report)
-                self.assertIn(f"{directory_name}/{preview['train']['comparison_image']}", report)
-            self.assertFalse((baseline / directory_name / "checkpoint_previews.json").exists())
+            self.assertIn("generate_levels.py", report)
             self.assertEqual(list((baseline / directory_name / "checkpoints").iterdir()), [])
             self.assertFalse((baseline / directory_name / "reconstructions").exists())
-            baseline_config = json.loads((baseline / "run_config.json").read_text(encoding="utf-8"))
-            self.assertEqual(baseline_config["checkpoint_ranges"], [])
-            self.assertIn("Checkpoint saving was disabled", (baseline / "REPORT.md").read_text(encoding="utf-8"))
 
     def test_loader_rejects_nonbinary_encoding_and_inconsistent_rank(self) -> None:
         entry = self.source_entries[0]

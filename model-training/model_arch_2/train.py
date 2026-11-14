@@ -32,9 +32,6 @@ from checkpoint_ranges import (
 )
 from data import ComparisonDataset, load_training_data
 from plotting import plot_loss_curves
-from reconstruction_previews import (
-    PREVIEW_COUNT, save_checkpoint_reconstructions, select_preview_levels,
-)
 
 
 # Set this to a small positive number for a quick run; None uses all train pairs.
@@ -369,7 +366,7 @@ def run_combination(data, fitting: list[dict], validation: list[dict],
     optimizer = torch.optim.Adam(model.parameters(), lr=hp.learning_rate)
     loader = make_loader(data, fitting, args.batch_size, ordered=True,
                          shuffle=True, seed=args.seed)
-    history, csv_rows, saved_checkpoints, checkpoint_previews = [], [], [], []
+    history, csv_rows, saved_checkpoints = [], [], []
     print(f"Starting {combination_id} with {asdict(hp)}", flush=True)
     try:
         for epoch in range(1, args.epochs + 1):
@@ -405,33 +402,6 @@ def run_combination(data, fitting: list[dict], validation: list[dict],
                 save_epoch_checkpoint(checkpoint, model, optimizer, config, data,
                                       fitting, validation, row)
                 saved_checkpoints.append(checkpoint.relative_to(output).as_posix())
-                previews = {}
-                for split in ("validation", "train"):
-                    preview_directory = output / "reconstructions" / checkpoint.stem / split
-                    with preserve_random_state():
-                        seed_everything(config["preview_seed"])
-                        preview = save_checkpoint_reconstructions(
-                            model, data, config[f"{split}_preview_samples"], preview_directory,
-                            device, config["preview_seed"], checkpoint.relative_to(output).as_posix(), epoch,
-                            selection_seed=config["seed"], split=split,
-                        )
-                    relative_directory = preview_directory.relative_to(output).as_posix()
-                    previews[split] = {
-                        "sample_count": preview["sample_count"],
-                        "comparison_image": (f"{relative_directory}/{preview['comparison_image']}"
-                                             if preview["comparison_image"] is not None else None),
-                        "samples_file": f"{relative_directory}/samples.json",
-                    }
-                    if preview["sample_count"]:
-                        print(f"{combination_id} epoch {epoch} {split} reconstructions: "
-                              f"{preview_directory / preview['comparison_image']}", flush=True)
-                checkpoint_previews.append({
-                    "epoch": epoch,
-                    "checkpoint": checkpoint.relative_to(output).as_posix(),
-                    **previews["validation"],
-                    "train": previews["train"],
-                })
-                write_json(output / "checkpoint_previews.json", checkpoint_previews)
     finally:
         if history:
             plot_loss_curves(history, asdict(hp), output / "validation_curves.png", combination_id)
@@ -449,7 +419,6 @@ def run_combination(data, fitting: list[dict], validation: list[dict],
         "last_train_metrics": train_metrics,
         "last_validation_metrics": validation_metrics,
         "checkpoint_files": saved_checkpoints,
-        "checkpoint_previews": checkpoint_previews,
         "loss_graph": f"{output.name}/validation_curves.png",
     }
 
@@ -491,34 +460,9 @@ def write_report(output: Path, config: dict, experiments: list[dict]) -> None:
               "using the highest-logit geometry tile at each position and averaging over both inputs.",
               "", saving_summary,
               "Each checkpoint filename identifies its saved epoch, such as epoch_021.pt for epoch 21."]
-    previews = [(experiment, preview) for experiment in experiments
-                for preview in experiment.get("checkpoint_previews", [])]
-    if previews:
-        lines += ["", "## Saved-model validation and training reconstructions", "",
-                  f"Up to {PREVIEW_COUNT} distinct levels from each of the fitting and validation portions",
-                  "are randomly selected once and reused",
-                  "for every checkpoint and configuration. Each sheet shows the original input followed",
-                  "by its VAE reconstruction from a sampled posterior latent vector. Sampling uses the",
-                  "same seed for each checkpoint. Black X markers show the input or reconstructed path.",
-                  "Tile channels use argmax; the independent path channel uses probability >= 0.5."]
-        for experiment, preview in previews:
-            directory = experiment["directory"]
-            lines += ["", f"### {experiment['combination_id']} / epoch {preview['epoch']}", "",
-                      f"[Saved model]({directory}/{preview['checkpoint']}) | "
-                      f"[Sample details]({directory}/{preview['samples_file']})", ""]
-            if preview["comparison_image"] is not None:
-                lines.append(f"![{preview['sample_count']} validation inputs and VAE reconstructions]"
-                             f"({directory}/{preview['comparison_image']})")
-            else:
-                lines.append("No validation levels were available for reconstruction previews.")
-            train_preview = preview.get("train")
-            if train_preview is not None:
-                lines += ["", f"[Training sample details]({directory}/{train_preview['samples_file']})", ""]
-                if train_preview["comparison_image"] is not None:
-                    lines.append(f"![{train_preview['sample_count']} training inputs and VAE reconstructions]"
-                                 f"({directory}/{train_preview['comparison_image']})")
-                else:
-                    lines.append("No training levels were available for reconstruction previews.")
+    lines += ["", "After training, run model-training/generate_levels.py with --runs-dir",
+              "pointing to this run to render train and validation reconstructions and generate",
+              "new levels from every saved checkpoint's decoder."]
     (output / "REPORT.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -568,8 +512,6 @@ def main(argv=None) -> None:
     else:
         fitting, validation = split_training_groups(data.entries, args.validation_fraction, args.seed)
         validation_source = "train_set"
-    preview_samples = select_preview_levels(validation, args.seed)
-    train_preview_samples = select_preview_levels(fitting, args.seed)
     output = (args.output_dir or HERE / "runs" / datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")).resolve()
     if output.exists() and any(output.iterdir()):
         raise ValueError(f"Output directory must be new or empty {output}")
@@ -594,11 +536,6 @@ def main(argv=None) -> None:
         "validation_source": validation_source,
         "validation_fraction": args.validation_fraction if validation_source == "train_set" else None,
         "seed": args.seed, "reporting_seed": (args.seed + 1) % (2**32),
-        "preview_seed": (args.seed + 2) % (2**32),
-        "validation_preview_requested_levels": PREVIEW_COUNT,
-        "validation_preview_samples": preview_samples,
-        "train_preview_requested_levels": PREVIEW_COUNT,
-        "train_preview_samples": train_preview_samples,
         "device": str(device), "cpu_threads": args.cpu_threads,
         "architecture": architecture_metadata(),
         "python_version": platform.python_version(), "pytorch_version": str(torch.__version__),

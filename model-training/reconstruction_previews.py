@@ -1,4 +1,4 @@
-"""Render fitting and held-out inputs with VAE reconstructions at each checkpoint."""
+"""Render VAE reconstructions and levels sampled from saved-model decoders."""
 
 from __future__ import annotations
 
@@ -12,6 +12,7 @@ import numpy as np
 import torch
 
 from categorical_reconstruction import reconstruction_probabilities
+from data import INPUT_SHAPE
 
 
 PREVIEW_COUNT = 5
@@ -59,6 +60,25 @@ def _renderer():
     return module.encoding_to_image
 
 
+def _decoding_policy(categorical_tiles: bool) -> str:
+    if categorical_tiles:
+        return "argmax over 21 tile softmax probabilities; independent sigmoid path probability >= 0.5"
+    return "argmax over 21 tile logits; independent path bit at logit >= 0 (probability >= 0.5)"
+
+
+def _binary_encodings(logits: torch.Tensor, categorical_tiles: bool) -> np.ndarray:
+    """Convert decoder logits to one geometry tile and an independent path bit."""
+    if categorical_tiles:
+        probabilities = reconstruction_probabilities(logits)
+        tile_ids = probabilities[:, :21].argmax(dim=1).cpu().numpy()
+        path_bits = (probabilities[:, 21] >= 0.5).to(torch.uint8).cpu().numpy()
+    else:
+        tile_ids = logits[:, :21].argmax(dim=1).cpu().numpy()
+        path_bits = (logits[:, 21] >= 0).to(torch.uint8).cpu().numpy()
+    geometry = np.eye(21, dtype=np.uint8)[tile_ids].transpose(0, 3, 1, 2)
+    return np.concatenate((geometry, path_bits[:, None]), axis=1)
+
+
 def save_checkpoint_reconstructions(model, data, samples: list[dict], output: Path,
                                     device: torch.device, seed: int,
                                     checkpoint: str, epoch: int, *, selection_seed: int | None = None,
@@ -66,8 +86,8 @@ def save_checkpoint_reconstructions(model, data, samples: list[dict], output: Pa
                                     split: str = "validation") -> dict:
     """Save paired level PNGs from one posterior sample for each supplied input.
 
-    The caller seeds and preserves the training RNG streams around this reporting
-    pass. This function restores the model's previous training/evaluation mode.
+    The caller seeds posterior sampling. This function restores the model's
+    previous training/evaluation mode.
     """
     if split not in ("train", "validation"):
         raise ValueError("Preview split must be 'train' or 'validation'.")
@@ -83,11 +103,7 @@ def save_checkpoint_reconstructions(model, data, samples: list[dict], output: Pa
         "sample_count": len(samples),
         "selection_policy": SELECTION_POLICY.format(split=split),
         "latent_policy": f"one reparameterized posterior sample per {split} input",
-        "decoding": (
-            "argmax over 21 tile softmax probabilities; independent sigmoid path probability >= 0.5"
-            if categorical_tiles else
-            "argmax over 21 tile logits; independent path bit at logit >= 0 (probability >= 0.5)"
-        ),
+        "decoding": _decoding_policy(categorical_tiles),
         "channels_metadata": "channels.json" if samples else None,
         "comparison_image": "comparison.png" if samples else None,
         "samples": [],
@@ -111,13 +127,7 @@ def save_checkpoint_reconstructions(model, data, samples: list[dict], output: Pa
             logits = model.decode(model.reparameterize(mu, log_var))
         if not torch.isfinite(logits).all():
             raise FloatingPointError("Non-finite VAE reconstruction logits in checkpoint preview.")
-        if categorical_tiles:
-            probabilities = reconstruction_probabilities(logits)
-            tile_ids = probabilities[:, :21].argmax(dim=1).cpu().numpy()
-            path_bits = (probabilities[:, 21] >= 0.5).to(torch.uint8).cpu().numpy()
-        else:
-            tile_ids = logits[:, :21].argmax(dim=1).cpu().numpy()
-            path_bits = (logits[:, 21] >= 0).to(torch.uint8).cpu().numpy()
+        encodings = _binary_encodings(logits, categorical_tiles)
     finally:
         model.train(previous_training)
 
@@ -127,10 +137,7 @@ def save_checkpoint_reconstructions(model, data, samples: list[dict], output: Pa
     channels_path.write_text(json.dumps(data.channels, indent=2) + "\n", encoding="utf-8")
     pairs = []
     for index, sample in enumerate(samples, 1):
-        generated = np.concatenate((
-            np.eye(21, dtype=np.uint8)[tile_ids[index - 1]].transpose(2, 0, 1),
-            path_bits[index - 1][None],
-        ), axis=0)
+        generated = encodings[index - 1]
         original = inputs[index - 1].detach().cpu().numpy().astype(np.uint8)
         input_image = render(original, channels_path=channels_path)
         generated_image = render(generated, channels_path=channels_path)
@@ -158,6 +165,81 @@ def save_checkpoint_reconstructions(model, data, samples: list[dict], output: Pa
         draw.text((8, top + height + label_height + 4),
                   f"VAE reconstruction | epoch {epoch}", fill="black", font=font)
         sheet.paste(generated, (0, top + height + 2 * label_height))
+    sheet.save(output / record["comparison_image"], format="PNG")
+    (output / "samples.json").write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
+    return record
+
+
+def save_generated_levels(model, channels: dict, output: Path, device: torch.device,
+                          seed: int, checkpoint: str, epoch: int, *, latent_dim: int,
+                          categorical_tiles: bool = False, count: int = PREVIEW_COUNT) -> dict:
+    """Decode independent standard-normal latent vectors without encoding inputs."""
+    if type(count) is not int or count < 1:
+        raise ValueError("Generated level count must be a positive integer.")
+    if type(latent_dim) is not int or latent_dim < 1:
+        raise ValueError("Latent dimension must be a positive integer.")
+
+    from PIL import Image, ImageDraw, ImageFont
+
+    generator = torch.Generator(device="cpu").manual_seed(seed)
+    latent = torch.randn(count, latent_dim, generator=generator, dtype=torch.float32)
+    previous_training = model.training
+    try:
+        model.eval()
+        with torch.no_grad():
+            logits = model.decode(latent.to(device))
+        if logits.shape != (count, *INPUT_SHAPE):
+            raise ValueError(f"Expected generated logits with shape {(count, *INPUT_SHAPE)}, got {tuple(logits.shape)}.")
+        if not torch.isfinite(logits).all():
+            raise FloatingPointError("Non-finite VAE decoder logits in generated levels.")
+        encodings = _binary_encodings(logits, categorical_tiles)
+    finally:
+        model.train(previous_training)
+
+    output = Path(output)
+    output.mkdir(parents=True)
+    channels_path = output / "channels.json"
+    channels_path.write_text(json.dumps(channels, indent=2) + "\n", encoding="utf-8")
+    record = {
+        "schema_version": 1,
+        "checkpoint": checkpoint,
+        "epoch": epoch,
+        "split": "generated",
+        "seed": seed,
+        "requested_sample_count": count,
+        "sample_count": count,
+        "latent_dim": latent_dim,
+        "latent_policy": "z ~ N(0, I); decoder-only generation without an input level",
+        "decoding": _decoding_policy(categorical_tiles),
+        "channels_metadata": "channels.json",
+        "comparison_image": "comparison.png",
+        "samples": [],
+    }
+    render = _renderer()
+    images = []
+    for index, encoding in enumerate(encodings, 1):
+        filenames = {
+            "generated_image": f"{index:02d}_generated.png",
+            "generated_encoding": f"{index:02d}_generated.npy",
+            "latent_vector": f"{index:02d}_latent.npy",
+        }
+        generated_image = render(encoding, channels_path=channels_path)
+        generated_image.save(output / filenames["generated_image"], format="PNG")
+        np.save(output / filenames["generated_encoding"], encoding, allow_pickle=False)
+        np.save(output / filenames["latent_vector"], latent[index - 1].numpy(), allow_pickle=False)
+        record["samples"].append({"sample_number": index, **filenames})
+        images.append(generated_image)
+
+    label_height = 36
+    width, height = images[0].size
+    row_height = height + label_height
+    sheet = Image.new("RGB", (width, row_height * count), "white")
+    draw = ImageDraw.Draw(sheet)
+    font = ImageFont.load_default(size=24)
+    for index, generated_image in enumerate(images):
+        top = index * row_height
+        draw.text((8, top + 4), f"{index + 1}. Generated level | epoch {epoch}", fill="black", font=font)
+        sheet.paste(generated_image, (0, top + label_height))
     sheet.save(output / record["comparison_image"], format="PNG")
     (output / "samples.json").write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     return record

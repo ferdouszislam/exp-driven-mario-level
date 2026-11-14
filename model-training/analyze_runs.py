@@ -1,4 +1,4 @@
-"""Rank epochs above configurable train/validation accuracy thresholds and plot metrics.
+"""Rank epochs above configurable accuracy and optional KL thresholds and plot metrics.
 
 Run from the repository root for any architecture:
     .venv/bin/python model-training/analyze_runs.py --runs-dir model-training/model_arch_1/runs
@@ -142,15 +142,23 @@ def load_experiment(experiment_dir: Path) -> list[dict]:
 
 
 def is_eligible(record: dict, min_train_accuracy: Decimal = MIN_TRAIN_ACCURACY,
-                min_validation_accuracy: Decimal = MIN_VALIDATION_ACCURACY) -> bool:
-    """Require each saved accuracy to be strictly above its threshold."""
+                min_validation_accuracy: Decimal = MIN_VALIDATION_ACCURACY,
+                min_train_kl_divergence: Decimal | None = None,
+                min_validation_kl_divergence: Decimal | None = None) -> bool:
+    """Require saved metrics to be strictly above every enabled threshold."""
     return (Decimal(str(record["train_accuracy"])) > min_train_accuracy
-            and Decimal(str(record["validation_accuracy"])) > min_validation_accuracy)
+            and Decimal(str(record["validation_accuracy"])) > min_validation_accuracy
+            and (min_train_kl_divergence is None
+                 or Decimal(str(record["train_kl_divergence"])) > min_train_kl_divergence)
+            and (min_validation_kl_divergence is None
+                 or Decimal(str(record["validation_kl_divergence"])) > min_validation_kl_divergence))
 
 
 def rank_records(records: list[dict], criterion: str, top_n: int = 10,
                  min_train_accuracy: Decimal = MIN_TRAIN_ACCURACY,
-                 min_validation_accuracy: Decimal = MIN_VALIDATION_ACCURACY) -> list[dict]:
+                 min_validation_accuracy: Decimal = MIN_VALIDATION_ACCURACY,
+                 min_train_kl_divergence: Decimal | None = None,
+                 min_validation_kl_divergence: Decimal | None = None) -> list[dict]:
     """Rank eligible combination/epoch pairs; a combination may appear repeatedly."""
     if top_n < 1:
         raise ValueError("top_n must be at least 1.")
@@ -164,7 +172,8 @@ def rank_records(records: list[dict], criterion: str, top_n: int = 10,
         return (*primary, record["combination_number"], record["epoch"])
 
     eligible = [record for record in records
-                if is_eligible(record, min_train_accuracy, min_validation_accuracy)]
+                if is_eligible(record, min_train_accuracy, min_validation_accuracy,
+                               min_train_kl_divergence, min_validation_kl_divergence)]
     return sorted(eligible, key=sort_key)[:top_n]
 
 
@@ -239,18 +248,34 @@ def write_csv(path: Path, records: list[dict], fieldnames: list[str] | None = No
     temporary.replace(path)
 
 
+def eligibility_requirement(min_train_accuracy: Decimal, min_validation_accuracy: Decimal,
+                            min_train_kl_divergence: Decimal | None = None,
+                            min_validation_kl_divergence: Decimal | None = None) -> str:
+    """Describe the active cutoffs consistently in both report indexes."""
+    requirements = [f"train accuracy > {min_train_accuracy}",
+                    f"validation accuracy > {min_validation_accuracy}"]
+    if min_train_kl_divergence is not None:
+        requirements.append(f"train KL divergence > {min_train_kl_divergence}")
+    if min_validation_kl_divergence is not None:
+        requirements.append(f"validation KL divergence > {min_validation_kl_divergence}")
+    return " and ".join(requirements)
+
+
 def write_experiment_report(output: Path, records: list[dict], rankings: dict,
                             min_train_accuracy: Decimal = MIN_TRAIN_ACCURACY,
-                            min_validation_accuracy: Decimal = MIN_VALIDATION_ACCURACY) -> None:
+                            min_validation_accuracy: Decimal = MIN_VALIDATION_ACCURACY,
+                            min_train_kl_divergence: Decimal | None = None,
+                            min_validation_kl_divergence: Decimal | None = None) -> None:
     """Add a compact, clickable index of the two rankings and their PNGs."""
-    eligible_count = sum(is_eligible(record, min_train_accuracy, min_validation_accuracy)
+    eligible_count = sum(is_eligible(record, min_train_accuracy, min_validation_accuracy,
+                                    min_train_kl_divergence, min_validation_kl_divergence)
                          for record in records)
-    accuracy_requirement = (f"train accuracy > {min_train_accuracy} and "
-                            f"validation accuracy > {min_validation_accuracy}")
+    requirement = eligibility_requirement(min_train_accuracy, min_validation_accuracy,
+                                          min_train_kl_divergence, min_validation_kl_divergence)
     lines = [f"# {records[0]['experiment_version']}", "",
              f"Read {len(records):,} epoch records from "
              f"{len({record['combination_number'] for record in records})} combinations.", "",
-             f"Ranked {eligible_count:,} eligible epochs with {accuracy_requirement}.", "",
+             f"Ranked {eligible_count:,} eligible epochs with {requirement}.", "",
              "Each entry is a combination/epoch pair; combinations may repeat. "
              "The linked CSVs include hyperparameters and every requested train/validation metric.", "",
              "Accuracy gap = abs(train_accuracy - validation_accuracy). "
@@ -261,7 +286,7 @@ def write_experiment_report(output: Path, records: list[dict], rankings: dict,
                   "| Rank | Combination | Epoch | Train accuracy | Validation accuracy | Absolute gap | PNG |",
                   "|---:|---|---:|---:|---:|---:|---|"]
         if not selected:
-            lines += ["", f"No epochs have {accuracy_requirement}."]
+            lines += ["", f"No epochs have {requirement}."]
         for rank, record in enumerate(selected, 1):
             lines.append(f"| {rank} | {record['combination_id']} | {record['epoch']} | "
                          f"{float(record['train_accuracy']):.6g} | "
@@ -281,6 +306,17 @@ def accuracy_threshold(value: str) -> Decimal:
     return threshold
 
 
+def kl_threshold(value: str) -> Decimal:
+    """Parse a finite nonnegative KL threshold on the saved loss scale."""
+    try:
+        threshold = decimal_value(value, "KL divergence threshold")
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(str(error)) from error
+    if threshold < 0:
+        raise argparse.ArgumentTypeError("KL divergence threshold must be nonnegative")
+    return threshold
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--runs-dir", type=Path, default=HERE / "runs",
@@ -293,6 +329,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--min-validation-accuracy", type=accuracy_threshold,
                         default=MIN_VALIDATION_ACCURACY,
                         help="Require validation accuracy strictly above this 0–1 threshold (default: 0.5).")
+    parser.add_argument("--min-train-kl-divergence", type=kl_threshold,
+                        help="Require train KL divergence strictly above this nonnegative threshold (default: no cutoff).")
+    parser.add_argument("--min-validation-kl-divergence", type=kl_threshold,
+                        help="Require validation KL divergence strictly above this nonnegative threshold (default: no cutoff).")
     parser.add_argument("--experiment", action="append", metavar="NAME",
                         help="Only this experiment folder; repeat to select more than one.")
     args = parser.parse_args(argv)
@@ -304,9 +344,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     thresholds = {"min_train_accuracy": args.min_train_accuracy,
-                  "min_validation_accuracy": args.min_validation_accuracy}
-    accuracy_requirement = (f"train accuracy > {args.min_train_accuracy} and "
-                            f"validation accuracy > {args.min_validation_accuracy}")
+                  "min_validation_accuracy": args.min_validation_accuracy,
+                  "min_train_kl_divergence": args.min_train_kl_divergence,
+                  "min_validation_kl_divergence": args.min_validation_kl_divergence}
+    requirement = eligibility_requirement(**thresholds)
     runs_dir = args.runs_dir.resolve()
     output_dir = (args.output_dir or runs_dir.parent / "run-analysis").resolve()
     try:
@@ -331,13 +372,13 @@ def main(argv: list[str] | None = None) -> int:
                  "1. Highest validation accuracy; ties use the smaller absolute train/validation accuracy gap.",
                  "2. Smallest absolute accuracy gap; ties use the higher validation accuracy.", "",
                  "Remaining ties use combination number, then epoch number (both ascending). "
-                 f"Only epochs with {accuracy_requirement} are eligible; "
+                 f"Only epochs with {requirement} are eligible; "
                  "multiple epochs from the same combination are allowed. "
                  "Gaps are calculated from the saved decimal values without display rounding or a tie tolerance.", "",
                  "Each unique selected combination/epoch has one PNG shared by both rankings if needed.", "",
                  "Source paths in CSVs are relative to the source runs folder. "
                  "PNG paths are relative to each experiment's report folder.", "",
-                 f"| Experiment version | Combinations | Epoch records | Eligible epochs ({accuracy_requirement}) | Selected PNGs | Results |",
+                 f"| Experiment version | Combinations | Epoch records | Eligible epochs ({requirement}) | Selected PNGs | Results |",
                  "|---|---:|---:|---:|---:|---|"]
         total_pngs = 0
         for directory, records in experiments:

@@ -169,6 +169,65 @@ class AnalyzeRunsTests(unittest.TestCase):
                     self.assertEqual(raised.exception.code, 2)
                     self.assertIn(option, errors.getvalue())
 
+    def test_both_rankings_apply_independent_strict_kl_minimums(self) -> None:
+        kl_values = [
+            ("0.1", "1"), ("0.2", "1"), ("1", "0.29"), ("1", "0.3"),
+            ("0.20000000000000000001", "0.30000000000000000001"), ("2", "3"),
+        ]
+        records = [
+            {**self.record(1, epoch, "0.9", "0.7"),
+             "train_kl_divergence": train, "validation_kl_divergence": validation}
+            for epoch, (train, validation) in enumerate(kl_values, 1)
+        ]
+        for criterion in analysis.RANKINGS:
+            for thresholds, expected in (
+                ({"min_train_kl_divergence": Decimal("0.2")}, [3, 4, 5, 6]),
+                ({"min_validation_kl_divergence": Decimal("0.3")}, [1, 2, 5, 6]),
+                ({"min_train_kl_divergence": Decimal("0.2"),
+                  "min_validation_kl_divergence": Decimal("0.3")}, [5, 6]),
+            ):
+                with self.subTest(criterion=criterion, thresholds=thresholds):
+                    selected = analysis.rank_records(records, criterion, **thresholds)
+                    self.assertEqual([row["epoch"] for row in selected], expected)
+
+    def test_kl_minimums_are_disabled_by_default_and_zero_is_strict(self) -> None:
+        record = {**self.record(1, 1, "0.9", "0.7"),
+                  "train_kl_divergence": "0", "validation_kl_divergence": "0"}
+        self.assertTrue(analysis.is_eligible(record))
+        for criterion in analysis.RANKINGS:
+            with self.subTest(criterion=criterion):
+                self.assertEqual(analysis.rank_records([record], criterion), [record])
+                for name in ("min_train_kl_divergence", "min_validation_kl_divergence"):
+                    self.assertEqual(analysis.rank_records(
+                        [record], criterion, **{name: Decimal("0")}), [])
+
+    def test_cli_kl_minimum_defaults_precision_and_nonnegative_range(self) -> None:
+        defaults = analysis.parse_args([])
+        self.assertIsNone(defaults.min_train_kl_divergence)
+        self.assertIsNone(defaults.min_validation_kl_divergence)
+        custom = analysis.parse_args([
+            "--min-train-kl-divergence", "0.10000000000000000001",
+            "--min-validation-kl-divergence", "2.50000000000000000001",
+        ])
+        self.assertEqual(custom.min_train_kl_divergence, Decimal("0.10000000000000000001"))
+        self.assertEqual(custom.min_validation_kl_divergence, Decimal("2.50000000000000000001"))
+        for value in ("0", "1", "25", "1e-8"):
+            with self.subTest(value=value):
+                args = analysis.parse_args(["--min-train-kl-divergence", value,
+                                            "--min-validation-kl-divergence", value])
+                self.assertEqual(args.min_train_kl_divergence, Decimal(value))
+                self.assertEqual(args.min_validation_kl_divergence, Decimal(value))
+
+    def test_cli_rejects_invalid_kl_minimums(self) -> None:
+        for option in ("--min-train-kl-divergence", "--min-validation-kl-divergence"):
+            for value in ("-0.1", "NaN", "sNaN", "inf", "-inf", "invalid"):
+                with self.subTest(option=option, value=value):
+                    errors = io.StringIO()
+                    with redirect_stderr(errors), self.assertRaises(SystemExit) as raised:
+                        analysis.parse_args([option, value])
+                    self.assertEqual(raised.exception.code, 2)
+                    self.assertIn(option, errors.getvalue())
+
     def test_load_uses_saved_combination_ids_and_preserves_metric_text(self) -> None:
         first = self.epoch(3, "0.12345678901234567", "0.22345678901234567")
         self.combination("aaa", 11, [first])
@@ -418,6 +477,57 @@ class AnalyzeRunsTests(unittest.TestCase):
         for filename in ("top_validation_accuracy.csv", "smallest_accuracy_gap.csv"):
             with (report_directory / filename).open(newline="", encoding="utf-8") as handle:
                 self.assertEqual(list(csv.DictReader(handle)), [])
+
+    def test_cli_kl_minimums_control_rankings_counts_and_reports(self) -> None:
+        rows = [
+            {**self.epoch(epoch, train_accuracy, validation_accuracy),
+             "train_kl_divergence": train_kl, "validation_kl_divergence": validation_kl}
+            for epoch, train_accuracy, validation_accuracy, train_kl, validation_kl in (
+                (1, "0.95", "0.8", "0.2", "2"),
+                (2, "0.95", "0.8", "2", "0.3"),
+                (3, "0.95", "0.8", "0.20000000000000000001", "0.30000000000000000001"),
+                (4, "0.8", "0.7", "5", "7"),
+                (5, "0.9", "0.7", "0.4", "0.5"),
+            )
+        ]
+        self.combination("params", 1, rows)
+        output = self.root / "analysis"
+        arguments = ["--runs-dir", str(self.runs), "--output-dir", str(output)]
+        report_directory = output / self.experiment.name
+        for train_minimum, validation_minimum, expected in (("0.2", "0.3", [3, 5]),
+                                                           ("10", "11", [])):
+            with self.subTest(train_minimum=train_minimum):
+                console = io.StringIO()
+                with redirect_stdout(console), patch.object(analysis, "plot_record") as plot:
+                    self.assertEqual(analysis.main([
+                        *arguments, "--min-train-kl-divergence", train_minimum,
+                        "--min-validation-kl-divergence", validation_minimum,
+                    ]), 0)
+                self.assertEqual({call.args[0]["epoch"] for call in plot.call_args_list},
+                                 set(expected))
+                self.assertIn(f"{len(expected)}/5 eligible epochs", console.getvalue())
+                for filename in ("top_validation_accuracy.csv", "smallest_accuracy_gap.csv"):
+                    with (report_directory / filename).open(newline="", encoding="utf-8") as handle:
+                        reader = csv.DictReader(handle)
+                        self.assertIn("train_kl_divergence", reader.fieldnames)
+                        self.assertIn("validation_kl_divergence", reader.fieldnames)
+                        selected = list(reader)
+                    self.assertEqual([int(row["epoch"]) for row in selected], expected)
+                    if selected:
+                        self.assertEqual(selected[0]["train_kl_divergence"],
+                                         "0.20000000000000000001")
+                        self.assertEqual(selected[0]["validation_kl_divergence"],
+                                         "0.30000000000000000001")
+                report = (report_directory / "README.md").read_text(encoding="utf-8")
+                index = (output / "README.md").read_text(encoding="utf-8")
+                self.assertIn(f"Ranked {len(expected)} eligible", report)
+                for text in (report, index):
+                    self.assertIn(f"train KL divergence > {train_minimum}", text)
+                    self.assertIn(f"validation KL divergence > {validation_minimum}", text)
+                self.assertIn(f"| example_v1 | 1 | 5 | {len(expected)} | {len(expected)} |", index)
+                if not expected:
+                    self.assertIn("No epochs have", report)
+                    self.assertEqual(list(report_directory.rglob("*.png")), [])
 
     def test_cli_handles_fresh_experiment_with_no_eligible_epochs(self) -> None:
         self.combination("params", 1, [self.epoch(1, "0.8", "0.7"),

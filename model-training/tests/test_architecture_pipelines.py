@@ -178,17 +178,21 @@ assert reconstruction_previews.RENDERER_PATH.is_file()
                     self.assertEqual(experiment["status"], "completed")
                     combination = output / experiment["directory"]
                     self.assertGreater((combination / "validation_curves.png").stat().st_size, 0)
-                    preview = json.loads((combination / "checkpoint_previews.json").read_text(encoding="utf-8"))[0]
-                    self.assertEqual(preview["sample_count"], 2)
-                    self.assertGreater((combination / preview["comparison_image"]).stat().st_size, 0)
-                    self.assertEqual(preview["train"]["sample_count"], 2)
-                    train_samples = json.loads((combination / preview["train"]["samples_file"]).read_text())
-                    self.assertEqual(train_samples["split"], "train")
+                    self.assertFalse((combination / "reconstructions").exists())
+                    self.assertFalse((combination / "checkpoint_previews.json").exists())
+                    self.run_command(["-c", CHECK_MODEL, name,
+                                      str(combination / "checkpoints/epoch_001.pt")], folder)
+                    self.run_command(["../generate_levels.py", "--runs-dir", str(output),
+                                      "--device", "cpu", "--cpu-threads", "2"], folder)
+                    for portion, count in (("train", 2), ("validation", 2), ("generated", 5)):
+                        destination = combination / "reconstructions" / portion / "epoch_001"
+                        samples = json.loads((destination / "samples.json").read_text())
+                        self.assertEqual(samples["sample_count"], count)
+                        self.assertGreater((destination / "comparison.png").stat().st_size, 0)
+                        self.assertEqual(len(list(destination.glob("*_generated.npy"))), count)
+                    train_samples = json.loads((combination / "reconstructions/train/epoch_001/samples.json").read_text())
                     self.assertTrue(all(sample["encoding"].startswith("train_set/")
                                         for sample in train_samples["samples"]))
-                    self.assertGreater((combination / preview["train"]["comparison_image"]).stat().st_size, 0)
-                    self.run_command(["-c", CHECK_MODEL, name,
-                                      str(combination / preview["checkpoint"])], folder)
                     analysis = root / name / "analysis"
                     self.run_command(["../analyze_runs.py", "--runs-dir", str(runs),
                                       "--output-dir", str(analysis), "--top-n", "1"], folder)

@@ -33,6 +33,14 @@ By default, only epochs with **train accuracy > 0.8 and validation accuracy > 0.
 are candidates for either ranking. Set separate cutoffs with `--min-train-accuracy`
 and `--min-validation-accuracy`; both accept finite values between 0 and 1.
 An epoch is excluded if either accuracy is equal to or below its cutoff.
+Optionally require minimum KL divergence with `--min-train-kl-divergence` and
+`--min-validation-kl-divergence`. Each accepts a finite nonnegative value with no
+upper bound and requires the corresponding saved KL divergence to be **strictly
+greater** than that value. Either option can be used independently; omitted KL
+cutoffs apply no filter, so zero KL remains eligible when accuracy requirements
+are met. These cutoffs use the unweighted KL values saved in `epoch_metrics.csv`,
+and all enabled accuracy and KL requirements must be met for either ranking.
+Both report indexes show the active cutoffs and eligible epoch counts.
 **Multiple epochs from one combination are allowed.**
 If both requested ranking keys tie, lower combination number wins, then earlier epoch.
 If fewer than 10 eligible rows exist, all eligible rows are returned. If none qualify,
@@ -97,6 +105,10 @@ The following commands run **inside your chosen architecture folder**:
 # Set separate strict minimum accuracies (defaults: train > 0.8, validation > 0.5).
 ../../.venv/bin/python ../analyze_runs.py --runs-dir runs \
   --min-train-accuracy 0.9 --min-validation-accuracy 0.6
+
+# Also require train KL > 0.01 and validation KL > 0.02 (defaults: no KL cutoffs).
+../../.venv/bin/python ../analyze_runs.py --runs-dir runs \
+  --min-train-kl-divergence 0.01 --min-validation-kl-divergence 0.02
 
 # Analyze selected versions and keep a separate report snapshot.
 ../../.venv/bin/python ../analyze_runs.py --runs-dir runs \
