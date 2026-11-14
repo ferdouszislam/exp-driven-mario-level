@@ -1,0 +1,199 @@
+{
+  "excluded": {
+    "equal_fun_comparisons": 17,
+    "level_ids_also_retained_for_other_judgments": 39,
+    "neither_fun_comparisons": 17,
+    "playthrough_appearances": 68,
+    "playthrough_keys_also_retained": 0,
+    "total_comparisons": 34,
+    "unique_levels": 62,
+    "unique_playthroughs": 68
+  },
+  "input": {
+    "experiment_1_rows": 124,
+    "experiment_2_ranking_rows": 91
+  },
+  "output": {
+    "experiment_1_pairs": 90,
+    "experiment_2_pairs": 273,
+    "files_per_instance": 7,
+    "pair_instances": 363,
+    "pair_side_appearances": 726,
+    "participants": 84,
+    "unique_levels": 290,
+    "unique_playthroughs": 450
+  },
+  "policies": {
+    "annotation_subset": "supplied cleaned CSVs; no additional progress/status filter",
+    "deduplicate_rankings": false,
+    "experiment_1": "retain A/B; exclude E/N annotation rows",
+    "experiment_2": "pairs (rank1,rank2), (rank1,rank3), (rank2,rank3)",
+    "map_crop": {
+      "dropped_left_columns": 16,
+      "retained_source_columns": [
+        16,
+        192
+      ],
+      "source_shape": [
+        16,
+        192
+      ]
+    },
+    "path_grid": "floor((y-8)/16), floor(x/16)-16; sampled occupancy; skip outside cropped grid",
+    "path_symbols": {
+      "unvisited": "x",
+      "visited": "P"
+    },
+    "tile_aliases": "preserve literal # and |; omit b and B; reject unknown symbols"
+  },
+  "preserved_repeated_rankings": {
+    "additional_submissions": 1,
+    "pairs_from_additional_submissions": 3,
+    "repeated_submission_groups": 1
+  },
+  "reproduction": {
+    "numpy_version": "2.3.4",
+    "script_sha256": "1b412062306b0ad8762c98a5ce6698f2c7c25405e662caf12b40e37338d47ee9",
+    "source_hashes_file": "source_hashes.json"
+  },
+  "schema_version": 4,
+  "split": {
+    "actual_test_fraction": 0.20110192837465565,
+    "actual_train_fraction": 0.6391184573002755,
+    "actual_validation_fraction": 0.15977961432506887,
+    "assignment_algorithm": "SHA256(seed:group_id) order; whole-group subset sum nearest test target",
+    "by_experiment": {
+      "test_set": {
+        "1": 13,
+        "2": 60
+      },
+      "train_set": {
+        "1": 67,
+        "2": 165
+      },
+      "validation_set": {
+        "1": 10,
+        "2": 48
+      }
+    },
+    "connected_groups": 180,
+    "group_by": [
+      "source_annotation_id",
+      "annotation_reuse_group",
+      "playthrough_key"
+    ],
+    "held_out_unit": "playthrough; participants and map geometries may recur across sets",
+    "instances": {
+      "test_set": 73,
+      "train_set": 232,
+      "validation_set": 58
+    },
+    "original_train_test_split": {
+      "actual_test_fraction": 0.20110192837465565,
+      "actual_train_fraction": 0.7988980716253443,
+      "assignment_algorithm": "SHA256(seed:group_id) order; whole-group subset sum nearest test target",
+      "by_experiment": {
+        "test_set": {
+          "1": 13,
+          "2": 60
+        },
+        "train_set": {
+          "1": 77,
+          "2": 213
+        }
+      },
+      "connected_groups": 180,
+      "group_by": [
+        "source_annotation_id",
+        "annotation_reuse_group",
+        "playthrough_key"
+      ],
+      "held_out_unit": "playthrough; participants and map geometries may recur across sets",
+      "instances": {
+        "test_set": 73,
+        "train_set": 290
+      },
+      "requested_test_fraction": 0.2,
+      "requested_train_fraction": 0.8,
+      "seed": 42,
+      "shared_between_sets": {
+        "annotation_reuse_groups": 0,
+        "level_ids": 37,
+        "participant_ids": 21,
+        "playthrough_keys": 0,
+        "source_annotation_ids": 0
+      },
+      "target_test_instances": 73,
+      "target_train_instances": 290,
+      "test_groups": 32,
+      "train_groups": 148,
+      "unique_playthroughs": {
+        "test_set": 83,
+        "train_set": 367
+      }
+    },
+    "requested_test_fraction": 0.2,
+    "requested_train_fraction": 0.6400000000000001,
+    "requested_validation_fraction": 0.16000000000000003,
+    "seed": 42,
+    "shared_between_sets": {
+      "train_set_vs_test_set": {
+        "annotation_reuse_groups": 0,
+        "level_ids": 32,
+        "participant_ids": 20,
+        "playthrough_keys": 0,
+        "source_annotation_ids": 0,
+        "split_group_ids": 0
+      },
+      "train_set_vs_validation_set": {
+        "annotation_reuse_groups": 0,
+        "level_ids": 34,
+        "participant_ids": 13,
+        "playthrough_keys": 0,
+        "source_annotation_ids": 0,
+        "split_group_ids": 0
+      },
+      "validation_set_vs_test_set": {
+        "annotation_reuse_groups": 0,
+        "level_ids": 9,
+        "participant_ids": 2,
+        "playthrough_keys": 0,
+        "source_annotation_ids": 0,
+        "split_group_ids": 0
+      }
+    },
+    "target_test_instances": 73,
+    "target_train_instances": 232,
+    "target_validation_instances": 58,
+    "test_groups": 32,
+    "train_groups": 122,
+    "unique_playthroughs": {
+      "test_set": 83,
+      "train_set": 299,
+      "validation_set": 68
+    },
+    "validation": {
+      "actual_fraction_of_original_train": 0.2,
+      "assignment_algorithm": "train.py: sorted group IDs; random.Random(seed).shuffle; take whole groups until validation target, leaving one training group",
+      "original_train_instances": 290,
+      "requested_fraction_of_original_train": 0.2,
+      "seed": 42,
+      "target_instances": 58
+    },
+    "validation_groups": 26
+  },
+  "unique_playthrough_path_stats": {
+    "cropped_prefix_samples": 83908,
+    "ordered_samples": 764548,
+    "out_of_grid_samples": 1903,
+    "outside_export_samples": 85811,
+    "playthroughs_with_out_of_grid_samples": 203,
+    "statuses": {
+      "LOSE": 128,
+      "TIME_OUT": 6,
+      "WIN": 316
+    },
+    "valid_samples": 678737,
+    "visited_cells": 153653
+  }
+}

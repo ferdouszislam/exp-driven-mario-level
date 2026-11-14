@@ -1,0 +1,143 @@
+{
+  "active_bits_per_cell": "1 for unvisited cells; 2 for visited cells",
+  "axis_order": [
+    "channel",
+    "row",
+    "column"
+  ],
+  "channels": [
+    {
+      "index": 0,
+      "name": "solid",
+      "symbol": "X"
+    },
+    {
+      "index": 1,
+      "name": "breakable_block",
+      "symbol": "S"
+    },
+    {
+      "index": 2,
+      "name": "empty",
+      "symbol": "-"
+    },
+    {
+      "index": 3,
+      "name": "mushroom_platform",
+      "symbol": "%"
+    },
+    {
+      "index": 4,
+      "name": "normal_pipe",
+      "symbol": "t"
+    },
+    {
+      "index": 5,
+      "name": "flower_pipe",
+      "symbol": "T"
+    },
+    {
+      "index": 6,
+      "name": "coin",
+      "symbol": "o"
+    },
+    {
+      "index": 7,
+      "name": "coin_question_block",
+      "symbol": "Q"
+    },
+    {
+      "index": 8,
+      "name": "mushroom_question_block",
+      "symbol": "@"
+    },
+    {
+      "index": 9,
+      "name": "mushroom_breakable_block",
+      "symbol": "U"
+    },
+    {
+      "index": 10,
+      "name": "one_up_block",
+      "symbol": "L"
+    },
+    {
+      "index": 11,
+      "name": "invisible_one_up_block",
+      "symbol": "1"
+    },
+    {
+      "index": 12,
+      "name": "invisible_coin_block",
+      "symbol": "2"
+    },
+    {
+      "index": 13,
+      "name": "goomba",
+      "symbol": "g"
+    },
+    {
+      "index": 14,
+      "name": "green_koopa",
+      "symbol": "k"
+    },
+    {
+      "index": 15,
+      "name": "red_koopa",
+      "symbol": "r"
+    },
+    {
+      "index": 16,
+      "name": "flying_green_koopa",
+      "symbol": "K"
+    },
+    {
+      "index": 17,
+      "name": "flying_red_koopa",
+      "symbol": "R"
+    },
+    {
+      "index": 18,
+      "name": "spiky",
+      "symbol": "y"
+    },
+    {
+      "index": 19,
+      "name": "solid_alias",
+      "symbol": "#"
+    },
+    {
+      "index": 20,
+      "name": "mushroom_stalk",
+      "symbol": "|"
+    },
+    {
+      "index": 21,
+      "name": "PATH",
+      "symbol": "P"
+    }
+  ],
+  "dtype": "uint8",
+  "map_crop": {
+    "dropped_left_columns": 16,
+    "retained_source_columns": [
+      16,
+      192
+    ],
+    "source_shape": [
+      16,
+      192
+    ]
+  },
+  "path_channel_index": 21,
+  "path_text_symbols": {
+    "unvisited": "x",
+    "visited": "P"
+  },
+  "schema_version": 2,
+  "shape": [
+    22,
+    16,
+    176
+  ]
+}
