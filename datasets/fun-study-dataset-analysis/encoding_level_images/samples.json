@@ -1,0 +1,166 @@
+{
+  "candidate_playthroughs_per_split": {
+    "test_set": 83,
+    "train_set": 299
+  },
+  "channels_sha256": "8e9b442839a7dd0e0a6650c134392c771bd283c4f633b3b980818ddb38750a9e",
+  "path_marker": "black X drawn after all tiles and objects",
+  "renderer_sha256": "d48c452227b26a2c76bdeb48c194a7a9d4235b0596aa1803f3ec2a329d4a705a",
+  "samples": [
+    {
+      "encoding": "train_set/exp1_0007__lvl12_over_lvl172/lvl12.npy",
+      "encoding_sha256": "9b28ae885be69055d96c1db96afe989458bd2647d303c8ff49d698fcfc3bcac6",
+      "encoding_shape": [
+        22,
+        16,
+        176
+      ],
+      "image": "train_set/01_lvl12_33253213.png",
+      "image_size": [
+        2816,
+        256
+      ],
+      "instance_id": "exp1_0007__lvl12_over_lvl172",
+      "level_id": "lvl12",
+      "participant_id": "33253213-2bfe-40e3-8131-2e175da84c1c",
+      "playthrough_key": "33253213-2bfe-40e3-8131-2e175da84c1c_lvl12",
+      "sample_number": 1,
+      "split": "train_set",
+      "tile_shape": [
+        16,
+        176
+      ],
+      "visited_cells": 316
+    },
+    {
+      "encoding": "train_set/exp2_0001_pair2__Runner-16_over_Collector-42/Collector-42.npy",
+      "encoding_sha256": "817eb5065c414241b2a1bcf0dc740ca06f33bd7ea289402bd7be2f07d9be0c52",
+      "encoding_shape": [
+        22,
+        16,
+        176
+      ],
+      "image": "train_set/02_Collector-42_0cbaa3ae.png",
+      "image_size": [
+        2816,
+        256
+      ],
+      "instance_id": "exp2_0001_pair2__Runner-16_over_Collector-42",
+      "level_id": "Collector-42",
+      "participant_id": "0cbaa3ae-5376-4d7f-8053-7daba92be456",
+      "playthrough_key": "0cbaa3ae-5376-4d7f-8053-7daba92be456_Collector-42",
+      "sample_number": 2,
+      "split": "train_set",
+      "tile_shape": [
+        16,
+        176
+      ],
+      "visited_cells": 244
+    },
+    {
+      "encoding": "train_set/exp2_0011_pair1__Collector-47_over_Killer-62/Collector-47.npy",
+      "encoding_sha256": "6b292e6bdb676df7ea9f0a930594c50cccfd0e7bb13443300e580be4c2cf0794",
+      "encoding_shape": [
+        22,
+        16,
+        176
+      ],
+      "image": "train_set/03_Collector-47_90237211.png",
+      "image_size": [
+        2816,
+        256
+      ],
+      "instance_id": "exp2_0011_pair1__Collector-47_over_Killer-62",
+      "level_id": "Collector-47",
+      "participant_id": "90237211-82c9-4695-9a59-8d975f6bef3a",
+      "playthrough_key": "90237211-82c9-4695-9a59-8d975f6bef3a_Collector-47",
+      "sample_number": 3,
+      "split": "train_set",
+      "tile_shape": [
+        16,
+        176
+      ],
+      "visited_cells": 552
+    },
+    {
+      "encoding": "test_set/exp2_0082_pair2__Killer-95_over_Runner-57/Runner-57.npy",
+      "encoding_sha256": "0e7d1b907655d51d360d4ba45c1465833825dae89b3ae9fc163ef09990eaa4ab",
+      "encoding_shape": [
+        22,
+        16,
+        176
+      ],
+      "image": "test_set/01_Runner-57_6d710075.png",
+      "image_size": [
+        2816,
+        256
+      ],
+      "instance_id": "exp2_0082_pair2__Killer-95_over_Runner-57",
+      "level_id": "Runner-57",
+      "participant_id": "6d710075-57ba-4545-bc65-e2a274f9f92b",
+      "playthrough_key": "6d710075-57ba-4545-bc65-e2a274f9f92b_Runner-57",
+      "sample_number": 1,
+      "split": "test_set",
+      "tile_shape": [
+        16,
+        176
+      ],
+      "visited_cells": 319
+    },
+    {
+      "encoding": "test_set/exp1_0124__lvl28_over_lvl40/lvl40.npy",
+      "encoding_sha256": "0a8facf533d29d7edfd3d37561a7d13f0c9449cccf6034cc7295a77fc9036c88",
+      "encoding_shape": [
+        22,
+        16,
+        176
+      ],
+      "image": "test_set/02_lvl40_56f050c3.png",
+      "image_size": [
+        2816,
+        256
+      ],
+      "instance_id": "exp1_0124__lvl28_over_lvl40",
+      "level_id": "lvl40",
+      "participant_id": "56f050c3-595e-40c7-a656-21076e66917f",
+      "playthrough_key": "56f050c3-595e-40c7-a656-21076e66917f_lvl40",
+      "sample_number": 2,
+      "split": "test_set",
+      "tile_shape": [
+        16,
+        176
+      ],
+      "visited_cells": 420
+    },
+    {
+      "encoding": "test_set/exp1_0069__lvl130_over_lvl95/lvl95.npy",
+      "encoding_sha256": "08747142aac2e2575bfd0d3fa04dcbfd2068f4247c812286f09e22541514a43c",
+      "encoding_shape": [
+        22,
+        16,
+        176
+      ],
+      "image": "test_set/03_lvl95_1f832b78.png",
+      "image_size": [
+        2816,
+        256
+      ],
+      "instance_id": "exp1_0069__lvl130_over_lvl95",
+      "level_id": "lvl95",
+      "participant_id": "1f832b78-6dd1-4b19-b30b-51960d91b031",
+      "playthrough_key": "1f832b78-6dd1-4b19-b30b-51960d91b031_lvl95",
+      "sample_number": 3,
+      "split": "test_set",
+      "tile_shape": [
+        16,
+        176
+      ],
+      "visited_cells": 349
+    }
+  ],
+  "samples_per_split": 3,
+  "scale": 1,
+  "schema_version": 1,
+  "seed": 42,
+  "selection": "first instance_id occurrence per playthrough; sorted keys; Random(seed).sample; train then test"
+}
