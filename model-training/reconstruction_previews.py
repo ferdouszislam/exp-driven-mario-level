@@ -1,4 +1,4 @@
-"""Render held-out inputs and their VAE reconstructions beside each checkpoint."""
+"""Render fitting and held-out inputs with VAE reconstructions at each checkpoint."""
 
 from __future__ import annotations
 
@@ -18,18 +18,18 @@ PREVIEW_COUNT = 5
 RENDERER_PATH = (Path(__file__).resolve().parents[1]
                  / "datasets/fun-study-dataset-analysis/encoding_to_level_image.py")
 SELECTION_POLICY = (
-    "First playthrough per unique level_id in sorted validation instances/playthroughs; "
+    "First playthrough per unique level_id in sorted {split} instances/playthroughs; "
     "Random(selection_seed).sample over sorted level IDs; same inputs for every checkpoint."
 )
 
 
-def select_validation_levels(validation: list[dict], seed: int,
-                             count: int = PREVIEW_COUNT) -> list[dict]:
-    """Pick distinct level IDs, retaining the associated validation path input."""
+def select_preview_levels(entries: list[dict], seed: int,
+                          count: int = PREVIEW_COUNT) -> list[dict]:
+    """Pick distinct level IDs, retaining a path input from the supplied portion."""
     if type(count) is not int or count < 1:
         raise ValueError("Preview count must be a positive integer.")
     candidates = {}
-    for entry in sorted(validation, key=lambda item: item["instance_id"]):
+    for entry in sorted(entries, key=lambda item: item["instance_id"]):
         for play in sorted(entry["playthroughs"],
                            key=lambda item: (item["level_id"], item["playthrough_key"])):
             candidates.setdefault(play["level_id"], {
@@ -40,6 +40,12 @@ def select_validation_levels(validation: list[dict], seed: int,
             })
     keys = random.Random(seed).sample(sorted(candidates), min(count, len(candidates)))
     return [candidates[key] for key in keys]
+
+
+def select_validation_levels(validation: list[dict], seed: int,
+                             count: int = PREVIEW_COUNT) -> list[dict]:
+    """Keep the validation-only selector interface for existing callers."""
+    return select_preview_levels(validation, seed, count)
 
 
 @lru_cache(maxsize=1)
@@ -56,22 +62,27 @@ def _renderer():
 def save_checkpoint_reconstructions(model, data, samples: list[dict], output: Path,
                                     device: torch.device, seed: int,
                                     checkpoint: str, epoch: int, *, selection_seed: int | None = None,
-                                    categorical_tiles: bool = False) -> dict:
-    """Save paired level PNGs from one posterior sample for each validation input.
+                                    categorical_tiles: bool = False,
+                                    split: str = "validation") -> dict:
+    """Save paired level PNGs from one posterior sample for each supplied input.
 
     The caller seeds and preserves the training RNG streams around this reporting
     pass. This function restores the model's previous training/evaluation mode.
     """
+    if split not in ("train", "validation"):
+        raise ValueError("Preview split must be 'train' or 'validation'.")
+    input_label = "Training" if split == "train" else "Validation"
     record = {
         "schema_version": 1,
         "checkpoint": checkpoint,
         "epoch": epoch,
+        "split": split,
         "seed": seed,
         "selection_seed": selection_seed,
         "requested_sample_count": PREVIEW_COUNT,
         "sample_count": len(samples),
-        "selection_policy": SELECTION_POLICY,
-        "latent_policy": "one reparameterized posterior sample per validation input",
+        "selection_policy": SELECTION_POLICY.format(split=split),
+        "latent_policy": f"one reparameterized posterior sample per {split} input",
         "decoding": (
             "argmax over 21 tile softmax probabilities; independent sigmoid path probability >= 0.5"
             if categorical_tiles else
@@ -82,7 +93,7 @@ def save_checkpoint_reconstructions(model, data, samples: list[dict], output: Pa
         "samples": [],
     }
     if not samples:
-        record["skipped_reason"] = "No validation levels are available."
+        record["skipped_reason"] = f"No {split} levels are available."
         output = Path(output)
         output.mkdir(parents=True)
         (output / "samples.json").write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
@@ -142,7 +153,7 @@ def save_checkpoint_reconstructions(model, data, samples: list[dict], output: Pa
     font = ImageFont.load_default(size=24)
     for index, (sample, original, generated) in enumerate(pairs):
         top = index * row_height
-        draw.text((8, top + 4), f"{index + 1}. Validation input: {sample['level_id']}", fill="black", font=font)
+        draw.text((8, top + 4), f"{index + 1}. {input_label} input: {sample['level_id']}", fill="black", font=font)
         sheet.paste(original, (0, top + label_height))
         draw.text((8, top + height + label_height + 4),
                   f"VAE reconstruction | epoch {epoch}", fill="black", font=font)

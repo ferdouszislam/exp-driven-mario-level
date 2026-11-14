@@ -363,13 +363,13 @@ Each invocation creates one experiment root with the shared configuration and sp
 
 | File | Contents |
 |---|---|
-| `run_config.json` | Dataset and fingerprint, requested/actual sample counts, source hyperparameter path and listed combinations in file order, epoch budget, checkpoint bounds and paired ranges, seeds, selected preview inputs, device, environment, architecture, and shared run settings |
+| `run_config.json` | Dataset and fingerprint, requested/actual sample counts, source hyperparameter path and listed combinations in file order, epoch budget, checkpoint bounds and paired ranges, seeds, selected training and validation preview inputs, device, environment, architecture, and shared run settings |
 | `channels.json` | Exact input channel codebook |
 | `selected_train_comparisons.json` | Selected manifest entries with participant, playthrough, and grouping provenance |
 | `selected_validation_comparisons.json` | Saved validation manifest entries when `validation_set` is present |
 | `split.json` | Fixed fitting and validation memberships shared by all combinations |
 | `experiments.json` | All combinations, their `pending`, `running`, `completed`, or `failed` status, and completed summaries with curve and checkpoint-preview paths |
-| `REPORT.md` | Human-readable run settings, links to each combination's six-panel fitting/validation curves, and an embedded input/reconstruction sheet for each saved checkpoint after all combinations finish |
+| `REPORT.md` | Human-readable run settings, links to each combination's six-panel fitting/validation curves, and embedded training and validation input/reconstruction sheets for each saved checkpoint after all combinations finish |
 
 Each parameter-named directory, such as `1e-4_1e-2_1e-3_1e-2/`, contains its own outputs. Its folder name records the learning rate, reconstruction weight, KL weight, and ranking weight; weighted pipelines append the background-error multiplier, for example `1e-4_1e-2_1e-3_1e-2_3/`. The number of directories follows the listed rows.
 
@@ -384,8 +384,9 @@ Each parameter-named directory, such as `1e-4_1e-2_1e-3_1e-2/`, contains its own
 | `validation_predictions.csv` | Final-epoch ordered validation predictions when validation is available |
 | `validation_curves.png` | A 3×2 figure for weighted total loss, reconstruction loss (original BCE or categorical tiles plus path BCE), KL divergence, ranking BCE, overall accuracy, and normalized tile Hamming distance, each showing fitting and available validation values against epoch number |
 | `checkpoints/epoch_030.pt`, etc. | Optional model and optimizer state for each completed epoch within any configured inclusive checkpoint range, saved once per epoch |
-| `checkpoint_previews.json` | Index of saved checkpoint epochs and their sample counts, comparison PNGs, and sample manifests; updated after each checkpoint's preview is saved |
-| `reconstructions/epoch_030/`, etc. | Validation inputs and VAE reconstructions associated with that saved checkpoint, described below |
+| `checkpoint_previews.json` | Index of saved checkpoint epochs with validation sample counts, comparison PNGs, and sample manifests, plus a nested `train` object with the same three fields for training previews; updated after each checkpoint's previews are saved |
+| `reconstructions/epoch_030/validation/`, etc. | Validation inputs and VAE reconstructions associated with that saved checkpoint, described below |
+| `reconstructions/epoch_030/train/`, etc. | Fitting inputs and VAE reconstructions associated with that saved checkpoint |
 
 The JSON history and complete epoch CSV are each replaced atomically after every epoch's measurements. This makes completed epoch measurements available while the experiment continues. Prediction CSV files summarize the final epoch. The history retains measurements for earlier epochs.
 
@@ -402,7 +403,7 @@ CHECKPOINT_END_EPOCH = [20, 60]
 
 For each bound, supplied CLI values replace that constant's defaults. The start and end lists must have the same number of values. Supplying only one bound raises an argument error. Every bound must be positive, and each end must be at least its corresponding start. Ranges may be supplied in any order and may overlap or extend beyond the training budget.
 
-The bounds are inclusive. The actual checkpoint epochs are the union of the configured ranges intersected with completed training epochs; each selected epoch produces one checkpoint and one set of reconstruction previews. For example, ranges 10–20 and 15–25 save 16 checkpoints, covering epochs 10–25 once each. A range entirely beyond the epoch budget produces no checkpoints or previews. Default runs produce zero model checkpoint files at every training length.
+The bounds are inclusive. The actual checkpoint epochs are the union of the configured ranges intersected with completed training epochs; each selected epoch produces one checkpoint with training and validation reconstruction previews. For example, ranges 10–20 and 15–25 save 16 checkpoints, covering epochs 10–25 once each. A range entirely beyond the epoch budget produces no checkpoints or previews. Default runs produce zero model checkpoint files at every training length.
 
 The run and combination configurations, including the configuration embedded in each checkpoint, record `checkpoint_start_epoch` and `checkpoint_end_epoch` as lists, even for a single range, and the requested pairs in `checkpoint_ranges` (`[[10, 20], [50, 60]]` in JSON). When saving is disabled, the two bound fields are `null` in JSON and `checkpoint_ranges` is `[]`. These fields retain the requested ranges, including any portions beyond the epoch budget. The final report describes the ranges that fall within the run's epoch budget.
 
@@ -410,13 +411,15 @@ For float32 model parameters and two Adam moment tensors, checkpoint tensor stor
 
 Each checkpoint contains `epoch`, `model_state_dict`, `optimizer_state_dict`, `config`, `channels`, `selected_instance_ids`, `fitting_instance_ids`, `validation_instance_ids`, `train_metrics`, and `validation_metrics`. The configuration and split memberships identify the experiment and data associated with that saved epoch. Architecture metadata identifies the selected model's version, normalization and its settings, channel counts, strides, activations, and dropout placement. Earlier 192-column checkpoints have different fully connected dimensions and require their original model definitions for restoration. They cannot be loaded into the cropped model; new training runs use the cropped export and a distinct architecture version. Check the full metadata together with the architecture label when choosing the matching definition.
 
-### Validation reconstruction previews for every saved model
+### Training and validation reconstruction previews for every saved model
 
 At startup, the pipeline randomly selects **five distinct validation level IDs** using the configured `--seed` (42 by default). It sorts validation entries by instance ID and their playthroughs by level ID and playthrough key, retains the first occurrence of each level ID, then samples without replacement from the sorted level IDs. This deduplication applies only to visualization; training and validation measurements retain their original playthrough observations. If fewer than five level IDs are available, all available levels are selected without repetition. Saved `validation_set` entries are used when present; otherwise the same policy uses the pipeline's internal validation portion.
 
-The same selected inputs and their recorded paths are reused across every saved epoch and hyperparameter combination. Immediately after saving a checkpoint, its current model encodes those inputs, draws one posterior latent sample per input, and decodes the samples. These images are **reconstructions of validation inputs**, rather than unconditional samples from the standard normal prior.
+All 12 training pipelines also select **five distinct training level IDs** with the same policy and seed, using only the fitting comparisons actually used for optimization. This respects the training-sample cap and excludes any comparisons assigned to internal validation. If fewer than five distinct fitting levels are available, the preview uses all of them without repetition. The run configuration records these inputs in `train_preview_samples` and the requested count in `train_preview_requested_levels`; the corresponding validation fields remain available.
 
-Preview inference uses evaluation mode, disabled gradients, and the seed `(seed + 2) % (2**32)`, which is 44 by default. Reusing the seed gives the same latent-noise sequence for comparison as model parameters change. The previous model mode and the training RNG states are restored after preview generation, so previews do not change subsequent optimization.
+The same selected inputs and their recorded paths are reused across every saved epoch and hyperparameter combination, separately for training and validation. Immediately after saving a checkpoint, its current model encodes those inputs, draws one posterior latent sample per input, and decodes the samples. These images are **reconstructions of training and validation inputs**.
+
+Preview inference uses evaluation mode, disabled gradients, and the seed `(seed + 2) % (2**32)`, which is 44 by default. The seed is reset for each portion's preview; reusing it gives the same latent-noise sequence for comparison as model parameters change. The previous model mode and the training RNG states are restored after preview generation, so previews do not change subsequent optimization.
 
 Decoder outputs become a valid binary `(22, 16, 176)` encoding before rendering. The original pipelines select one tile with argmax over tile logits and set the independent path bit with `logit >= 0`. The `_softmax` pipelines pass `categorical_tiles=True` to the shared preview function, which applies [reconstruction_probabilities](categorical_reconstruction.py) to raw `decode` output: softmax over channels 0–20, then tile argmax; sigmoid over channel 21, then path probability `>= 0.5`. The public model method `decode_probabilities` exposes the same probability transformation for other callers. These discrete decisions are mathematically equivalent for identical logits, but the new variants learn tiles with a categorical loss. Both the original and reconstructed arrays are rendered by `encoding_to_image` from the existing [encoding_to_level_image.py](../datasets/fun-study-dataset-analysis/encoding_to_level_image.py). Black X markers are drawn over the tiles to show the corresponding path.
 
@@ -425,18 +428,27 @@ For example, a saved epoch-30 model has these preview files beneath its combinat
 ```text
 checkpoint_previews.json
 reconstructions/epoch_030/
-    01_input.png
-    01_generated.png
-    01_generated.npy
-    ... through 05 for five selected levels ...
-    channels.json
-    samples.json
-    comparison.png
+    validation/
+        01_input.png
+        01_generated.png
+        01_generated.npy
+        ... through 05 for five selected validation levels ...
+        channels.json
+        samples.json
+        comparison.png
+    train/
+        01_input.png
+        01_generated.png
+        01_generated.npy
+        ... through 05 for five selected fitting levels ...
+        channels.json
+        samples.json
+        comparison.png
 ```
 
-Each individual PNG shows all 176 exported columns at 2816×256 pixels; the removed 16-column prefix is absent from both tiles and path markers. `comparison.png` stacks labeled input/reconstruction pairs for all selected levels. `samples.json` records the checkpoint, epoch, input-selection and posterior-sampling seeds, decoding policy, level IDs, playthrough keys, source instance IDs and encoding paths, and output filenames. `channels.json` supplies the exact codebook used by the renderer. The source encoding paths are relative to the dataset root; the checkpoint path in this manifest is relative to its combination directory.
+Each individual PNG shows all 176 exported columns at 2816×256 pixels; the removed 16-column prefix is absent from both tiles and path markers. The sibling `validation/` and `train/` directories each contain a `comparison.png` stacking labeled input/reconstruction pairs for their selected levels. Their `validation/samples.json` and `train/samples.json` manifests record `split` as `validation` or `train`, the checkpoint, epoch, input-selection and posterior-sampling seeds, decoding policy, level IDs, playthrough keys, source instance IDs and encoding paths, and output filenames. `channels.json` supplies the exact codebook used by the renderer. The source encoding paths are relative to the dataset root; the checkpoint path in each manifest is relative to its combination directory.
 
-The console prints each completed comparison-sheet path. `checkpoint_previews.json` makes the available sheets discoverable while training continues, and the run's final `REPORT.md` embeds a sheet for every saved model. Preview directories are created only for epochs whose checkpoints are saved. If validation is unavailable, each saved epoch gets a `samples.json` explaining the skip and no PNGs. When checkpoint saving is disabled, no checkpoint previews are produced.
+The console prints each completed comparison-sheet path. `checkpoint_previews.json` makes both sheets discoverable while training continues: each checkpoint record retains its validation `sample_count`, `comparison_image`, and `samples_file` fields and adds a `train` object containing those fields for the training previews. The run's final `REPORT.md` embeds both sheets for every saved model. Preview directories are created only for epochs whose checkpoints are saved. If validation is unavailable, each saved epoch gets a `validation/samples.json` explaining the skip and no validation PNGs; training previews are still generated. When checkpoint saving is disabled, no checkpoint previews are produced.
 
 To inspect a checkpoint, run Python from the matching architecture folder and load an epoch produced by that folder. For example, after the explicit 30–40 range command above, select a parameter folder from its run:
 

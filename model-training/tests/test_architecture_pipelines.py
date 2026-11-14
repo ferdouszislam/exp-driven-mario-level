@@ -181,6 +181,12 @@ assert reconstruction_previews.RENDERER_PATH.is_file()
                     preview = json.loads((combination / "checkpoint_previews.json").read_text(encoding="utf-8"))[0]
                     self.assertEqual(preview["sample_count"], 2)
                     self.assertGreater((combination / preview["comparison_image"]).stat().st_size, 0)
+                    self.assertEqual(preview["train"]["sample_count"], 2)
+                    train_samples = json.loads((combination / preview["train"]["samples_file"]).read_text())
+                    self.assertEqual(train_samples["split"], "train")
+                    self.assertTrue(all(sample["encoding"].startswith("train_set/")
+                                        for sample in train_samples["samples"]))
+                    self.assertGreater((combination / preview["train"]["comparison_image"]).stat().st_size, 0)
                     self.run_command(["-c", CHECK_MODEL, name,
                                       str(combination / preview["checkpoint"])], folder)
                     analysis = root / name / "analysis"
