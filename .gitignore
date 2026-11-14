@@ -217,6 +217,8 @@ checkpoints/
 /model-training/*/run-analysis/
 /model-training/runs_wo_crop/
 /model-training/run-analysis_wo_crop/
+/model-training/runs-0/
+/model-training/run-analysis-0/
 
 /datasets/fun-study-dataset-analysis/.git-not/
 
