@@ -3,7 +3,7 @@
 #SBATCH --gpus=h100:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=16G
-#SBATCH --time=04:00:00
+#SBATCH --time=01:00:00
 #SBATCH --array=0-11
 #SBATCH --job-name=mario_vae_arr
 #SBATCH --output=logs/%x-%A_%a.out
