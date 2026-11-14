@@ -221,20 +221,3 @@ checkpoints/
 /model-training/run-analysis-0/
 
 /datasets/fun-study-dataset-analysis/.git-not/
-
-# Mario-Fun-Study folders not used by preprocess_dataset.py
-/datasets/fun-study-dataset-analysis/Mario-Fun-Study/*.py
-/datasets/fun-study-dataset-analysis/Mario-Fun-Study/.idea/
-/datasets/fun-study-dataset-analysis/Mario-Fun-Study/analysis/
-/datasets/fun-study-dataset-analysis/Mario-Fun-Study/lvls/
-/datasets/fun-study-dataset-analysis/Mario-Fun-Study/models/
-/datasets/fun-study-dataset-analysis/Mario-Fun-Study/smb/
-/datasets/fun-study-dataset-analysis/Mario-Fun-Study/src/
-/datasets/fun-study-dataset-analysis/Mario-Fun-Study/exp_data/survey_data/formal/data/
-/datasets/fun-study-dataset-analysis/Mario-Fun-Study/exp_data/survey_data/formal/jsons/
-/datasets/fun-study-dataset-analysis/Mario-Fun-Study/exp_data/survey_data/formal/reps/
-/datasets/fun-study-dataset-analysis/Mario-Fun-Study/exp_data/survey_data/formal/res-reproduce/
-/datasets/fun-study-dataset-analysis/Mario-Fun-Study/exp_data/survey_data/formal/vary-goal-div/
-/datasets/fun-study-dataset-analysis/Mario-Fun-Study/exp_data/survey_data/formal/levels/original/
-
-/datasets/fun-study-dataset-analysis/encoding_level_images
