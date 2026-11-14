@@ -212,6 +212,7 @@ pyrightconfig.json
 checkpoints/
 
 /model-training/runs/
+/model-training/runs-tmp/
 /model-training/run-analysis/
 /model-training/*/runs/
 /model-training/*/run-analysis/
