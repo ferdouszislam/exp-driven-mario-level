@@ -5,4 +5,4 @@
 # Each row uses a fresh model and the full --epochs budget.
 # Blank lines and # comments are allowed; use a dot for decimal values.
 
-3e-4, 0.01, 1e-3, 0.1, 3
+1e-4, 0.1, 1e-4, 0.01, 3
