@@ -211,14 +211,9 @@ pyrightconfig.json
 # Ignore saved model checkpoints
 checkpoints/
 
-/model-training/runs/
-/model-training/runs-tmp/
-/model-training/run-analysis/
-/model-training/*/runs/
-/model-training/*/run-analysis/
-/model-training/runs_wo_crop/
-/model-training/run-analysis_wo_crop/
-/model-training/runs-0/
-/model-training/run-analysis-0/
+/model-training/runs*/
+/model-training/run-analysis*/
+/model-training/*/runs*/
+/model-training/*/run-analysis*/
 
 /datasets/fun-study-dataset-analysis/.git-not/
