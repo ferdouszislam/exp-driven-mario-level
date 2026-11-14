@@ -29,9 +29,10 @@ For **each experiment version separately**, it selects:
 2. The 10 smallest absolute train/validation accuracy differences, breaking ties
    by higher validation accuracy.
 
-Only epochs with **both train accuracy and validation accuracy strictly greater
-than 0.5** are candidates for either ranking. An epoch is excluded if either
-accuracy is equal to or below 0.5.
+By default, only epochs with **train accuracy > 0.8 and validation accuracy > 0.5**
+are candidates for either ranking. Set separate cutoffs with `--min-train-accuracy`
+and `--min-validation-accuracy`; both accept finite values between 0 and 1.
+An epoch is excluded if either accuracy is equal to or below its cutoff.
 **Multiple epochs from one combination are allowed.**
 If both requested ranking keys tie, lower combination number wins, then earlier epoch.
 If fewer than 10 eligible rows exist, all eligible rows are returned. If none qualify,
@@ -92,6 +93,10 @@ The following commands run **inside your chosen architecture folder**:
 ```bash
 # Analyze just one version.
 ../../.venv/bin/python ../analyze_runs.py --runs-dir runs --experiment m2_e100_v3
+
+# Set separate strict minimum accuracies (defaults: train > 0.8, validation > 0.5).
+../../.venv/bin/python ../analyze_runs.py --runs-dir runs \
+  --min-train-accuracy 0.9 --min-validation-accuracy 0.6
 
 # Analyze selected versions and keep a separate report snapshot.
 ../../.venv/bin/python ../analyze_runs.py --runs-dir runs \

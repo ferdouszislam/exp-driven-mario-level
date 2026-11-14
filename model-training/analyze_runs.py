@@ -1,4 +1,4 @@
-"""Rank epochs with both train and validation accuracy > 0.5 and plot metrics.
+"""Rank epochs above configurable train/validation accuracy thresholds and plot metrics.
 
 Run from the repository root for any architecture:
     .venv/bin/python model-training/analyze_runs.py --runs-dir model-training/model_arch_1/runs
@@ -17,7 +17,8 @@ import sys
 
 
 HERE = Path(__file__).resolve().parent
-MIN_ACCURACY = Decimal("0.5")
+MIN_TRAIN_ACCURACY = Decimal("0.8")
+MIN_VALIDATION_ACCURACY = Decimal("0.5")
 HYPERPARAMETERS = ("learning_rate", "lambda_rec", "lambda_kl", "lambda_rank")
 OPTIONAL_HYPERPARAMETERS = ("background_error_weight",)
 METRICS = (
@@ -140,13 +141,16 @@ def load_experiment(experiment_dir: Path) -> list[dict]:
     return records
 
 
-def is_eligible(record: dict) -> bool:
-    """Require both saved accuracies to be strictly above the threshold."""
-    return all(Decimal(str(record[f"{split}_accuracy"])) > MIN_ACCURACY
-               for split in ("train", "validation"))
+def is_eligible(record: dict, min_train_accuracy: Decimal = MIN_TRAIN_ACCURACY,
+                min_validation_accuracy: Decimal = MIN_VALIDATION_ACCURACY) -> bool:
+    """Require each saved accuracy to be strictly above its threshold."""
+    return (Decimal(str(record["train_accuracy"])) > min_train_accuracy
+            and Decimal(str(record["validation_accuracy"])) > min_validation_accuracy)
 
 
-def rank_records(records: list[dict], criterion: str, top_n: int = 10) -> list[dict]:
+def rank_records(records: list[dict], criterion: str, top_n: int = 10,
+                 min_train_accuracy: Decimal = MIN_TRAIN_ACCURACY,
+                 min_validation_accuracy: Decimal = MIN_VALIDATION_ACCURACY) -> list[dict]:
     """Rank eligible combination/epoch pairs; a combination may appear repeatedly."""
     if top_n < 1:
         raise ValueError("top_n must be at least 1.")
@@ -159,7 +163,8 @@ def rank_records(records: list[dict], criterion: str, top_n: int = 10) -> list[d
         primary = (-accuracy, gap) if criterion == "validation_accuracy" else (gap, -accuracy)
         return (*primary, record["combination_number"], record["epoch"])
 
-    eligible = [record for record in records if is_eligible(record)]
+    eligible = [record for record in records
+                if is_eligible(record, min_train_accuracy, min_validation_accuracy)]
     return sorted(eligible, key=sort_key)[:top_n]
 
 
@@ -234,13 +239,18 @@ def write_csv(path: Path, records: list[dict], fieldnames: list[str] | None = No
     temporary.replace(path)
 
 
-def write_experiment_report(output: Path, records: list[dict], rankings: dict) -> None:
+def write_experiment_report(output: Path, records: list[dict], rankings: dict,
+                            min_train_accuracy: Decimal = MIN_TRAIN_ACCURACY,
+                            min_validation_accuracy: Decimal = MIN_VALIDATION_ACCURACY) -> None:
     """Add a compact, clickable index of the two rankings and their PNGs."""
-    eligible_count = sum(is_eligible(record) for record in records)
+    eligible_count = sum(is_eligible(record, min_train_accuracy, min_validation_accuracy)
+                         for record in records)
+    accuracy_requirement = (f"train accuracy > {min_train_accuracy} and "
+                            f"validation accuracy > {min_validation_accuracy}")
     lines = [f"# {records[0]['experiment_version']}", "",
              f"Read {len(records):,} epoch records from "
              f"{len({record['combination_number'] for record in records})} combinations.", "",
-             f"Ranked {eligible_count:,} eligible epochs with both train and validation accuracy strictly greater than 0.5.", "",
+             f"Ranked {eligible_count:,} eligible epochs with {accuracy_requirement}.", "",
              "Each entry is a combination/epoch pair; combinations may repeat. "
              "The linked CSVs include hyperparameters and every requested train/validation metric.", "",
              "Accuracy gap = abs(train_accuracy - validation_accuracy). "
@@ -251,13 +261,24 @@ def write_experiment_report(output: Path, records: list[dict], rankings: dict) -
                   "| Rank | Combination | Epoch | Train accuracy | Validation accuracy | Absolute gap | PNG |",
                   "|---:|---|---:|---:|---:|---:|---|"]
         if not selected:
-            lines += ["", "No epochs have both train and validation accuracy > 0.5."]
+            lines += ["", f"No epochs have {accuracy_requirement}."]
         for rank, record in enumerate(selected, 1):
             lines.append(f"| {rank} | {record['combination_id']} | {record['epoch']} | "
                          f"{float(record['train_accuracy']):.6g} | "
                          f"{float(record['validation_accuracy']):.6g} | "
                          f"{float(record['accuracy_gap']):.6g} | [Chart]({record['plot_file']}) |")
     (output / "README.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def accuracy_threshold(value: str) -> Decimal:
+    """Parse a finite accuracy threshold on the logged 0–1 scale."""
+    try:
+        threshold = decimal_value(value, "accuracy threshold")
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(str(error)) from error
+    if not 0 <= threshold <= 1:
+        raise argparse.ArgumentTypeError("accuracy threshold must be between 0 and 1")
+    return threshold
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -267,6 +288,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--output-dir", type=Path,
                         help="Report folder (default: run-analysis beside the selected runs folder).")
     parser.add_argument("--top-n", type=int, default=10, help="Results per ranking per version (default: 10).")
+    parser.add_argument("--min-train-accuracy", type=accuracy_threshold, default=MIN_TRAIN_ACCURACY,
+                        help="Require train accuracy strictly above this 0–1 threshold (default: 0.8).")
+    parser.add_argument("--min-validation-accuracy", type=accuracy_threshold,
+                        default=MIN_VALIDATION_ACCURACY,
+                        help="Require validation accuracy strictly above this 0–1 threshold (default: 0.5).")
     parser.add_argument("--experiment", action="append", metavar="NAME",
                         help="Only this experiment folder; repeat to select more than one.")
     args = parser.parse_args(argv)
@@ -277,6 +303,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    thresholds = {"min_train_accuracy": args.min_train_accuracy,
+                  "min_validation_accuracy": args.min_validation_accuracy}
+    accuracy_requirement = (f"train accuracy > {args.min_train_accuracy} and "
+                            f"validation accuracy > {args.min_validation_accuracy}")
     runs_dir = args.runs_dir.resolve()
     output_dir = (args.output_dir or runs_dir.parent / "run-analysis").resolve()
     try:
@@ -301,24 +331,25 @@ def main(argv: list[str] | None = None) -> int:
                  "1. Highest validation accuracy; ties use the smaller absolute train/validation accuracy gap.",
                  "2. Smallest absolute accuracy gap; ties use the higher validation accuracy.", "",
                  "Remaining ties use combination number, then epoch number (both ascending). "
-                 "Only epochs with both train and validation accuracy strictly greater than 0.5 are eligible; "
+                 f"Only epochs with {accuracy_requirement} are eligible; "
                  "multiple epochs from the same combination are allowed. "
                  "Gaps are calculated from the saved decimal values without display rounding or a tie tolerance.", "",
                  "Each unique selected combination/epoch has one PNG shared by both rankings if needed.", "",
                  "Source paths in CSVs are relative to the source runs folder. "
                  "PNG paths are relative to each experiment's report folder.", "",
-                 "| Experiment version | Combinations | Epoch records | Eligible epochs (both > 0.5) | Selected PNGs | Results |",
+                 f"| Experiment version | Combinations | Epoch records | Eligible epochs ({accuracy_requirement}) | Selected PNGs | Results |",
                  "|---|---:|---:|---:|---:|---|"]
         total_pngs = 0
         for directory, records in experiments:
             output = output_dir / directory.name
-            rankings = {criterion: rank_records(records, criterion, args.top_n) for criterion in RANKINGS}
+            rankings = {criterion: rank_records(records, criterion, args.top_n, **thresholds)
+                        for criterion in RANKINGS}
             selected_epochs = {}
             for selected in rankings.values():
                 for record in selected:
                     record["plot_file"] = f"plots/{record['combination_id']}_epoch_{record['epoch']:03d}.png"
                     selected_epochs[(record["combination_number"], record["epoch"])] = record
-            eligible_count = sum(is_eligible(record) for record in records)
+            eligible_count = sum(is_eligible(record, **thresholds) for record in records)
             print(f"{directory.name}: {eligible_count:,}/{len(records):,} eligible epochs; "
                   f"generating {len(selected_epochs)} PNGs...", flush=True)
             for record in selected_epochs.values():
@@ -328,7 +359,7 @@ def main(argv: list[str] | None = None) -> int:
                           fieldnames=list(dict.fromkeys(
                               key for record in records for key in (*record, "plot_file")
                           )))
-            write_experiment_report(output, records, rankings)
+            write_experiment_report(output, records, rankings, **thresholds)
             # Remove only this script's obsolete chart files after the reports succeed.
             current_plots = {record["plot_file"] for record in selected_epochs.values()}
             for path in (output / "plots").glob("*.png"):

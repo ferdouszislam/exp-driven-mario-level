@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 import csv
 from decimal import Decimal
 import io
@@ -88,7 +88,8 @@ class AnalyzeRunsTests(unittest.TestCase):
             self.record(1, 3, "0.79", "0.8"),
             self.record(9, 1, "0.91", "0.9"),
         ]
-        selected = analysis.rank_records(records, "validation_accuracy")
+        selected = analysis.rank_records(records, "validation_accuracy",
+                                         min_train_accuracy=Decimal("0.5"))
         self.assertEqual([(r["combination_number"], r["epoch"]) for r in selected],
                          [(9, 1), (4, 7), (1, 3), (1, 6), (2, 9)])
 
@@ -100,7 +101,8 @@ class AnalyzeRunsTests(unittest.TestCase):
             self.record(1, 3, "0.79", "0.8"),
             self.record(9, 1, "0.91", "0.9"),
         ]
-        selected = analysis.rank_records(records, "accuracy_gap")
+        selected = analysis.rank_records(records, "accuracy_gap",
+                                         min_train_accuracy=Decimal("0.5"))
         self.assertEqual([(r["combination_number"], r["epoch"]) for r in selected],
                          [(4, 7), (9, 1), (1, 3), (1, 6), (2, 9)])
 
@@ -110,14 +112,14 @@ class AnalyzeRunsTests(unittest.TestCase):
         self.assertEqual([r["epoch"] for r in selected], list(range(1, 11)))
         self.assertEqual(len(analysis.rank_records(records[:2], "accuracy_gap")), 2)
 
-    def test_both_rankings_require_train_and_validation_strictly_above_half(self) -> None:
+    def test_both_rankings_require_accuracies_strictly_above_default_minimums(self) -> None:
         records = [
-            self.record(1, 1, "0.49", "0.7"),
-            self.record(1, 2, "0.5", "0.7"),
-            self.record(1, 3, "0.7", "0.49"),
-            self.record(1, 4, "0.7", "0.5"),
-            self.record(1, 5, "0.5000000000000001", "0.5000000000000001"),
-            self.record(1, 6, "0.9", "0.7"),
+            self.record(1, 1, "0.79", "0.7"),
+            self.record(1, 2, "0.8", "0.7"),
+            self.record(1, 3, "0.9", "0.49"),
+            self.record(1, 4, "0.9", "0.5"),
+            self.record(1, 5, "0.8000000000000001", "0.5000000000000001"),
+            self.record(1, 6, "0.99", "0.6"),
         ]
         for criterion, expected_epochs in (("validation_accuracy", [6, 5]),
                                            ("accuracy_gap", [5, 6])):
@@ -125,6 +127,47 @@ class AnalyzeRunsTests(unittest.TestCase):
                 selected = analysis.rank_records(records, criterion)
                 self.assertEqual([row["epoch"] for row in selected], expected_epochs)
                 self.assertEqual(analysis.rank_records(records[:4], criterion), [])
+
+    def test_both_rankings_use_independent_custom_minimums_strictly(self) -> None:
+        records = [
+            self.record(1, 1, "0.6", "0.8"),
+            self.record(1, 2, "0.9", "0.4"),
+            self.record(1, 3, "0.6000000000000001", "0.4000000000000001"),
+            self.record(1, 4, "0.8", "0.7"),
+        ]
+        for criterion in analysis.RANKINGS:
+            with self.subTest(criterion=criterion):
+                selected = analysis.rank_records(
+                    records, criterion, min_train_accuracy=Decimal("0.6"),
+                    min_validation_accuracy=Decimal("0.4"))
+                self.assertEqual([row["epoch"] for row in selected], [4, 3])
+                self.assertEqual(analysis.rank_records(records, criterion), [])
+
+    def test_cli_minimum_defaults_and_decimal_precision(self) -> None:
+        defaults = analysis.parse_args([])
+        self.assertEqual(defaults.min_train_accuracy, Decimal("0.8"))
+        self.assertEqual(defaults.min_validation_accuracy, Decimal("0.5"))
+        custom = analysis.parse_args([
+            "--min-train-accuracy", "0.80000000000000000001",
+            "--min-validation-accuracy", "0.40000000000000000001",
+        ])
+        self.assertEqual(custom.min_train_accuracy, Decimal("0.80000000000000000001"))
+        self.assertEqual(custom.min_validation_accuracy, Decimal("0.40000000000000000001"))
+        for boundary in ("0", "1"):
+            args = analysis.parse_args(["--min-train-accuracy", boundary,
+                                        "--min-validation-accuracy", boundary])
+            self.assertEqual(args.min_train_accuracy, Decimal(boundary))
+            self.assertEqual(args.min_validation_accuracy, Decimal(boundary))
+
+    def test_cli_rejects_invalid_accuracy_minimums(self) -> None:
+        for option in ("--min-train-accuracy", "--min-validation-accuracy"):
+            for value in ("-0.1", "1.01", "NaN", "sNaN", "inf", "invalid"):
+                with self.subTest(option=option, value=value):
+                    errors = io.StringIO()
+                    with redirect_stderr(errors), self.assertRaises(SystemExit) as raised:
+                        analysis.parse_args([option, value])
+                    self.assertEqual(raised.exception.code, 2)
+                    self.assertIn(option, errors.getvalue())
 
     def test_load_uses_saved_combination_ids_and_preserves_metric_text(self) -> None:
         first = self.epoch(3, "0.12345678901234567", "0.22345678901234567")
@@ -153,7 +196,8 @@ class AnalyzeRunsTests(unittest.TestCase):
         ])
         records = analysis.load_experiment(self.experiment)
         self.assertEqual([r["accuracy_gap"] for r in records], [Decimal("0.1")] * 2)
-        selected = analysis.rank_records(records, "accuracy_gap")
+        selected = analysis.rank_records(records, "accuracy_gap",
+                                         min_train_accuracy=Decimal("0.5"))
         self.assertEqual([r["epoch"] for r in selected], [2, 1])
 
     def test_missing_config_is_reported(self) -> None:
@@ -269,8 +313,8 @@ class AnalyzeRunsTests(unittest.TestCase):
                     analysis.load_experiment(self.experiment)
 
     def test_cli_preserves_metrics_for_bce_and_softmax_combinations(self) -> None:
-        self.combination("bce", 1, [self.epoch(1, "0.7", "0.6")])
-        row = self.epoch(1, "0.8", "0.7")
+        self.combination("bce", 1, [self.epoch(1, "0.9", "0.6")])
+        row = self.epoch(1, "0.9", "0.7")
         for split in ("train", "validation"):
             row[f"{split}_reconstruction_loss"] = row.pop(f"{split}_reconstruction_bce")
             row[f"{split}_tile_cross_entropy"] = "0.12345678901234567"
@@ -298,11 +342,11 @@ class AnalyzeRunsTests(unittest.TestCase):
 
     def test_cli_writes_both_rankings_and_every_selected_png(self) -> None:
         self.combination("params", 7, [
-            self.epoch(1, "0.6", "0.6"),
-            self.epoch(2, "0.8", "0.7"),
+            self.epoch(1, "0.81", "0.6"),
+            self.epoch(2, "0.85", "0.7"),
             self.epoch(3, "0.9", "0.8"),
         ])
-        self.combination("other", 2, [self.epoch(1, "0.7", "0.7")],
+        self.combination("other", 2, [self.epoch(1, "0.9", "0.7")],
                          self.runs / "example_v2")
         output = self.root / "analysis"
         with redirect_stdout(io.StringIO()):
@@ -329,11 +373,57 @@ class AnalyzeRunsTests(unittest.TestCase):
                         self.assertGreater(chart.height, 500)
                         chart.verify()
 
+    def test_cli_custom_minimums_control_rankings_counts_and_report_text(self) -> None:
+        self.combination("params", 1, [
+            self.epoch(1, "0.6", "0.8"),
+            self.epoch(2, "0.9", "0.4"),
+            self.epoch(3, "0.6000000000000001", "0.4000000000000001"),
+            self.epoch(4, "0.8", "0.7"),
+        ])
+        output = self.root / "analysis"
+        arguments = ["--runs-dir", str(self.runs), "--output-dir", str(output)]
+        console = io.StringIO()
+        with redirect_stdout(console), patch.object(analysis, "plot_record") as plot:
+            self.assertEqual(analysis.main([
+                *arguments, "--min-train-accuracy", "0.6",
+                "--min-validation-accuracy", "0.4",
+            ]), 0)
+        self.assertEqual({call.args[0]["epoch"] for call in plot.call_args_list}, {3, 4})
+        self.assertIn("2/4 eligible epochs", console.getvalue())
+        report_directory = output / self.experiment.name
+        for filename in ("top_validation_accuracy.csv", "smallest_accuracy_gap.csv"):
+            with (report_directory / filename).open(newline="", encoding="utf-8") as handle:
+                rows = list(csv.DictReader(handle))
+            self.assertEqual([row["epoch"] for row in rows], ["4", "3"])
+        report = (report_directory / "README.md").read_text(encoding="utf-8")
+        index = (output / "README.md").read_text(encoding="utf-8")
+        self.assertIn("Ranked 2 eligible", report)
+        for text in (report, index):
+            self.assertRegex(text, r"train accuracy[^\n]*0\.6")
+            self.assertRegex(text, r"validation accuracy[^\n]*0\.4")
+        self.assertRegex(index, r"\| example_v1 \| 1 \| 4 \| 2 \| 2 \|")
+
+        console = io.StringIO()
+        with redirect_stdout(console), patch.object(analysis, "plot_record") as plot:
+            self.assertEqual(analysis.main([
+                *arguments, "--min-train-accuracy", "0.9",
+                "--min-validation-accuracy", "0.85",
+            ]), 0)
+        plot.assert_not_called()
+        self.assertIn("0/4 eligible epochs", console.getvalue())
+        report = (report_directory / "README.md").read_text(encoding="utf-8")
+        self.assertIn("0 eligible", report)
+        self.assertRegex(report, r"No epochs[^\n]*train accuracy[^\n]*0\.9")
+        self.assertRegex(report, r"No epochs[^\n]*validation accuracy[^\n]*0\.85")
+        for filename in ("top_validation_accuracy.csv", "smallest_accuracy_gap.csv"):
+            with (report_directory / filename).open(newline="", encoding="utf-8") as handle:
+                self.assertEqual(list(csv.DictReader(handle)), [])
+
     def test_cli_handles_fresh_experiment_with_no_eligible_epochs(self) -> None:
-        self.combination("params", 1, [self.epoch(1, "0.5", "0.7"),
-                                       self.epoch(2, "0.49", "0.7"),
-                                       self.epoch(3, "0.7", "0.5"),
-                                       self.epoch(4, "0.7", "0.49")])
+        self.combination("params", 1, [self.epoch(1, "0.8", "0.7"),
+                                       self.epoch(2, "0.79", "0.7"),
+                                       self.epoch(3, "0.9", "0.5"),
+                                       self.epoch(4, "0.9", "0.49")])
         output = self.root / "analysis"
         with redirect_stdout(io.StringIO()):
             self.assertEqual(analysis.main(["--runs-dir", str(self.runs),
@@ -348,7 +438,7 @@ class AnalyzeRunsTests(unittest.TestCase):
         self.assertIn("0 eligible", (report_directory / "README.md").read_text(encoding="utf-8"))
 
     def test_cli_refresh_with_no_eligible_epochs_removes_only_old_generated_plots(self) -> None:
-        destination = self.combination("params", 1, [self.epoch(1, "0.7", "0.6")])
+        destination = self.combination("params", 1, [self.epoch(1, "0.9", "0.6")])
         output = self.root / "analysis"
         arguments = ["--runs-dir", str(self.runs), "--output-dir", str(output)]
         with redirect_stdout(io.StringIO()):
