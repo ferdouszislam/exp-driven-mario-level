@@ -19,11 +19,11 @@ Each architecture has a dedicated, independently runnable pipeline folder:
 
 Choose the folder for the model you want to train. Each contains its own `model.py`, `train.py`, and editable `hyperparameter-combinations.txt`. Running its `train.py` selects that architecture. Default training outputs go into that folder's `runs/`.
 
-Architecture-agnostic utilities live once in `model-training/`: [data.py](data.py) loads the common dataset, [plotting.py](plotting.py) plots training histories, [reconstruction_previews.py](reconstruction_previews.py) renders inputs and reconstructions through the supplied model's `encode`, `reparameterize`, and `decode` methods, and [analyze_runs.py](analyze_runs.py) ranks saved metrics from any selected runs folder. Training imports the shared modules automatically. Analysis reports default to `run-analysis/` beside the selected runs folder.
+Architecture-agnostic utilities live once in `model-training/`: [data.py](data.py) loads the common dataset, [plotting.py](plotting.py) plots training histories, [generate_levels.py](generate_levels.py) loads saved checkpoints after training and creates reconstructions and new levels, [reconstruction_previews.py](reconstruction_previews.py) supplies the shared rendering helpers, and [analyze_runs.py](analyze_runs.py) ranks saved metrics from any selected runs folder. Analysis reports default to `run-analysis/` beside the selected runs folder.
 
 The original three pipelines implement the joint training stage of the [project proposal](player-exp-pairwise-cnn-vae-pcgml-proposal.pdf). Their `_softmax` variants change the reconstruction output interpretation and loss as described in section 6. Six additional `_weighted` variants impose a larger tile loss for wrongly predicting ground or air at a cell with another true tile type. All twelve share the saved dataset and training conventions described below. Each has a shared encoder and decoder for the two playthroughs and a classifier that predicts whether the first playthrough is preferred to the second.
 
-The workflow reads explicit training rows from the selected folder's `hyperparameter-combinations.txt`, with a default budget of **100 epochs per listed combination**. Each data row specifies one complete run, and only the listed rows are trained. Every epoch records fitting and validation measurements, and each combination produces curves for losses, overall accuracy, and normalized tile Hamming distance. You choose a combination and epoch from those records. Each experiment starts with a fresh model and uses the same saved `train_set` and `validation_set` assignments. Supplying one or more pairs of checkpoint-range bounds enables model saving and an input/reconstruction preview for each saved model, using five randomly selected validation levels.
+The workflow reads explicit training rows from the selected folder's `hyperparameter-combinations.txt`, with a default budget of **100 epochs per listed combination**. Each data row specifies one complete run, and only the listed rows are trained. Every epoch records fitting and validation measurements, and each combination produces curves for losses, overall accuracy, and normalized tile Hamming distance. You choose a combination and epoch from those records. Each experiment starts with a fresh model and uses the same saved `train_set` and `validation_set` assignments. Supplying one or more pairs of checkpoint-range bounds enables model saving. Run `generate_levels.py` after training to reconstruct five fitting and five validation inputs and generate five new levels for every saved checkpoint.
 
 ## 1. Setup and commands
 
@@ -45,7 +45,7 @@ cd model-training/model_arch_1
 
 Use any folder from the table in the `cd` command to select another model; for example, `cd model-training/model_arch_1_softmax` selects its categorical-tile variant. The command trains every row in that folder's `hyperparameter-combinations.txt` for 100 epochs and saves measurements and curves under its own `runs/<UTC-timestamp>/`. Checkpoint saving is disabled by default. Editing one folder's hyperparameter file or training constants affects that folder's subsequent runs.
 
-The remaining training commands in this section run **inside your chosen architecture folder**. For a small end-to-end run, create a separate one-combination file and train with four original comparisons for two epochs. Saving both epochs also exercises validation reconstruction previews:
+The remaining training commands in this section run **inside your chosen architecture folder**. For a small end-to-end run, create a separate one-combination file and train with four original comparisons for two epochs, saving both epochs:
 
 ```bash
 cat > /tmp/mario-smoke-hyperparameters.txt <<'EOF'
@@ -62,7 +62,13 @@ EOF
   --output-dir runs/smoke
 ```
 
-Open `runs/smoke/REPORT.md` inside that model folder to see its curves and checkpoint comparison sheets. The temporary file leaves the folder's hyperparameter file unchanged. Use a fresh output directory for another invocation.
+Open `runs/smoke/REPORT.md` inside that model folder to see its curves. Then generate the checkpoint images separately:
+
+```bash
+../../.venv/bin/python ../generate_levels.py --runs-dir runs/smoke
+```
+
+Each combination's `reconstructions/` directory contains the fitting, validation, and generated level images for both saved epochs. The temporary file leaves the folder's hyperparameter file unchanged. Use a fresh training output directory for another invocation.
 
 The smoke file above is for the six pipelines without the `_weighted` suffix. When running a weighted pipeline, append its fifth value to the data row, for example `1e-4, 1, 1e-3, 1e-2, 3`; see the conditional-weighting rules in section 6. Its parser requires five columns.
 
@@ -83,7 +89,7 @@ An explicit single-epoch checkpoint range can be exercised with four comparisons
   --output-dir runs/comparison_checkpoint_check
 ```
 
-That run saves one epoch-2 checkpoint and its reconstruction previews per combination. To train for the default 100 epochs and save epochs 30 through 40 inclusive, use
+That run saves one epoch-2 checkpoint per combination. To train for the default 100 epochs and save epochs 30 through 40 inclusive, use
 
 ```bash
 ../../.venv/bin/python train.py \
@@ -92,7 +98,7 @@ That run saves one epoch-2 checkpoint and its reconstruction previews per combin
   --output-dir runs/comparison_30_to_40
 ```
 
-This saves **11 checkpoints per listed combination**, each with reconstruction previews. The window controls saving while each experiment completes its full training budget. Changing the hyperparameter file changes the number of combinations and total saved models.
+This saves **11 checkpoints per listed combination**. The window controls saving while each experiment completes its full training budget. Changing the hyperparameter file changes the number of combinations and total saved models.
 
 To save two separate ranges, repeat the start and end flags:
 
@@ -105,7 +111,7 @@ To save two separate ranges, repeat the start and end flags:
   --output-dir runs/comparison_two_ranges
 ```
 
-This saves **22 checkpoints per listed combination**, covering epochs 10–20 and 50–60 inclusive, with reconstruction previews for those same epochs. Epochs between the ranges still train and produce measurements. You can also supply the same ranges as `--checkpoint-start-epoch 10 50 --checkpoint-end-epoch 20 60`. Starts and ends are paired by position: the first start with the first end, then the second start with the second end. All twelve model-training pipelines accept both forms and the original single-range form. Overlapping ranges save each epoch only once.
+This saves **22 checkpoints per listed combination**, covering epochs 10–20 and 50–60 inclusive. Epochs between the ranges still train and produce measurements. You can also supply the same ranges as `--checkpoint-start-epoch 10 50 --checkpoint-end-epoch 20 60`. Starts and ends are paired by position: the first start with the first end, then the second start with the second end. All twelve model-training pipelines accept both forms and the original single-range form. Overlapping ranges save each epoch only once.
 
 Each output directory must be new or empty. Omit `--output-dir` to create a new UTC-timestamped directory under the selected model folder's `runs/`. The script rejects output inside the input dataset. Explicit relative paths, including `--output-dir` and `--hyperparameters-file`, resolve from your current working directory. Default dataset, hyperparameter, and run paths resolve from the selected script's location. View all flags or analyze completed runs with
 
@@ -363,13 +369,13 @@ Each invocation creates one experiment root with the shared configuration and sp
 
 | File | Contents |
 |---|---|
-| `run_config.json` | Dataset and fingerprint, requested/actual sample counts, source hyperparameter path and listed combinations in file order, epoch budget, checkpoint bounds and paired ranges, seeds, selected training and validation preview inputs, device, environment, architecture, and shared run settings |
+| `run_config.json` | Dataset and fingerprint, requested/actual sample counts, source hyperparameter path and listed combinations in file order, epoch budget, checkpoint bounds and paired ranges, seeds, device, environment, architecture, and shared run settings |
 | `channels.json` | Exact input channel codebook |
 | `selected_train_comparisons.json` | Selected manifest entries with participant, playthrough, and grouping provenance |
 | `selected_validation_comparisons.json` | Saved validation manifest entries when `validation_set` is present |
 | `split.json` | Fixed fitting and validation memberships shared by all combinations |
-| `experiments.json` | All combinations, their `pending`, `running`, `completed`, or `failed` status, and completed summaries with curve and checkpoint-preview paths |
-| `REPORT.md` | Human-readable run settings, links to each combination's six-panel fitting/validation curves, and embedded training and validation input/reconstruction sheets for each saved checkpoint after all combinations finish |
+| `experiments.json` | All combinations, their `pending`, `running`, `completed`, or `failed` status, and completed summaries with curve and checkpoint paths |
+| `REPORT.md` | Human-readable run settings, links to each combination's six-panel fitting/validation curves, and a reminder to generate level images after training |
 
 Each parameter-named directory, such as `1e-4_1e-2_1e-3_1e-2/`, contains its own outputs. Its folder name records the learning rate, reconstruction weight, KL weight, and ranking weight; weighted pipelines append the background-error multiplier, for example `1e-4_1e-2_1e-3_1e-2_3/`. The number of directories follows the listed rows.
 
@@ -384,9 +390,8 @@ Each parameter-named directory, such as `1e-4_1e-2_1e-3_1e-2/`, contains its own
 | `validation_predictions.csv` | Final-epoch ordered validation predictions when validation is available |
 | `validation_curves.png` | A 3×2 figure for weighted total loss, reconstruction loss (original BCE or categorical tiles plus path BCE), KL divergence, ranking BCE, overall accuracy, and normalized tile Hamming distance, each showing fitting and available validation values against epoch number |
 | `checkpoints/epoch_030.pt`, etc. | Optional model and optimizer state for each completed epoch within any configured inclusive checkpoint range, saved once per epoch |
-| `checkpoint_previews.json` | Index of saved checkpoint epochs with validation sample counts, comparison PNGs, and sample manifests, plus a nested `train` object with the same three fields for training previews; updated after each checkpoint's previews are saved |
-| `reconstructions/epoch_030/validation/`, etc. | Validation inputs and VAE reconstructions associated with that saved checkpoint, described below |
-| `reconstructions/epoch_030/train/`, etc. | Fitting inputs and VAE reconstructions associated with that saved checkpoint |
+
+Running `generate_levels.py` after training adds `reconstructions/index.json` and the level image directories described below. The training scripts save checkpoints and measurements without rendering these images.
 
 The JSON history and complete epoch CSV are each replaced atomically after every epoch's measurements. This makes completed epoch measurements available while the experiment continues. Prediction CSV files summarize the final epoch. The history retains measurements for earlier epochs.
 
@@ -403,7 +408,7 @@ CHECKPOINT_END_EPOCH = [20, 60]
 
 For each bound, supplied CLI values replace that constant's defaults. The start and end lists must have the same number of values. Supplying only one bound raises an argument error. Every bound must be positive, and each end must be at least its corresponding start. Ranges may be supplied in any order and may overlap or extend beyond the training budget.
 
-The bounds are inclusive. The actual checkpoint epochs are the union of the configured ranges intersected with completed training epochs; each selected epoch produces one checkpoint with training and validation reconstruction previews. For example, ranges 10–20 and 15–25 save 16 checkpoints, covering epochs 10–25 once each. A range entirely beyond the epoch budget produces no checkpoints or previews. Default runs produce zero model checkpoint files at every training length.
+The bounds are inclusive. The actual checkpoint epochs are the union of the configured ranges intersected with completed training epochs; each selected epoch produces one checkpoint. For example, ranges 10–20 and 15–25 save 16 checkpoints, covering epochs 10–25 once each. A range entirely beyond the epoch budget produces no checkpoints. Default runs produce zero model checkpoint files at every training length.
 
 The run and combination configurations, including the configuration embedded in each checkpoint, record `checkpoint_start_epoch` and `checkpoint_end_epoch` as lists, even for a single range, and the requested pairs in `checkpoint_ranges` (`[[10, 20], [50, 60]]` in JSON). When saving is disabled, the two bound fields are `null` in JSON and `checkpoint_ranges` is `[]`. These fields retain the requested ranges, including any portions beyond the epoch budget. The final report describes the ranges that fall within the run's epoch budget.
 
@@ -411,44 +416,87 @@ For float32 model parameters and two Adam moment tensors, checkpoint tensor stor
 
 Each checkpoint contains `epoch`, `model_state_dict`, `optimizer_state_dict`, `config`, `channels`, `selected_instance_ids`, `fitting_instance_ids`, `validation_instance_ids`, `train_metrics`, and `validation_metrics`. The configuration and split memberships identify the experiment and data associated with that saved epoch. Architecture metadata identifies the selected model's version, normalization and its settings, channel counts, strides, activations, and dropout placement. Earlier 192-column checkpoints have different fully connected dimensions and require their original model definitions for restoration. They cannot be loaded into the cropped model; new training runs use the cropped export and a distinct architecture version. Check the full metadata together with the architecture label when choosing the matching definition.
 
-### Training and validation reconstruction previews for every saved model
+### Reconstruct and generate levels after training
 
-At startup, the pipeline randomly selects **five distinct validation level IDs** using the configured `--seed` (42 by default). It sorts validation entries by instance ID and their playthroughs by level ID and playthrough key, retains the first occurrence of each level ID, then samples without replacement from the sorted level IDs. This deduplication applies only to visualization; training and validation measurements retain their original playthrough observations. If fewer than five level IDs are available, all available levels are selected without repetition. Saved `validation_set` entries are used when present; otherwise the same policy uses the pipeline's internal validation portion.
+For a standalone guide with commands, options, output files, and troubleshooting,
+see [RECONSTRUCTION_AND_GENERATION.md](RECONSTRUCTION_AND_GENERATION.md).
 
-All 12 training pipelines also select **five distinct training level IDs** with the same policy and seed, using only the fitting comparisons actually used for optimization. This respects the training-sample cap and excludes any comparisons assigned to internal validation. If fewer than five distinct fitting levels are available, the preview uses all of them without repetition. The run configuration records these inputs in `train_preview_samples` and the requested count in `train_preview_requested_levels`; the corresponding validation fields remain available.
+Run the shared [generate_levels.py](generate_levels.py) script **after training has finished and checkpoints have been saved**. From the repository root, this command scans every `checkpoints/` folder beneath `model-training/` and processes all saved `.pt` models:
 
-The same selected inputs and their recorded paths are reused across every saved epoch and hyperparameter combination, separately for training and validation. Immediately after saving a checkpoint, its current model encodes those inputs, draws one posterior latent sample per input, and decodes the samples. These images are **reconstructions of training and validation inputs**.
-
-Preview inference uses evaluation mode, disabled gradients, and the seed `(seed + 2) % (2**32)`, which is 44 by default. The seed is reset for each portion's preview; reusing it gives the same latent-noise sequence for comparison as model parameters change. The previous model mode and the training RNG states are restored after preview generation, so previews do not change subsequent optimization.
-
-Decoder outputs become a valid binary `(22, 16, 176)` encoding before rendering. The original pipelines select one tile with argmax over tile logits and set the independent path bit with `logit >= 0`. The `_softmax` pipelines pass `categorical_tiles=True` to the shared preview function, which applies [reconstruction_probabilities](categorical_reconstruction.py) to raw `decode` output: softmax over channels 0–20, then tile argmax; sigmoid over channel 21, then path probability `>= 0.5`. The public model method `decode_probabilities` exposes the same probability transformation for other callers. These discrete decisions are mathematically equivalent for identical logits, but the new variants learn tiles with a categorical loss. Both the original and reconstructed arrays are rendered by `encoding_to_image` from the existing [encoding_to_level_image.py](../datasets/fun-study-dataset-analysis/encoding_to_level_image.py). Black X markers are drawn over the tiles to show the corresponding path.
-
-For example, a saved epoch-30 model has these preview files beneath its combination directory:
-
-```text
-checkpoint_previews.json
-reconstructions/epoch_030/
-    validation/
-        01_input.png
-        01_generated.png
-        01_generated.npy
-        ... through 05 for five selected validation levels ...
-        channels.json
-        samples.json
-        comparison.png
-    train/
-        01_input.png
-        01_generated.png
-        01_generated.npy
-        ... through 05 for five selected fitting levels ...
-        channels.json
-        samples.json
-        comparison.png
+```bash
+.venv/bin/python model-training/generate_levels.py
 ```
 
-Each individual PNG shows all 176 exported columns at 2816×256 pixels; the removed 16-column prefix is absent from both tiles and path markers. The sibling `validation/` and `train/` directories each contain a `comparison.png` stacking labeled input/reconstruction pairs for their selected levels. Their `validation/samples.json` and `train/samples.json` manifests record `split` as `validation` or `train`, the checkpoint, epoch, input-selection and posterior-sampling seeds, decoding policy, level IDs, playthrough keys, source instance IDs and encoding paths, and output filenames. `channels.json` supplies the exact codebook used by the renderer. The source encoding paths are relative to the dataset root; the checkpoint path in each manifest is relative to its combination directory.
+To process just one architecture's runs or one completed run, supply `--runs-dir`:
 
-The console prints each completed comparison-sheet path. `checkpoint_previews.json` makes both sheets discoverable while training continues: each checkpoint record retains its validation `sample_count`, `comparison_image`, and `samples_file` fields and adds a `train` object containing those fields for the training previews. The run's final `REPORT.md` embeds both sheets for every saved model. Preview directories are created only for epochs whose checkpoints are saved. If validation is unavailable, each saved epoch gets a `validation/samples.json` explaining the skip and no validation PNGs; training previews are still generated. When checkpoint saving is disabled, no checkpoint previews are produced.
+```bash
+.venv/bin/python model-training/generate_levels.py \
+  --runs-dir model-training/model_arch_1/runs/smoke
+```
+
+To process one combination's checkpoint folder, use `--checkpoints-dir` instead. Replace the parameter folder below with the one from your actual run:
+
+```bash
+.venv/bin/python model-training/generate_levels.py \
+  --checkpoints-dir model-training/model_arch_1/runs/smoke/1e-4_1_1e-3_1e-2/checkpoints
+```
+
+`--runs-dir` and `--checkpoints-dir` are mutually exclusive. `--device` accepts `auto`, `cpu`, `cuda`, or `mps`; `--cpu-threads` controls CPU threads. By default the script uses each checkpoint's recorded seed; `--seed` overrides it for another reproducible set of inputs and latent samples. Run `--help` to see the available flags.
+
+The script identifies the correct model among all twelve pipelines using the checkpoint's architecture metadata and strictly restores its saved model weights. It reads the dataset location from the checkpoint configuration. If the dataset moved, for example after downloading results from a cluster, point to the current preprocessed dataset root:
+
+```bash
+.venv/bin/python model-training/generate_levels.py \
+  --runs-dir model-training/model_arch_1/runs/smoke \
+  --dataset datasets/fun-study-dataset-analysis/preprocessed_dataset \
+  --device cpu
+```
+
+For each checkpoint, the script creates three groups:
+
+- **Training reconstructions:** five distinct level IDs from the checkpoint's fitting comparisons, respecting its training-sample cap and excluding comparisons assigned to validation.
+- **Validation reconstructions:** five distinct level IDs from that checkpoint's recorded validation comparisons. These can belong to the saved `validation_set` or to the internal validation portion of `train_set`, matching the training run.
+- **Generated levels:** five independently sampled latent vectors from the standard normal prior, `z ~ N(0, I)`, passed directly to the decoder. These samples do not use an input level or the encoder.
+
+For reconstructions, entries are sorted by instance ID and their playthroughs by level ID and playthrough key. The first occurrence of each level ID is retained, then five IDs are sampled without replacement using the seed. If fewer than five distinct IDs are available, all available levels are used without repetition. Empty validation produces a `samples.json` explaining the skip; fitting reconstructions and prior samples are still generated. The checkpoint's saved memberships determine the two portions, so the script does not create a new validation split or use test levels.
+
+Each reconstruction encodes an input, draws one posterior latent sample, and decodes it. Inference uses evaluation mode and disabled gradients. Using the same seed and saved split across checkpoints gives consistent input selection and latent noise for comparison. The training process has already finished; level generation runs separately from optimization.
+
+Decoder outputs become binary `(22, 16, 176)` encodings before rendering. The original pipelines select one tile using argmax over tile logits and set the independent path bit with `logit >= 0`. The `_softmax` pipelines use softmax over channels 0–20, then tile argmax; sigmoid over channel 21, then path probability `>= 0.5`. Both reconstructions and prior samples use the existing [encoding_to_level_image.py](../datasets/fun-study-dataset-analysis/encoding_to_level_image.py) renderer. Black X markers show path occupancy.
+
+Each combination keeps the outputs beside its `checkpoints/` folder. For an epoch-30 checkpoint, the layout is:
+
+```text
+checkpoints/
+    epoch_030.pt
+reconstructions/
+    index.json
+    train/
+        epoch_030/
+            01_input.png
+            01_generated.png
+            01_generated.npy
+            ... through 05 when five fitting levels are available ...
+            channels.json
+            samples.json
+            comparison.png
+    validation/
+        epoch_030/
+            ... matching input/reconstruction files for validation levels ...
+            channels.json
+            samples.json
+            comparison.png
+    generated/
+        epoch_030/
+            ... five decoder-generated PNGs and encodings ...
+            channels.json
+            samples.json
+            comparison.png
+```
+
+Each individual level PNG shows all 176 exported columns at 2816×256 pixels. Reconstruction sheets stack labeled original/reconstructed pairs; the generated sheet shows the five prior samples. The sample manifests record the checkpoint, epoch, seeds, decoding policy, output filenames, and the source input provenance where applicable. `channels.json` supplies the renderer's codebook. `reconstructions/index.json` lists the checkpoints and their outputs, and the console prints the saved sheet paths.
+
+Rerunning the script with the same seed reproduces its outputs. It replaces its own checkpoint output directories after successfully generating the replacement files, keeping other checkpoints and the saved training results in place. The training report continues to describe metrics and checkpoint ranges; generated image paths are recorded in the reconstruction index.
 
 To inspect a checkpoint, run Python from the matching architecture folder and load an epoch produced by that folder. For example, after the explicit 30–40 range command above, select a parameter folder from its run:
 
@@ -486,8 +534,8 @@ PYTHONPATH=datasets/fun-study-dataset-analysis \
   -s datasets/fun-study-dataset-analysis/tests -v
 ```
 
-The checks cover model dimensions and shared weights, normalization and activations, loss gradients, explicit-row parsing and ordering, parameter-named output folders, checkpoint serialization, reconstruction rendering, crop alignment, grouped splits, rebuild behavior, and preservation of training random streams. Each architecture was also checked with a real-data CPU CLI run from its own folder: one training comparison for one epoch, all 58 saved validation comparisons, and an epoch-1 checkpoint with previews of five validation levels.
+The checks cover model dimensions and shared weights, normalization and activations, loss gradients, explicit-row parsing and ordering, parameter-named output folders, checkpoint serialization, separate checkpoint-based reconstruction and generation, crop alignment, grouped splits, rebuild behavior, and preservation of training random streams.
 
-The two-epoch command in section 1 provides a reproducible one-combination check of per-epoch measurements, JSON/CSV export, curves, checkpoints, and reconstruction previews. Use a fresh output directory for each invocation.
+The two-epoch training command and subsequent `generate_levels.py` command in section 1 provide a reproducible one-combination check of per-epoch measurements, JSON/CSV export, curves, checkpoints, fitting and validation reconstructions, and prior samples. Use a fresh training output directory for each training invocation.
 
 Existing directories under `model-training/runs/` contain artifacts from earlier training workflows. Their saved configurations and reports identify the procedure and metric schema used for those runs. Those artifacts remain in place. New runs default to the selected architecture folder's `runs/`. To analyze earlier root-level runs, use the shared `../analyze_runs.py` with `--runs-dir ../runs` from inside a model folder, or pass an absolute runs path. See [ANALYZE_RUNS.md](ANALYZE_RUNS.md).

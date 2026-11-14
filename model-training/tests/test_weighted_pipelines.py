@@ -199,16 +199,16 @@ class WeightedPipelineTests(unittest.TestCase):
                     config = json.loads((combination / "config.json").read_text())
                     self.assertEqual(config["hyperparameters"]["background_error_weight"], 3)
                     self.assertGreater((combination / "validation_curves.png").stat().st_size, 0)
-                    previews = json.loads((combination / "checkpoint_previews.json").read_text())
-                    self.assertEqual(previews[0]["sample_count"], 2)
-                    self.assertGreater((combination / previews[0]["comparison_image"]).stat().st_size, 0)
-                    self.assertEqual(previews[0]["train"]["sample_count"], 2)
-                    train_samples = json.loads((combination / previews[0]["train"]["samples_file"]).read_text())
-                    self.assertEqual(train_samples["split"], "train")
-                    self.assertTrue(all(sample["encoding"].startswith("train_set/")
-                                        for sample in train_samples["samples"]))
-                    self.assertGreater((combination / previews[0]["train"]["comparison_image"]).stat().st_size, 0)
-                    checkpoint_path = combination / previews[0]["checkpoint"]
+                    self.assertFalse((combination / "reconstructions").exists())
+                    self.assertFalse((combination / "checkpoint_previews.json").exists())
+                    self.run_command([TRAINING_ROOT / "generate_levels.py", "--runs-dir", output,
+                                      "--device", "cpu", "--cpu-threads", "2"], root)
+                    for portion, count in (("train", 2), ("validation", 2), ("generated", 5)):
+                        destination = combination / "reconstructions" / portion / "epoch_001"
+                        samples = json.loads((destination / "samples.json").read_text())
+                        self.assertEqual(samples["sample_count"], count)
+                        self.assertGreater((destination / "comparison.png").stat().st_size, 0)
+                    checkpoint_path = combination / "checkpoints/epoch_001.pt"
                     checkpoint = torch.load(checkpoint_path, weights_only=True, map_location="cpu")
                     self.assertEqual(checkpoint["config"]["hyperparameters"]["background_error_weight"], 3)
                     with pipeline(name) as (model, _):
