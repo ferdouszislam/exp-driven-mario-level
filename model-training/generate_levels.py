@@ -2,6 +2,8 @@
 
 With no arguments, process every checkpoints/*.pt under model-training.
 Outputs live beside each checkpoints folder in reconstructions/{split}/{checkpoint}.
+Use --output-dir to choose another output root, preserving relative run folders
+when searching recursively.
 """
 
 from __future__ import annotations
@@ -150,7 +152,8 @@ def publish_outputs(staging: Path, output: Path, checkpoint_name: str, index: li
 
 
 def process_checkpoint(path: Path, device: torch.device,
-                       dataset_override: Path | None = None, seed: int | None = None) -> dict:
+                       dataset_override: Path | None = None, seed: int | None = None,
+                       output_dir: Path | None = None) -> dict:
     """Restore one saved model and write both reconstructions and prior samples."""
     path = Path(path).resolve()
     checkpoint = torch.load(path, map_location="cpu", weights_only=True)
@@ -164,7 +167,7 @@ def process_checkpoint(path: Path, device: torch.device,
     categorical = (metadata.get("tile_output_activation") == "softmax"
                    or "softmax" in metadata["architecture_version"])
     combination = path.parent.parent
-    output = combination / "reconstructions"
+    output = Path(output_dir).resolve() if output_dir is not None else combination / "reconstructions"
     checkpoint_relative = path.relative_to(combination).as_posix()
     epoch = checkpoint["epoch"]
     record = {"checkpoint": checkpoint_relative, "epoch": epoch,
@@ -174,7 +177,8 @@ def process_checkpoint(path: Path, device: torch.device,
     if not isinstance(index, list):
         raise ValueError(f"Expected a checkpoint list in {index_path}")
 
-    with tempfile.TemporaryDirectory(prefix=".generate-levels-", dir=combination) as temporary:
+    output.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix=".generate-levels-", dir=output) as temporary:
         staging = Path(temporary)
         for split, entries in (("train", fitting), ("validation", validation)):
             samples = select_preview_levels(entries, selection_seed)
@@ -212,6 +216,8 @@ def parse_args(argv=None):
     search = parser.add_mutually_exclusive_group()
     search.add_argument("--runs-dir", type=Path, help="Recursively search this root; default model-training")
     search.add_argument("--checkpoints-dir", type=Path, help="Process the .pt files in one checkpoint folder")
+    parser.add_argument("--output-dir", type=Path,
+                        help="Output root; recursive searches preserve relative run folders; default beside checkpoints")
     parser.add_argument("--dataset", type=Path, help="Override the checkpoint's dataset location")
     parser.add_argument("--device", choices=("auto", "cpu", "cuda", "mps"), default="auto")
     parser.add_argument("--cpu-threads", type=int, default=4)
@@ -226,7 +232,7 @@ def parse_args(argv=None):
 
 def main(argv=None) -> None:
     args = parse_args(argv)
-    root = args.checkpoints_dir or args.runs_dir or HERE
+    root = (args.checkpoints_dir or args.runs_dir or HERE).resolve()
     checkpoints = discover_checkpoints(root, checkpoints_only=args.checkpoints_dir is not None)
     if not checkpoints:
         raise ValueError(f"No saved .pt checkpoints found under {root}")
@@ -244,13 +250,18 @@ def main(argv=None) -> None:
     print(f"Found {len(checkpoints)} checkpoints; device={device}", flush=True)
     for number, path in enumerate(checkpoints, 1):
         try:
-            record = process_checkpoint(path, device, args.dataset, args.seed)
+            output = path.parent.parent / "reconstructions"
+            if args.output_dir is not None:
+                output = args.output_dir.resolve()
+                if args.checkpoints_dir is None and root.name != "checkpoints":
+                    output /= path.parent.parent.relative_to(root)
+            record = process_checkpoint(path, device, args.dataset, args.seed, output_dir=output)
             counts = ", ".join(f"{split}={record[split]['sample_count']}" for split in SPLITS)
             print(f"[{number}/{len(checkpoints)}] {path}: {counts}", flush=True)
             for split in SPLITS:
                 image = record[split]["comparison_image"]
                 if image is not None:
-                    print(f"  {path.parent.parent / 'reconstructions' / image}", flush=True)
+                    print(f"  {output / image}", flush=True)
         except Exception as error:
             failures.append(path)
             print(f"[{number}/{len(checkpoints)}] Failed {path}: {error}", file=sys.stderr, flush=True)

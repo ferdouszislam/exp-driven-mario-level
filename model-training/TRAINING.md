@@ -443,6 +443,8 @@ To process one combination's checkpoint folder, use `--checkpoints-dir` instead.
 
 `--runs-dir` and `--checkpoints-dir` are mutually exclusive. `--device` accepts `auto`, `cpu`, `cuda`, or `mps`; `--cpu-threads` controls CPU threads. By default the script uses each checkpoint's recorded seed; `--seed` overrides it for another reproducible set of inputs and latent samples. Run `--help` to see the available flags.
 
+Add `--output-dir PATH` to choose where results are saved. With `--checkpoints-dir`, that directory directly contains `train/`, `validation/`, `generated/`, and `index.json`. Recursive searches preserve each combination's path relative to the search root beneath `PATH`, keeping matching epoch names separate. Relative output paths resolve from your current working directory.
+
 The script identifies the correct model among all twelve pipelines using the checkpoint's architecture metadata and strictly restores its saved model weights. It reads the dataset location from the checkpoint configuration. If the dataset moved, for example after downloading results from a cluster, point to the current preprocessed dataset root:
 
 ```bash
@@ -464,7 +466,7 @@ Each reconstruction encodes an input, draws one posterior latent sample, and dec
 
 Decoder outputs become binary `(22, 16, 176)` encodings before rendering. The original pipelines select one tile using argmax over tile logits and set the independent path bit with `logit >= 0`. The `_softmax` pipelines use softmax over channels 0–20, then tile argmax; sigmoid over channel 21, then path probability `>= 0.5`. Both reconstructions and prior samples use the existing [encoding_to_level_image.py](../datasets/fun-study-dataset-analysis/encoding_to_level_image.py) renderer. Black X markers show path occupancy.
 
-Each combination keeps the outputs beside its `checkpoints/` folder. For an epoch-30 checkpoint, the layout is:
+By default, each combination keeps the outputs beside its `checkpoints/` folder. For an epoch-30 checkpoint, the layout is:
 
 ```text
 checkpoints/
