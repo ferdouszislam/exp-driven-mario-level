@@ -66,8 +66,28 @@ models. Replace both the run and parameter folder names with your actual paths:
 ```
 
 `--runs-dir` and `--checkpoints-dir` cannot be used together.
-Paths supplied to these flags or to `--dataset` are relative to your terminal's
+Paths supplied to these flags, `--dataset`, or `--output-dir` are relative to your terminal's
 current directory unless you provide an absolute path.
+
+## Choose an output directory
+
+Pass `--output-dir` to save results at another location. With `--checkpoints-dir`,
+the requested directory directly contains `train/`, `validation/`, `generated/`,
+and `index.json`:
+
+```bash
+.venv/bin/python model-training/generate_levels.py \
+  --checkpoints-dir model-training/model_arch_1/runs/my_run/1e-4_1_1e-3_1e-2/checkpoints \
+  --output-dir generated-levels
+```
+
+For recursive searches, each combination's path relative to `--runs-dir` (or
+`model-training/` by default) is retained beneath the output directory. This
+keeps checkpoints with matching epoch names in separate folders. For example,
+`--runs-dir my_run --output-dir generated-levels` saves a combination's results
+under `generated-levels/parameter_folder/`. Pointing either search flag directly
+at a `checkpoints/` folder writes results directly into the output directory.
+Omit `--output-dir` to keep the existing locations beside each checkpoint folder.
 
 ## Use a dataset at a different location
 
@@ -95,6 +115,7 @@ memberships are reused; the script does not make a new split.
 |---|---|---|
 | `--runs-dir PATH` | Recursively search a particular run root. | The script's `model-training/` directory. |
 | `--checkpoints-dir PATH` | Process the `.pt` files directly inside one checkpoint folder. | Unset. |
+| `--output-dir PATH` | Choose the output root, retaining relative combination folders for recursive searches. | `reconstructions/` beside each checkpoint folder. |
 | `--dataset PATH` | Override the dataset location. | Saved path, then the local preprocessed dataset if that path is unavailable. |
 | `--device auto`, `cpu`, `cuda`, or `mps` | Choose the inference device. | `auto`: CUDA, then MPS, then CPU, depending on availability. |
 | `--cpu-threads N` | Set a positive number of CPU threads. | `4`. |
@@ -108,7 +129,7 @@ visualization inputs, without changing the checkpoint's saved training/validatio
 
 ## Find the results
 
-Outputs are saved beside each combination's `checkpoints/` folder. For example:
+By default, outputs are saved beside each combination's `checkpoints/` folder. For example:
 
 ```text
 my_run/parameter_folder/
@@ -143,7 +164,7 @@ reconstruction; generated sheets show the five decoder samples.
 | `channels.json` | The renderer's channel codebook. |
 
 Smaller input sets have fewer numbered files. An empty validation folder contains
-only `samples.json`. The combination's `reconstructions/index.json` lists the
+only `samples.json`. Each output directory's `index.json` lists the
 checkpoints and their output paths, and the terminal prints each saved sheet path.
 
 ## Reruns and errors
